@@ -1158,7 +1158,8 @@ riscv_ext_dont_care_version (const char *subset)
 {
   if (strcmp (subset, "g") == 0
       || strcmp (subset, "zicsr") == 0
-      || strcmp (subset, "zifencei") == 0)
+      || strcmp (subset, "zifencei") == 0
+      || strcmp (subset, "y") == 0)
     return TRUE;
   return FALSE;
 }
@@ -1313,7 +1314,7 @@ riscv_parsing_subset_version (riscv_parse_subset_t *rps,
 const char *
 riscv_supported_std_ext (void)
 {
-  return "mafdqlcbjtpvn";
+  return "mafdqlcbjtpvny";
 }
 
 /* Parsing function for standard extensions.
@@ -1452,6 +1453,7 @@ riscv_get_prefix_class (const char *arch)
     case 'h': return RV_ISA_CLASS_H;
     case 'x': return RV_ISA_CLASS_X;
     case 'z': return RV_ISA_CLASS_Z;
+    case 'y': return RV_ISA_CLASS_SFPU;
     default: return RV_ISA_CLASS_UNKNOWN;
     }
 }
@@ -1610,6 +1612,11 @@ static const char * const riscv_std_h_ext_strtab[] =
   NULL
 };
 
+static const char * const riscv_sfpu_ext_strtab[] =
+{
+  "sfp", NULL
+};
+
 /* For the extension `ext`, search through the list of known extensions
    `known_exts` for a match, and return TRUE if found.  */
 
@@ -1665,6 +1672,15 @@ riscv_ext_h_valid_p (const char *arg)
   return riscv_multi_letter_ext_valid_p (arg, riscv_std_h_ext_strtab);
 }
 
+/* Predicator functions for sfp-prefixed extensions.
+   Only known sfp-extensions are permitted.  */
+
+static bfd_boolean
+riscv_ext_sfp_valid_p (const char *arg)
+{
+  return riscv_multi_letter_ext_valid_p (arg, riscv_sfpu_ext_strtab);
+}
+
 /* Parsing order of the prefixed extensions that is specified by
    the ISA spec.  */
 
@@ -1674,6 +1690,7 @@ static const riscv_parse_config_t parse_config[] =
   {RV_ISA_CLASS_H, "h", riscv_ext_h_valid_p},
   {RV_ISA_CLASS_Z, "z", riscv_ext_z_valid_p},
   {RV_ISA_CLASS_X, "x", riscv_ext_x_valid_p},
+  {RV_ISA_CLASS_SFPU, "y", riscv_ext_sfp_valid_p},
   {RV_ISA_CLASS_UNKNOWN, NULL, NULL}
 };
 

@@ -256,6 +256,24 @@ static const char * const riscv_pred_succ[16] =
 #define OP_MASK_CFUNCT2                0x3
 #define OP_SH_CFUNCT2          5
 
+/* Field names for SFPU instructions */
+#define OP_SH_YMULADD_SRCA 		16
+#define OP_MASK_YMULADD_SRCA 		0xf
+#define OP_SH_YMULADD_SRCB 		12
+#define OP_MASK_YMULADD_SRCB 		0xf
+#define OP_SH_YMULADD_SRCC 		8
+#define OP_MASK_YMULADD_SRCC 		0xf
+#define OP_SH_YMULADD_DEST 		4
+#define OP_MASK_YMULADD_DEST 		0xf
+#define OP_SH_YLOADSTORE_RD		20
+#define OP_MASK_YLOADSTORE_RD		0xf
+#define OP_SH_YLOADSTORE_INST_MOD0	16
+#define OP_MASK_YLOADSTORE_INST_MOD0	0xf
+#define OP_SH_YMULADD_INST_MOD0		0
+#define OP_MASK_YMULADD_INST_MOD0	0xf
+#define OP_SH_YDEST_REG_ADDR		0
+#define OP_MASK_YDEST_REG_ADDR		0xffff
+
 /* ABI names for selected x-registers.  */
 
 #define X_RA 1
@@ -269,6 +287,7 @@ static const char * const riscv_pred_succ[16] =
 
 #define NGPR 32
 #define NFPR 32
+#define NSFPUR 16
 
 /* These fake label defines are use by both the assembler, and
    libopcodes.  The assembler uses this when it needs to generate a fake
@@ -312,6 +331,7 @@ enum riscv_insn_class
    INSN_CLASS_ZICSR,
    INSN_CLASS_ZIFENCEI,
    INSN_CLASS_ZIHINTPAUSE,
+   INSN_CLASS_I_M_A_Y
   };
 
 /* This structure holds information for a particular instruction.  */
@@ -444,6 +464,9 @@ struct riscv_csr_extra
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
 
+/* Instruction is an SFPU instruction */
+#define INSN_SFPU               0x00000100
+
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */
 #define INSN_MACRO		0xffffffff
@@ -494,6 +517,8 @@ extern const char * const riscv_gpr_names_numeric[NGPR];
 extern const char * const riscv_gpr_names_abi[NGPR];
 extern const char * const riscv_fpr_names_numeric[NFPR];
 extern const char * const riscv_fpr_names_abi[NFPR];
+extern const char * const riscv_sfpur_names_numeric[NSFPUR];
+extern const char * const riscv_sfpur_names_abi[NSFPUR];
 
 extern const struct riscv_opcode riscv_opcodes[];
 extern const struct riscv_opcode riscv_insn_types[];

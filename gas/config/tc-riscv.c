@@ -186,6 +186,7 @@ struct riscv_set_options
   int relax; /* Emit relocs the linker is allowed to relax.  */
   int arch_attr; /* Emit arch attribute.  */
   int csr_check; /* Enable the CSR checking.  */
+  int sfpu; /* Generate SFPU code.  */
 };
 
 static struct riscv_set_options riscv_opts =
@@ -195,8 +196,18 @@ static struct riscv_set_options riscv_opts =
   0,	/* rve */
   1,	/* relax */
   DEFAULT_RISCV_ATTR, /* arch_attr */
-  0.	/* csr_check */
+  0,	/* csr_check */
+  0.    /* sfpu */
 };
+
+static void
+riscv_set_sfpu (bfd_boolean sfpu_value)
+{
+  if (sfpu_value)
+    elf_flags |= EF_RISCV_SFPU;
+
+  riscv_opts.sfpu = sfpu_value;
+}
 
 static void
 riscv_set_rvc (bfd_boolean rvc_value)
@@ -252,6 +263,12 @@ riscv_multi_subset_supports (enum riscv_insn_class insn_class)
       return riscv_subset_supports ("zifencei");
     case INSN_CLASS_ZIHINTPAUSE:
       return riscv_subset_supports ("zihintpause");
+
+    case INSN_CLASS_I_M_A_Y:
+      return riscv_subset_supports ("i")  &&
+	     riscv_subset_supports ("m")  &&
+             riscv_subset_supports ("a")  &&
+             riscv_subset_supports ("y");
 
     default:
       as_fatal ("Unreachable");
@@ -459,7 +476,8 @@ riscv_target_format (void)
 static inline unsigned int
 insn_length (const struct riscv_cl_insn *insn)
 {
-  return riscv_insn_length (insn->insn_opcode);
+  return insn->insn_mo->insn_class == INSN_CLASS_I_M_A_Y ?
+         4 : riscv_insn_length (insn->insn_opcode);
 }
 
 /* Initialise INSN from opcode entry MO.  Leave its position unspecified.  */
@@ -472,6 +490,11 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
   insn->frag = NULL;
   insn->where = 0;
   insn->fixp = NULL;
+
+  /*  Zero out the lower most two bits as they were set to indicate the
+      instruction as a 4 byte instruction */
+  if (mo->insn_class == INSN_CLASS_I_M_A_Y)
+    insn->insn_opcode &= 0xfffffffc;
 }
 
 /* Install INSN at the location specified by its "frag" and "where" fields.  */
@@ -662,6 +685,7 @@ enum reg_class
 {
   RCLASS_GPR,
   RCLASS_FPR,
+  RCLASS_SFPUR,
   RCLASS_MAX,
 
   RCLASS_CSR
@@ -1017,6 +1041,25 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    return FALSE;
 	  }
 	break;
+      case 'y': /* SFPU */
+	switch (c = *p++)
+	  {
+	    case 'a': USE_BITS (OP_MASK_YMULADD_SRCA, OP_SH_YMULADD_SRCA); break;
+	    case 'b': USE_BITS (OP_MASK_YMULADD_SRCB, OP_SH_YMULADD_SRCB); break;
+	    case 'c': USE_BITS (OP_MASK_YMULADD_SRCC, OP_SH_YMULADD_SRCC); break;
+	    case 'd': USE_BITS (OP_MASK_YLOADSTORE_RD, OP_SH_YLOADSTORE_RD); break;
+	    case 'e': USE_BITS (OP_MASK_YMULADD_DEST, OP_SH_YMULADD_DEST); break;
+	    /* 'm' can have a numeric extension for various purposes.  Hence increment p */
+	    case 'm': USE_BITS (OP_MASK_YLOADSTORE_INST_MOD0, OP_SH_YLOADSTORE_INST_MOD0); p++; break;
+	    case 'n': USE_BITS (OP_MASK_YDEST_REG_ADDR, OP_SH_YDEST_REG_ADDR); break;
+	    case 'o': USE_BITS (OP_MASK_YMULADD_INST_MOD0, OP_SH_YMULADD_INST_MOD0); p++; break;
+	    default:
+	      as_bad (_("internal: bad SFPU opcode"
+			" (unknown operand type `F%c'): %s %s"),
+		      c, opc->name, opc->args);
+	    return FALSE;
+	  }
+	break;
       case 'O': /* opcode */
 	switch (c = *p++)
 	  {
@@ -1107,6 +1150,8 @@ md_begin (void)
   hash_reg_names (RCLASS_GPR, riscv_gpr_names_abi, NGPR);
   hash_reg_names (RCLASS_FPR, riscv_fpr_names_numeric, NFPR);
   hash_reg_names (RCLASS_FPR, riscv_fpr_names_abi, NFPR);
+  hash_reg_names (RCLASS_SFPUR, riscv_sfpur_names_numeric, NSFPUR);
+  // hash_reg_names (RCLASS_SFPUR, riscv_sfpur_names_abi, NFPR);
   /* Add "fp" as an alias for "s0".  */
   hash_reg_name (RCLASS_GPR, "fp", 8);
 
@@ -1147,6 +1192,10 @@ riscv_apply_const_reloc (bfd_reloc_code_real_type reloc_type, bfd_vma value)
       abort ();
     }
 }
+
+/* Put top 2 bits, which are currently never 'b11 to bottom, indicating to Risc
+   that they are not risc instructions. */
+#define TRISC_OP_SWIZZLE(x) ( (((x) >> 30) & 0x3) | (((x) & 0x3FFFFFFF) << 2) ) 
 
 /* Output an instruction.  IP is the instruction information.
    ADDRESS_EXPR is an operand of the instruction to be used with
@@ -1195,6 +1244,9 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	  ip->fixp->fx_tcbit = riscv_opts.relax;
 	}
     }
+
+  if (ip->insn_mo->insn_class == INSN_CLASS_I_M_A_Y)
+    ip->insn_opcode = TRISC_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
   install_insn (ip);
@@ -2601,6 +2653,113 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		}
 	      break;
 
+	    case 'y':
+	      switch (*++args)
+		{
+		case 'a': /* MUL/ADD SRCA L0-L15 */
+		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+		      || !(regno <= 15))
+		    break;
+		  INSERT_OPERAND (YMULADD_SRCA, *ip, regno);
+		  continue;
+		case 'b': /* MUL/ADD SRCB L0-L15 */
+		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+		      || !(regno <= 15))
+		    break;
+		  INSERT_OPERAND (YMULADD_SRCB, *ip, regno);
+		  continue;
+		case 'c': /* MUL/ADD SRCC L0-L15 */
+		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+		      || !(regno <= 15))
+		    break;
+		  INSERT_OPERAND (YMULADD_SRCC, *ip, regno);
+		  continue;
+		case 'd': /* LOAD/STORE RD L0-L3 */
+		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+		      || !(regno <= 3))
+		    {
+		      as_bad (_("bad register for lreg_dest field, "
+				"register must be L0...L3"));
+		      break;
+		    }
+		  INSERT_OPERAND (YLOADSTORE_RD, *ip, regno);
+		  continue;
+		case 'e': /* MUL/ADD DEST L0-L3 */
+		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+		      || !(regno <= 3))
+		    {
+		      as_bad (_("bad register for lreg_dest field, "
+				"register must be L0...L3"));
+		      break;
+		    }
+		  INSERT_OPERAND (YMULADD_DEST, *ip, regno);
+		  continue;
+		case 'm': /* load/store instr_mod0 */
+		  {
+		    char x = *++args;
+		    if (x == '1')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 15)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...15"));
+			    break;
+			  }
+		      }
+		    else if (x == '2')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 1)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...1"));
+			    break;
+			  }
+		      }
+		  }
+
+		  INSERT_OPERAND (YLOADSTORE_INST_MOD0, *ip, imm_expr->X_add_number);
+		  imm_expr->X_op = O_absent;
+		  s = expr_end;
+		  continue;
+		case 'n': /* dest_reg_addr */
+		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		      || imm_expr->X_op != O_constant
+		      || imm_expr->X_add_number < -32768
+		      || imm_expr->X_add_number >  32767)
+		    {
+		      as_bad (_("bad value for dest_reg_addr field, "
+				"value must be 0...15"));
+		      break;
+		    }
+
+		  INSERT_OPERAND (YDEST_REG_ADDR, *ip, imm_expr->X_add_number);
+		  imm_expr->X_op = O_absent;
+		  s = expr_end;
+		  continue;
+		case 'o': /* mul/add instr_mod0 */
+		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		      || imm_expr->X_op != O_constant
+		      || imm_expr->X_add_number < 0
+		      || imm_expr->X_add_number > 3)
+		    {
+		      as_bad (_("bad value for instr_mod0 field, "
+				"value must be 0...3"));
+		      break;
+		    }
+
+		  INSERT_OPERAND (YMULADD_INST_MOD0, *ip, imm_expr->X_add_number);
+		  imm_expr->X_op = O_absent;
+		  s = expr_end;
+		  continue;
+		}
+	      break;
+
 	    case 'z':
 	      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 		  || imm_expr->X_op != O_constant
@@ -3219,6 +3378,10 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 	  free (s);
 	}
     }
+  else if (strcmp (name, "sfpu") == 0)
+    riscv_set_sfpu (TRUE);
+  else if (strcmp (name, "nosfpu") == 0)
+    riscv_set_sfpu (FALSE);
   else
     {
       as_warn (_("Unrecognized .option directive: %s\n"), name);

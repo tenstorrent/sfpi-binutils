@@ -597,6 +597,14 @@
 #define MASK_CUSTOM3_RD_RS1  0x707f
 #define MATCH_CUSTOM3_RD_RS1_RS2 0x707b
 #define MASK_CUSTOM3_RD_RS1_RS2  0x707f
+
+/* SFPU Instructions */
+#define MATCH_SFPLOAD 0x70000003
+#define MASK_SFPLOAD  0xffffffff
+#define MATCH_SFPSTORE 0x72000003
+#define MASK_SFPSTORE  0xffffffff
+#define MATCH_SFPMAD 0x84000003
+#define MASK_SFPMAD  0xffffffff
 /* Privileged CSR addresses (v1.11).  */
 #define CSR_USTATUS 0x0
 #define CSR_UIE 0x4

@@ -56,6 +56,17 @@ const char * const riscv_fpr_names_abi[NFPR] = {
   "fs8", "fs9", "fs10", "fs11", "ft8", "ft9", "ft10", "ft11"
 };
 
+const char * const riscv_sfpur_names_numeric[NSFPUR] =
+{
+  "L0",   "L1",   "L2",   "L3",   "L4",   "L5",   "L6",   "L7",
+  "L8",   "L9",   "L10",  "L11",  "L12",  "L13",  "L14",  "L15"
+};
+
+const char * const riscv_sfpur_names_abi[NSFPUR] = {
+  "L0",   "L1",   "L2",   "L3",   "L4",   "L5",   "L6",   "L7",
+  "L8",   "L9",   "L10",  "L11",  "L12",  "L13",  "L14",  "L15"
+};
+
 /* The order of overloaded instructions matters.  Label arguments and
    register arguments look the same. Instructions that can have either
    for arguments must apear in the correct order in this table for the
@@ -79,6 +90,12 @@ const char * const riscv_fpr_names_abi[NFPR] = {
 #define MASK_AQ (OP_MASK_AQ << OP_SH_AQ)
 #define MASK_RL (OP_MASK_RL << OP_SH_RL)
 #define MASK_AQRL (MASK_AQ | MASK_RL)
+
+static int
+sfp_match_opcode (const struct riscv_opcode *op, insn_t insn)
+{
+  return 1;
+}
 
 static int
 match_opcode (const struct riscv_opcode *op, insn_t insn)
@@ -785,6 +802,11 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfence.vma", 0, INSN_CLASS_I,   "s",    MATCH_SFENCE_VMA, MASK_SFENCE_VMA | MASK_RS2, match_opcode, INSN_ALIAS },
 {"sfence.vma", 0, INSN_CLASS_I,   "s,t",  MATCH_SFENCE_VMA, MASK_SFENCE_VMA, match_opcode, 0 },
 {"wfi",        0, INSN_CLASS_I,   "",     MATCH_WFI, MASK_WFI, match_opcode, 0 },
+
+/* SFPU Instructions.  */
+{"sfpload",    0, INSN_CLASS_I_M_A_Y,   "yd,ym1,yn",      MATCH_SFPLOAD,  MASK_SFPLOAD,  sfp_match_opcode, 0 },
+{"sfpstore",   0, INSN_CLASS_I_M_A_Y,   "yd,ym2,yn",      MATCH_SFPSTORE, MASK_SFPSTORE, sfp_match_opcode, 0 },
+{"sfpmad",     0, INSN_CLASS_I_M_A_Y,   "ya,yb,yc,ye,yo", MATCH_SFPMAD,   MASK_SFPMAD,   sfp_match_opcode, 0 },
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

@@ -452,6 +452,7 @@ DESCRIPTION
 .  bfd_arch_riscv,
 .#define bfd_mach_riscv32	132
 .#define bfd_mach_riscv64	164
+.#define bfd_mach_riscv32_sfpu	1320
 .  bfd_arch_rl78,
 .#define bfd_mach_rl78		0x75
 .  bfd_arch_rx,	       {* Renesas RX.  *}
