@@ -21,6 +21,7 @@
    see <http://www.gnu.org/licenses/>.  */
 
 #include "sysdep.h"
+#define IN_ASSEMBLER
 #include "opcode/riscv.h"
 #include <stdio.h>
 
@@ -97,6 +98,17 @@ const char * const riscv_vma[2] =
   "mu", "ma"
 };
 
+const char * const riscv_sfpur_names_numeric[NSFPUR] =
+{
+  "L0",   "L1",   "L2",   "L3",   "L4",   "L5",   "L6",   "L7",
+  "L8",   "L9",   "L10",  "L11",  "L12",  "L13",  "L14",  "L15"
+};
+
+const char * const riscv_sfpur_names_abi[NSFPUR] = {
+  "L0",   "L1",   "L2",   "L3",   "L4",   "L5",   "L6",   "L7",
+  "L8",   "L9",   "L10",  "L11",  "L12",  "L13",  "L14",  "L15"
+};
+
 /* The order of overloaded instructions matters.  Label arguments and
    register arguments look the same. Instructions that can have either
    for arguments must apear in the correct order in this table for the
@@ -130,6 +142,13 @@ const char * const riscv_vma[2] =
 #define MASK_VS1 (OP_MASK_VS1 << OP_SH_VS1)
 #define MASK_VS2 (OP_MASK_VS2 << OP_SH_VS2)
 #define MASK_VMASK (OP_MASK_VMASK << OP_SH_VMASK)
+
+static int
+sfp_match_opcode (const struct riscv_opcode *op __attribute__((unused)),
+                  insn_t insn __attribute__((unused)))
+{
+  return 1;
+}
 
 static int
 match_opcode (const struct riscv_opcode *op, insn_t insn)
@@ -1824,6 +1843,8 @@ const struct riscv_opcode riscv_opcodes[] =
 {"hsv.h",       0, INSN_CLASS_H, "t,0(s)", MATCH_HSV_H, MASK_HSV_H, match_opcode, INSN_DREF|INSN_2_BYTE },
 {"hsv.w",       0, INSN_CLASS_H, "t,0(s)", MATCH_HSV_W, MASK_HSV_W, match_opcode, INSN_DREF|INSN_4_BYTE },
 {"hsv.d",      64, INSN_CLASS_H, "t,0(s)", MATCH_HSV_D, MASK_HSV_D, match_opcode, INSN_DREF|INSN_8_BYTE },
+
+#include "riscv-opc-sfpu.h"
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

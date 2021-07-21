@@ -114,6 +114,12 @@ END_RELOC_NUMBERS (R_RISCV_max)
 /* File uses the 32E base integer instruction.  */
 #define EF_RISCV_RVE 0x0008
 
+/* File uses the SFPU instructions.  */
+#define EF_RISCV_SFPU 0x0010
+
+/* File uses the SFPU Wormhole instructions.  */
+#define EF_RISCV_SFPU_WORMHOLE 0x0020
+
 /* The name of the global pointer symbol.  */
 #define RISCV_GP_SYMBOL "__global_pointer$"
 

@@ -27,8 +27,10 @@
 
 typedef uint64_t insn_t;
 
+#ifndef IN_DONT_CARE
 static inline unsigned int riscv_insn_length (insn_t insn)
 {
+#ifdef IN_ASSEMBLER
   if ((insn & 0x3) != 0x3) /* RVC instructions.  */
     return 2;
   if ((insn & 0x1f) != 0x1f) /* 32-bit instructions.  */
@@ -39,7 +41,61 @@ static inline unsigned int riscv_insn_length (insn_t insn)
     return 8;
   /* Longer instructions not supported at the moment.  */
   return 2;
+#elif defined IN_DISASSEMBLER
+  static int sfpu_mode = 0;
+
+  /* TODO:
+   * We are hard-coding this to 4 because we know for now that on the SFPU, we
+   * will never have anything other than a 4-byte instruction.  In case, this
+   * changes in future, then we need to fix it here.
+   */
+  return 4;
+
+  if (insn > 0xffff  &&
+      (   (((insn >> 24) & 0xff) >= SFP_OPCODE_START  &&
+           ((insn >> 24) & 0xff) < SFP_OPCODE_END)
+       || ((insn >> 24) & 0xff) == 0x2)) /* SFPU */
+    {
+      sfpu_mode = 1;
+      return 4;
+    }
+  if ((insn & 0x3) == 0x1  ||  (insn & 0x3) == 0x2)
+    {
+      sfpu_mode = 1;
+      return 4;
+    }
+  if (sfpu_mode && insn == 0x0)
+    {
+      return 4;
+    }
+  if ((insn & 0x3) != 0x3) /* RVC.  */
+    {
+      sfpu_mode = 0;
+      return 2;
+    }
+  if ((insn & 0x1f) != 0x1f) /* Base ISA and extensions in 32-bit space.  */
+    {
+      sfpu_mode = 0;
+      return 4;
+    }
+  if ((insn & 0x3f) == 0x1f) /* 48-bit extensions.  */
+    {
+      sfpu_mode = 0;
+      return 6;
+    }
+  if ((insn & 0x7f) == 0x3f) /* 64-bit extensions.  */
+    {
+      sfpu_mode = 0;
+      return 8;
+    }
+  /* Longer instructions not supported at the moment.  */
+  sfpu_mode = 0;
+  return 2;
+#else
+  #error "Must define one of IN_ASSEMBLER or IN_DISASSEMBLER"
+#endif
 }
+#endif
 
 static const char * const riscv_rm[8] =
 {
@@ -312,6 +368,8 @@ static const char * const riscv_pred_succ[16] =
 #define NVECR 32
 #define NVECM 1
 
+#include "riscv-sfpu.h"
+
 /* ABI names for selected x-registers.  */
 
 #define X_RA 1
@@ -325,6 +383,7 @@ static const char * const riscv_pred_succ[16] =
 
 #define NGPR 32
 #define NFPR 32
+#define NSFPUR 16
 
 /* These fake label defines are use by both the assembler, and
    libopcodes.  The assembler uses this when it needs to generate a fake
@@ -346,6 +405,11 @@ static const char * const riscv_pred_succ[16] =
 /* Extract the operand given by FIELD from integer INSN.  */
 #define EXTRACT_OPERAND(FIELD, INSN) \
   EXTRACT_BITS ((INSN), OP_MASK_##FIELD, OP_SH_##FIELD)
+
+/* Put top 2 bits, which are currently never 'b11 to bottom, indicating to Risc
+   that they are not risc instructions. */
+#define SFPU_OP_SWIZZLE(x)   ( (((x) >> 30) & 0x3) | (((x) & 0x3FFFFFFF) << 2) )
+#define SFPU_OP_UNSWIZZLE(x) ( (((x) & 0x3) << 30) | (((x) & 0xfffffffc) >> 2) )
 
 /* The maximal number of subset can be required.  */
 #define MAX_SUBSET_NUM 4
@@ -397,6 +461,8 @@ enum riscv_insn_class
   INSN_CLASS_ZICBOP,
   INSN_CLASS_ZICBOZ,
   INSN_CLASS_H,
+  INSN_CLASS_I_Y,  /* Grayskull */
+  INSN_CLASS_I_W,  /* Wormhole */
 };
 
 /* This structure holds information for a particular instruction.  */
@@ -467,6 +533,9 @@ struct riscv_opcode
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
 
+/* Instruction is an SFPU instruction */
+#define INSN_SFPU               0x00000100
+
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */
 #define INSN_MACRO		0xffffffff
@@ -527,6 +596,8 @@ extern const char * const riscv_vsew[8];
 extern const char * const riscv_vlmul[8];
 extern const char * const riscv_vta[2];
 extern const char * const riscv_vma[2];
+extern const char * const riscv_sfpur_names_numeric[NSFPUR];
+extern const char * const riscv_sfpur_names_abi[NSFPUR];
 
 extern const struct riscv_opcode riscv_opcodes[];
 extern const struct riscv_opcode riscv_insn_types[];

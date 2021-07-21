@@ -20,6 +20,8 @@
    along with this program; see the file COPYING3. If not,
    see <http://www.gnu.org/licenses/>.  */
 
+#define IN_DONT_CARE
+
 #include "sysdep.h"
 #include "bfd.h"
 #include "libbfd.h"
@@ -1261,6 +1263,8 @@ enum riscv_prefix_ext_class
   RV_ISA_CLASS_S,
   RV_ISA_CLASS_ZXM,
   RV_ISA_CLASS_X,
+  RV_ISA_CLASS_SFPU,
+  RV_ISA_CLASS_SFPU_WORMHOLE,
   RV_ISA_CLASS_UNKNOWN
 };
 
@@ -1282,6 +1286,8 @@ static const struct riscv_parse_prefix_config parse_config[] =
   {RV_ISA_CLASS_Z, "z"},
   {RV_ISA_CLASS_S, "s"},
   {RV_ISA_CLASS_X, "x"},
+  {RV_ISA_CLASS_SFPU, "y"},
+  {RV_ISA_CLASS_SFPU_WORMHOLE, "w"},
   {RV_ISA_CLASS_UNKNOWN, NULL}
 };
 
@@ -1341,7 +1347,7 @@ riscv_recognized_prefixed_ext (const char *ext)
 }
 
 /* Canonical order for single letter extensions.  */
-static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvnh";
+static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvnhyw";
 
 /* Array is used to compare the orders of standard extensions quickly.  */
 static int riscv_ext_order[26] = {0};
@@ -1557,7 +1563,9 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
 	   subset);
       /* Allow old ISA spec can recognize zicsr and zifencei.  */
       else if (strcmp (subset, "zicsr") != 0
-	       && strcmp (subset, "zifencei") != 0)
+	       && strcmp (subset, "zifencei") != 0
+               && strcmp (subset, "y") != 0
+               && strcmp (subset, "w") != 0)
 	rps->error_handler
 	  (_("cannot find default versions of the ISA extension `%s'"),
 	   subset);

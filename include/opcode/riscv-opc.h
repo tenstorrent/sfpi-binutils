@@ -2519,6 +2519,9 @@
 #define CSR_VTYPE 0xc21
 #define CSR_VLENB 0xc22
 #endif /* RISCV_ENCODING_H */
+
+#include "riscv-sfpu-opc.h"
+
 #ifdef DECLARE_INSN
 DECLARE_INSN(slli_rv32, MATCH_SLLI_RV32, MASK_SLLI_RV32)
 DECLARE_INSN(srli_rv32, MATCH_SRLI_RV32, MASK_SRLI_RV32)

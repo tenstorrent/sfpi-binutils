@@ -1,0 +1,60 @@
+/* Field names for SFPU instructions */
+#define OP_SH_SFPU_OP		        24
+#define OP_MASK_SFPU_OP			0xff
+#define OP_SH_YMULADD_SRCA 		16
+#define OP_MASK_YMULADD_SRCA 		0xf
+#define OP_SH_YMULADD_SRCB 		12
+#define OP_MASK_YMULADD_SRCB 		0xf
+#define OP_SH_YMULADD_SRCC 		8
+#define OP_MASK_YMULADD_SRCC 		0xf
+#define OP_SH_YMULADD_DEST 		4
+#define OP_MASK_YMULADD_DEST 		0xf
+#define OP_SH_YMULADD_INSTR_MOD0	0
+#define OP_MASK_YMULADD_INSTR_MOD0	0xf
+
+#define OP_SH_YLOADSTORE_RD		20
+#define OP_MASK_YLOADSTORE_RD		0xf
+#define OP_SH_YLOADSTORE_INSTR_MOD0	16
+#define OP_MASK_YLOADSTORE_INSTR_MOD0	0xf
+#define OP_SH_YDEST_REG_ADDR		0
+#define OP_MASK_YDEST_REG_ADDR		0xffff
+
+#define OP_SH_YMULI_IMM16_MATH		8
+#define OP_MASK_YMULI_IMM16_MATH	0xffff
+
+#define OP_SH_YCC_IMM12_MATH		12
+#define OP_MASK_YCC_IMM12_MATH		0xfff
+#define OP_SH_YCC_LREG_C		8
+#define OP_MASK_YCC_LREG_C		0xf
+#define OP_SH_YCC_LREG_DEST		4
+#define OP_MASK_YCC_LREG_DEST		0xf
+#define OP_SH_YCC_INSTR_MOD1		0
+#define OP_MASK_YCC_INSTR_MOD1		0xf
+
+#define OP_SH_WLOADSTORE_DEST_REG_ADDR   0
+#define OP_MASK_WLOADSTORE_DEST_REG_ADDR 0x3fff
+#define OP_SH_WLOADSTORE_ADDR_MODE       14
+#define OP_MASK_WLOADSTORE_ADDR_MODE     0x3
+
+#define OP_SH_WINCRWC_RWC_A       6
+#define OP_MASK_WINCRWC_RWC_A     0xf
+#define OP_SH_WINCRWC_RWC_B       10
+#define OP_MASK_WINCRWC_RWC_B     0xf
+#define OP_SH_WINCRWC_RWC_CR      18
+#define OP_MASK_WINCRWC_RWC_CR    0x3f
+#define OP_SH_WINCRWC_RWC_D       14
+#define OP_MASK_WINCRWC_RWC_D     0xf
+
+#define OP_SH_WREPLAY_LOAD_MODE       	0
+#define OP_MASK_WREPLAY_LOAD_MODE     	0x1
+#define OP_SH_WREPLAY_EXEC_WHILE_LOAD   1
+#define OP_MASK_WREPLAY_EXEC_WHILE_LOAD 0x7
+#define OP_SH_WREPLAY_LEN       	4
+#define OP_MASK_WREPLAY_LEN     	0x3ff
+#define OP_SH_WREPLAY_START_IDX       	14
+#define OP_MASK_WREPLAY_START_IDX     	0x3ff
+
+#define OP_SH_WSTOCH_RND_MODE		21
+#define OP_MASK_WSTOCH_RND_MODE		0x1
+#define OP_SH_WSTOCH_RND_IMM8_MATH	16
+#define OP_MASK_WSTOCH_RND_IMM8_MATH	0x1f

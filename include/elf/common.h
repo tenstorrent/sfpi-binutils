@@ -340,6 +340,7 @@
 #define EM_FT32         222     /* FTDI Chip FT32 high performance 32-bit RISC architecture */
 #define EM_MOXIE        223     /* Moxie processor family */
 #define EM_AMDGPU 	224 	/* AMD GPU architecture */
+#define EM_RISCV_SFPU 	242 	/* RISC-V with SFPU extension */
 #define EM_RISCV 	243 	/* RISC-V */
 #define EM_LANAI	244	/* Lanai 32-bit processor.  */
 #define EM_CEVA		245	/* CEVA Processor Architecture Family */
