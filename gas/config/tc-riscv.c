@@ -1052,10 +1052,10 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    /* 'm' can have a numeric extension for various purposes.  Hence increment p */
 	    case 'm': USE_BITS (OP_MASK_YLOADSTORE_INST_MOD0, OP_SH_YLOADSTORE_INST_MOD0); p++; break;
 	    case 'n': USE_BITS (OP_MASK_YDEST_REG_ADDR, OP_SH_YDEST_REG_ADDR); break;
-	    case 'o': USE_BITS (OP_MASK_YMULADD_INST_MOD0, OP_SH_YMULADD_INST_MOD0); p++; break;
+	    case 'o': USE_BITS (OP_MASK_YMULADD_INST_MOD0, OP_SH_YMULADD_INST_MOD0); break;
 	    default:
 	      as_bad (_("internal: bad SFPU opcode"
-			" (unknown operand type `F%c'): %s %s"),
+			" (unknown operand type `y%c'): %s %s"),
 		      c, opc->name, opc->args);
 	    return FALSE;
 	  }

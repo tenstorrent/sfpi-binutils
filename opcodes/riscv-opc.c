@@ -92,7 +92,8 @@ const char * const riscv_sfpur_names_abi[NSFPUR] = {
 #define MASK_AQRL (MASK_AQ | MASK_RL)
 
 static int
-sfp_match_opcode (const struct riscv_opcode *op, insn_t insn)
+sfp_match_opcode (const struct riscv_opcode *op __attribute__((unused)),
+                  insn_t insn __attribute__((unused)))
 {
   return 1;
 }
