@@ -1688,9 +1688,9 @@ static const riscv_parse_config_t parse_config[] =
 {
   {RV_ISA_CLASS_S, "s", riscv_ext_s_valid_p},
   {RV_ISA_CLASS_H, "h", riscv_ext_h_valid_p},
+  {RV_ISA_CLASS_SFPU, "y", riscv_ext_sfp_valid_p},
   {RV_ISA_CLASS_Z, "z", riscv_ext_z_valid_p},
   {RV_ISA_CLASS_X, "x", riscv_ext_x_valid_p},
-  {RV_ISA_CLASS_SFPU, "y", riscv_ext_sfp_valid_p},
   {RV_ISA_CLASS_UNKNOWN, NULL, NULL}
 };
 
