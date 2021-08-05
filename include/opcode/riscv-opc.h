@@ -601,10 +601,28 @@
 /* SFPU Instructions */
 #define MATCH_SFPLOAD 0x70000003
 #define MASK_SFPLOAD  0xffffffff
+#define MATCH_SFPLOADI 0x71000003
+#define MASK_SFPLOADI  0xffffffff
 #define MATCH_SFPSTORE 0x72000003
 #define MASK_SFPSTORE  0xffffffff
+
 #define MATCH_SFPMAD 0x84000003
 #define MASK_SFPMAD  0xffffffff
+
+#define MATCH_SFPENCC 0x8a000003
+#define MASK_SFPENCC  0xffffffff
+#define MATCH_SFPCOMPC 0x8b000003
+#define MASK_SFPCOMPC  0xffffffff
+#define MATCH_SFPPUSHC 0x87000003
+#define MASK_SFPPUSHC  0xffffffff
+#define MATCH_SFPPOPC 0x88000003
+#define MASK_SFPPOPC  0xffffffff
+#define MATCH_SFPSETCC 0x7b000003
+#define MASK_SFPSETCC  0xffffffff
+
+#define MATCH_SFPNOP   0x02000003
+#define MASK_SFPNOP    0xffffffff
+
 /* Privileged CSR addresses (v1.11).  */
 #define CSR_USTATUS 0x0
 #define CSR_UIE 0x4

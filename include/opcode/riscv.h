@@ -265,14 +265,24 @@ static const char * const riscv_pred_succ[16] =
 #define OP_MASK_YMULADD_SRCC 		0xf
 #define OP_SH_YMULADD_DEST 		4
 #define OP_MASK_YMULADD_DEST 		0xf
+#define OP_SH_YMULADD_INSTR_MOD0	0
+#define OP_MASK_YMULADD_INSTR_MOD0	0xf
+
 #define OP_SH_YLOADSTORE_RD		20
 #define OP_MASK_YLOADSTORE_RD		0xf
-#define OP_SH_YLOADSTORE_INST_MOD0	16
-#define OP_MASK_YLOADSTORE_INST_MOD0	0xf
-#define OP_SH_YMULADD_INST_MOD0		0
-#define OP_MASK_YMULADD_INST_MOD0	0xf
+#define OP_SH_YLOADSTORE_INSTR_MOD0	16
+#define OP_MASK_YLOADSTORE_INSTR_MOD0	0xf
 #define OP_SH_YDEST_REG_ADDR		0
 #define OP_MASK_YDEST_REG_ADDR		0xffff
+
+#define OP_SH_YCC_IMM12_MATH		12
+#define OP_MASK_YCC_IMM12_MATH		0xfff
+#define OP_SH_YCC_LREG_C		8
+#define OP_MASK_YCC_LREG_C		0xf
+#define OP_SH_YCC_LREG_DEST		4
+#define OP_MASK_YCC_LREG_DEST		0xf
+#define OP_SH_YCC_INSTR_MOD1		0
+#define OP_MASK_YCC_INSTR_MOD1		0xf
 
 /* ABI names for selected x-registers.  */
 
