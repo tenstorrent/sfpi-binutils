@@ -809,11 +809,12 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfploadi",   0, INSN_CLASS_I_M_A_Y,   "yd,ym1,yn",      MATCH_SFPLOADI, MASK_SFPLOADI, sfp_match_opcode, 0 },
 {"sfpstore",   0, INSN_CLASS_I_M_A_Y,   "yd,ym2,yn",      MATCH_SFPSTORE, MASK_SFPSTORE, sfp_match_opcode, 0 },
 {"sfpmad",     0, INSN_CLASS_I_M_A_Y,   "ya,yb,yc,ye,yo", MATCH_SFPMAD,   MASK_SFPMAD,   sfp_match_opcode, 0 },
-{"sfpencc",    0, INSN_CLASS_I_M_A_Y,   "yf,yi",          MATCH_SFPENCC,  MASK_SFPENCC,  sfp_match_opcode, 0 },
+{"sfpencc",    0, INSN_CLASS_I_M_A_Y,   "yf,yi1",         MATCH_SFPENCC,  MASK_SFPENCC,  sfp_match_opcode, 0 },
 {"sfpcompc",   0, INSN_CLASS_I_M_A_Y,   "",               MATCH_SFPCOMPC, MASK_SFPCOMPC, sfp_match_opcode, 0 },
 {"sfppushc",   0, INSN_CLASS_I_M_A_Y,   "",               MATCH_SFPPUSHC, MASK_SFPPUSHC, sfp_match_opcode, 0 },
 {"sfppopc",    0, INSN_CLASS_I_M_A_Y,   "",               MATCH_SFPPOPC,  MASK_SFPPOPC,  sfp_match_opcode, 0 },
-{"sfpsetcc",   0, INSN_CLASS_I_M_A_Y,   "yf,yg,yi",       MATCH_SFPSETCC, MASK_SFPSETCC, sfp_match_opcode, 0 },
+{"sfpsetcc",   0, INSN_CLASS_I_M_A_Y,   "yf,yg,yi1",      MATCH_SFPSETCC, MASK_SFPSETCC, sfp_match_opcode, 0 },
+{"sfpmov",     0, INSN_CLASS_I_M_A_Y,   "yg,yh,yi2",      MATCH_SFPMOV,   MASK_SFPMOV,   sfp_match_opcode, 0 },
 {"sfpnop",     0, INSN_CLASS_I_M_A_Y,   "",               MATCH_SFPNOP,   MASK_SFPNOP,   sfp_match_opcode, 0 },
 
 /* Terminate the list.  */

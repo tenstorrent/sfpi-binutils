@@ -619,6 +619,8 @@
 #define MASK_SFPPOPC  0xffffffff
 #define MATCH_SFPSETCC 0x7b000003
 #define MASK_SFPSETCC  0xffffffff
+#define MATCH_SFPMOV 0x7c000003
+#define MASK_SFPMOV  0xffffffff
 
 #define MATCH_SFPNOP   0x02000003
 #define MASK_SFPNOP    0xffffffff
