@@ -275,6 +275,14 @@ static const char * const riscv_pred_succ[16] =
 #define OP_SH_YDEST_REG_ADDR		0
 #define OP_MASK_YDEST_REG_ADDR		0xffff
 
+#define OP_SH_YLUT_RD			20
+#define OP_MASK_YLUT_RD			0xf
+#define OP_SH_YLUT_INSTR_MOD0		16
+#define OP_MASK_YLUT_INSTR_MOD0		0xf
+
+#define OP_SH_YMULI_IMM16_MATH		8
+#define OP_MASK_YMULI_IMM16_MATH	0xffff
+
 #define OP_SH_YCC_IMM12_MATH		12
 #define OP_MASK_YCC_IMM12_MATH		0xfff
 #define OP_SH_YCC_LREG_C		8

@@ -622,6 +622,43 @@
 #define MATCH_SFPMOV 0x7c000003
 #define MASK_SFPMOV  0xffffffff
 
+#define MATCH_SFPLUT   0x73000003
+#define MASK_SFPLUT    0xffffffff
+#define MATCH_SFPMULI   0x74000003
+#define MASK_SFPMULI    0xffffffff
+#define MATCH_SFPADDI   0x75000003
+#define MASK_SFPADDI    0xffffffff
+#define MATCH_SFPDIVP2   0x76000003
+#define MASK_SFPDIVP2    0xffffffff
+#define MATCH_SFPEXEXP   0x77000003
+#define MASK_SFPEXEXP    0xffffffff
+#define MATCH_SFPEXMAN   0x78000003
+#define MASK_SFPEXMAN    0xffffffff
+#define MATCH_SFPIADD   0x79000003
+#define MASK_SFPIADD    0xffffffff
+#define MATCH_SFPSHFT   0x7a000003
+#define MASK_SFPSHFT    0xffffffff
+#define MATCH_SFPABS   0x7d000003
+#define MASK_SFPABS    0xffffffff
+#define MATCH_SFPAND   0x7e000003
+#define MASK_SFPAND    0xffffffff
+#define MATCH_SFPOR   0x7f000003
+#define MASK_SFPOR    0xffffffff
+#define MATCH_SFPNOT   0x80000003
+#define MASK_SFPNOT    0xffffffff
+#define MATCH_SFPLZ   0x81000003
+#define MASK_SFPLZ    0xffffffff
+#define MATCH_SFPSETEXP   0x82000003
+#define MASK_SFPSETEXP    0xffffffff
+#define MATCH_SFPSETMAN   0x83000003
+#define MASK_SFPSETMAN    0xffffffff
+#define MATCH_SFPADD   0x85000003
+#define MASK_SFPADD    0xffffffff
+#define MATCH_SFPMUL   0x86000003
+#define MASK_SFPMUL    0xffffffff
+#define MATCH_SFPSETSGN   0x89000003
+#define MASK_SFPSETSGN    0xffffffff
+
 #define MATCH_SFPNOP   0x02000003
 #define MASK_SFPNOP    0xffffffff
 

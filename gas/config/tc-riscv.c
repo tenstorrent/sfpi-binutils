@@ -1059,6 +1059,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    case 'h': USE_BITS (OP_MASK_YCC_LREG_DEST, OP_SH_YCC_LREG_DEST); break;
 	    /* 'i' can have a numeric extension for various purposes.  Hence increment p */
 	    case 'i': USE_BITS (OP_MASK_YCC_INSTR_MOD1, OP_SH_YCC_INSTR_MOD1); p++; break;
+
+	    case 'j': USE_BITS (OP_MASK_YMULI_IMM16_MATH, OP_SH_YMULI_IMM16_MATH); break;
 	    default:
 	      as_bad (_("internal: bad SFPU opcode"
 			" (unknown operand type `y%c'): %s %s"),
@@ -2682,20 +2684,20 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  continue;
 		case 'd': /* LOAD/STORE RD L0-L3 */
 		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-		      || !(regno <= 15))
+		      || regno > 3)
 		    {
 		      as_bad (_("bad register for lreg_dest field, "
-				"register must be L0...L15"));
+				"register must be L0...L3"));
 		      break;
 		    }
 		  INSERT_OPERAND (YLOADSTORE_RD, *ip, regno);
 		  continue;
 		case 'e': /* MUL/ADD DEST L0-L3 */
 		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-		      || !(regno <= 15))
+		      || regno > 3)
 		    {
 		      as_bad (_("bad register for lreg_dest field, "
-				"register must be L0...L15"));
+				"register must be L0...L3"));
 		      break;
 		    }
 		  INSERT_OPERAND (YMULADD_DEST, *ip, regno);
@@ -2724,6 +2726,18 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  {
 			    as_bad (_("bad value for instr_mod0 field, "
 				      "value must be 0...1"));
+			    break;
+			  }
+		      }
+		    else if (x == '3')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 7)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...7"));
 			    break;
 			  }
 		      }
@@ -2760,10 +2774,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  continue;
 		case 'h': /* CC Instructions LREG_DEST L0-L3 */
 		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-		      || !(regno <= 15))
+		      || regno > 3)
 		    {
 		      as_bad (_("bad register for lreg_dest field, "
-				"register must be L0...L15"));
+				"register must be L0...L3"));
 		      break;
 		    }
 		  INSERT_OPERAND (YCC_LREG_DEST, *ip, regno);
@@ -2795,9 +2809,80 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    break;
 			  }
 		      }
+		    else if (x == '3')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number == 2
+			    || imm_expr->X_add_number > 3)
+			  {
+			    as_bad (_("bad value for instr_mod1 field, "
+				      "value must be 0...3, but cannot be 2"));
+			    break;
+			  }
+		      }
+		    else if (x == '4')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || (imm_expr->X_add_number > 3  &&
+			        imm_expr->X_add_number < 8)
+			    || imm_expr->X_add_number > 11)
+			  {
+			    as_bad (_("bad value for instr_mod1 field, "
+				      "value must be 0...3 or 8...11"));
+			    break;
+			  }
+		      }
+		    else if (x == '5')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number == 3
+			    || imm_expr->X_add_number == 7
+			    || imm_expr->X_add_number == 11
+			    || imm_expr->X_add_number > 14)
+			  {
+			    as_bad (_("bad value for instr_mod1 field, "
+				      "value must be 0...14, but cannot be 3, 7 or 11"));
+			    break;
+			  }
+		      }
+		    else if (x == '6')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || (imm_expr->X_add_number > 2  &&
+			        imm_expr->X_add_number < 8)
+			    || imm_expr->X_add_number > 10)
+			  {
+			    as_bad (_("bad value for instr_mod1 field, "
+				      "value must be 0...2 or 8...10"));
+			    break;
+			  }
+		      }
 		  }
 
 		  INSERT_OPERAND (YCC_INSTR_MOD1, *ip, imm_expr->X_add_number);
+		  imm_expr->X_op = O_absent;
+		  s = expr_end;
+		  continue;
+		case 'j': /* imm16_math */
+		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		      || imm_expr->X_op != O_constant
+		      || imm_expr->X_add_number < -32768
+		      || imm_expr->X_add_number >  32767)
+		    {
+		      as_bad (_("bad value for imm16_math field, "
+				"value must be -32768...32767"));
+		      break;
+		    }
+
+		  INSERT_OPERAND (YMULI_IMM16_MATH, *ip, imm_expr->X_add_number);
 		  imm_expr->X_op = O_absent;
 		  s = expr_end;
 		  continue;
@@ -2820,10 +2905,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 		      || imm_expr->X_op != O_constant
 		      || imm_expr->X_add_number < 0
+		      || imm_expr->X_add_number == 2
 		      || imm_expr->X_add_number > 3)
 		    {
 		      as_bad (_("bad value for instr_mod0 field, "
-				"value must be 0...3"));
+				"value must be 0...3, but cannot be 2"));
 		      break;
 		    }
 
