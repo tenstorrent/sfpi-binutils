@@ -2661,7 +2661,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		}
 	      break;
 
-	    case 'y':
+	    case 'y':  // SFPU Instructions
 	      switch (*++args)
 		{
 		case 'a': /* MUL/ADD SRCA L0-L15 */
@@ -2890,10 +2890,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 		      || imm_expr->X_op != O_constant
 		      || imm_expr->X_add_number < -32768
-		      || imm_expr->X_add_number >  32767)
+		      || imm_expr->X_add_number >  65535)
 		    {
 		      as_bad (_("bad value for dest_reg_addr field, "
-				"value must be -32768...32767"));
+				"value must be -32768...32767 for signed "
+				"values and 0...65535 for unsigned values"));
 		      break;
 		    }
 
