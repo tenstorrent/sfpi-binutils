@@ -1047,7 +1047,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    case 'a': USE_BITS (OP_MASK_YMULADD_SRCA, OP_SH_YMULADD_SRCA); break;
 	    case 'b': USE_BITS (OP_MASK_YMULADD_SRCB, OP_SH_YMULADD_SRCB); break;
 	    case 'c': USE_BITS (OP_MASK_YMULADD_SRCC, OP_SH_YMULADD_SRCC); break;
-	    case 'd': USE_BITS (OP_MASK_YLOADSTORE_RD, OP_SH_YLOADSTORE_RD); break;
+	    /* 'd' can have a numeric extension for various purposes.  Hence increment p */
+	    case 'd': USE_BITS (OP_MASK_YLOADSTORE_RD, OP_SH_YLOADSTORE_RD); p++; break;
 	    case 'e': USE_BITS (OP_MASK_YMULADD_DEST, OP_SH_YMULADD_DEST); break;
 	    /* 'm' can have a numeric extension for various purposes.  Hence increment p */
 	    case 'm': USE_BITS (OP_MASK_YLOADSTORE_INSTR_MOD0, OP_SH_YLOADSTORE_INSTR_MOD0); p++; break;
@@ -2683,13 +2684,27 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  INSERT_OPERAND (YMULADD_SRCC, *ip, regno);
 		  continue;
 		case 'd': /* LOAD/STORE RD L0-L3 */
-		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-		      || regno > 3)
-		    {
-		      as_bad (_("bad register for lreg_dest field, "
-				"register must be L0...L3"));
-		      break;
+		  {
+		    char x = *++args;
+
+		    if (x == '1') {
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 3)
+			{
+			  as_bad (_("bad register for lreg_dest field, "
+				    "register must be L0...L3"));
+			  break;
+			}
+		    } else if (x == '2') {
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 15)
+			{
+			  as_bad (_("bad register for lreg_dest field, "
+				    "register must be L0...L15"));
+			  break;
+			}
 		    }
+		  }
 		  INSERT_OPERAND (YLOADSTORE_RD, *ip, regno);
 		  continue;
 		case 'e': /* MUL/ADD DEST L0-L3 */
