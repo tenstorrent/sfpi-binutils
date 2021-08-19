@@ -1943,6 +1943,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   const char *error = "unrecognized opcode";
   /* Indicate we are assembling instruction with CSR.  */
   bfd_boolean insn_with_csr = FALSE;
+  /* To hold the value of imm12_math till the time the last operand has been read */
+  int imm12_math_op;
 
   /* Parse the name of the instruction.  Terminate the string if whitespace
      is found so that str_hash_find only sees the name part of the string.  */
@@ -1956,6 +1958,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
   insn = (struct riscv_opcode *) str_hash_find (hash, str);
 
+  imm12_math_op = 0;
   argsStart = s;
   for ( ; insn && insn->name && strcmp (insn->name, str) == 0; insn++)
     {
@@ -2764,15 +2767,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  continue;
 		case 'f': /* imm12_math */
 		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-		      || imm_expr->X_op != O_constant
-		      || imm_expr->X_add_number < -2048
-		      || imm_expr->X_add_number >  2047)
+		      || imm_expr->X_op != O_constant)
 		    {
 		      as_bad (_("bad value for imm12_math field, "
-				"value must be -2048...2047"));
+				"value must be constant immediate."));
 		      break;
 		    }
 
+		  imm12_math_op = imm_expr->X_add_number;
 		  INSERT_OPERAND (YCC_IMM12_MATH, *ip, imm_expr->X_add_number);
 		  imm_expr->X_op = O_absent;
 		  s = expr_end;
@@ -2823,6 +2825,35 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 				      "value must be 0...1"));
 			    break;
 			  }
+
+			if (imm_expr->X_add_number == 1)
+			  {
+			    if ((   ! strcasecmp(insn->name, "SFPDIVP2")
+				 || ! strcasecmp(insn->name, "SFPSETEXP"))  &&
+				(   imm12_math_op > 127
+				 || imm12_math_op < -128))
+			      {
+				as_bad (_("bad value for imm12_math field, "
+					  "value must be -128...127"));
+				break;
+			      }
+			    if (! strcasecmp(insn->name, "SFPSHFT")  &&
+				(   imm12_math_op > 32
+				 || imm12_math_op < -32))
+			      {
+				as_bad (_("bad value for imm12_math field, "
+					  "value must be -32...32"));
+				break;
+			      }
+			    if (! strcasecmp(insn->name, "SFPSETMAN")  &&
+				(   imm12_math_op > 511
+				 || imm12_math_op < -512))
+			      {
+				as_bad (_("bad value for imm12_math field, "
+					  "value must be -512...511"));
+				break;
+			      }
+		          }
 		      }
 		    else if (x == '3')
 		      {
@@ -2865,6 +2896,20 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 				      "value must be 0...14, but cannot be 3, 7 or 11"));
 			    break;
 			  }
+
+			if (   imm_expr->X_add_number == 1
+			    || imm_expr->X_add_number == 5
+			    || imm_expr->X_add_number == 9)
+			  {
+			    if (! strcasecmp(insn->name, "SFPIADD")  &&
+				(   imm12_math_op > 2047
+				 || imm12_math_op < -2048))
+			      {
+				as_bad (_("bad value for imm12_math field, "
+					  "value must be -2048...2047"));
+				break;
+			      }
+		          }
 		      }
 		    else if (x == '6')
 		      {
