@@ -30,6 +30,7 @@
 #include "dw2gencfi.h"
 
 #include "bfd/elfxx-riscv.h"
+#define IN_ASSEMBLER
 #include "elf/riscv.h"
 #include "opcode/riscv.h"
 
@@ -1202,10 +1203,6 @@ riscv_apply_const_reloc (bfd_reloc_code_real_type reloc_type, bfd_vma value)
     }
 }
 
-/* Put top 2 bits, which are currently never 'b11 to bottom, indicating to Risc
-   that they are not risc instructions. */
-#define TRISC_OP_SWIZZLE(x) ( (((x) >> 30) & 0x3) | (((x) & 0x3FFFFFFF) << 2) ) 
-
 /* Output an instruction.  IP is the instruction information.
    ADDRESS_EXPR is an operand of the instruction to be used with
    RELOC_TYPE.  */
@@ -1255,7 +1252,7 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
     }
 
   if (ip->insn_mo->insn_class == INSN_CLASS_I_M_A_Y)
-    ip->insn_opcode = TRISC_OP_SWIZZLE(ip->insn_opcode);
+    ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
   install_insn (ip);

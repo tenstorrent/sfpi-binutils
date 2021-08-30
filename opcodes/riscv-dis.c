@@ -23,6 +23,7 @@
 #include "sysdep.h"
 #include "disassemble.h"
 #include "libiberty.h"
+#define IN_DISASSEMBLER
 #include "opcode/riscv.h"
 #include "opintl.h"
 #include "elf-bfd.h"
@@ -260,6 +261,9 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	  break;
 
 	case ',':
+	  print (info->stream, "%c ", *d);
+	  break;
+
 	case '(':
 	case ')':
 	case '[':
@@ -405,6 +409,88 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	    break;
 	  }
 
+	case 'y':
+	  {
+	      switch (*++d)
+		{
+		case 'a': /* MUL/ADD SRCA L0-L15 */
+	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YMULADD_SRCA, l)]);
+		  break;
+		case 'b': /* MUL/ADD SRCB L0-L15 */
+	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YMULADD_SRCB, l)]);
+		  break;
+		case 'c': /* MUL/ADD SRCC L0-L15 */
+	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YMULADD_SRCC, l)]);
+		  break;
+		case 'd': /* LOAD/STORE RD L0-L3 */
+	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YLOADSTORE_RD, l)]);
+		  ++d;
+		  break;
+		case 'e': /* MUL/ADD DEST L0-L3 */
+	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YMULADD_DEST, l)]);
+		  break;
+		case 'm': /* load/store instr_mod0 */
+	          print (info->stream, "%ld", EXTRACT_OPERAND (YLOADSTORE_INSTR_MOD0, l));
+		  ++d;
+		  break;
+		case 'f': /* imm12_math */
+	          print (info->stream, "0x%03lX", EXTRACT_OPERAND (YCC_IMM12_MATH, l));
+		  break;
+		case 'g': /* CC Instructions LREG_C L0-L15 */
+	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_C, l)]);
+		  break;
+		case 'h': /* CC Instructions LREG_DEST L0-L3 */
+	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
+		  break;
+		case 'i': /* CC Instructions instr_mod1 */
+		  {
+		    char x = *++d;
+		    if (x == '1')
+		      print (info->stream, "0x%ld", EXTRACT_OPERAND (YCC_INSTR_MOD1, l));
+		    else if (x == '2')
+		      {
+			switch (EXTRACT_OPERAND (SFPU_OP, l)) {
+			  case 0x76:  /* SFPDIVP2 */
+			  case 0x7A:  /* SFPSHFT */
+			    print (info->stream, "0x%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    break;
+			  case 0x82:  /* SFPSETEXP */
+			  case 0x83:  /* SFPSETMAN */
+			    print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    break;
+			  default:
+			    print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    break;
+			}
+		      }
+		    else if (x == '5')
+		      {
+			switch (EXTRACT_OPERAND (SFPU_OP, l)) {
+			  case 0x79:
+			    print (info->stream, "0x%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    break;
+			  default:
+			    print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    break;
+			}
+		      }
+		    else
+		      print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+		  }
+		  break;
+		case 'j': /* imm16_math */
+	          print (info->stream, "%d", ((short)EXTRACT_OPERAND (YMULI_IMM16_MATH, l)));
+		  break;
+		case 'n': /* dest_reg_addr */
+	          print (info->stream, "%d", ((short)EXTRACT_OPERAND (YDEST_REG_ADDR, l)));
+		  break;
+		case 'o': /* mul/add instr_mod0 */
+	          print (info->stream, "%ld", EXTRACT_OPERAND (YMULADD_INSTR_MOD0, l));
+		  break;
+		}
+	    }
+	  break;
+
 	case 'Z':
 	  print (info->stream, "%d", rs1);
 	  break;
@@ -433,16 +519,32 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   int insnlen;
 
 #define OP_HASH_IDX(i) ((i) & (riscv_insn_length (i) == 2 ? 0x3 : OP_MASK_OP))
+#define SFPU_OP_HASH_IDX(i) \
+        (((i) & 0xffffff00) == (MATCH_SFPNOP & 0xffffff00) ? SFP_OPCODE_END : \
+                             ((i) >> OP_SH_SFPU_OP) & OP_MASK_SFPU_OP)
 
   /* Build a hash table to shorten the search time.  */
   if (! init)
     {
       for (op = riscv_opcodes; op->name; op++)
-	if (!riscv_hash[OP_HASH_IDX (op->match)])
-	  riscv_hash[OP_HASH_IDX (op->match)] = op;
+	if (!strncasecmp(op->name, "sfp", 3))
+	  {
+	    if (!riscv_hash[SFPU_OP_HASH_IDX (op->match)])
+	      riscv_hash[SFPU_OP_HASH_IDX (op->match)] = op;
+	  }
+	else 
+	  {
+	    if (!riscv_hash[OP_HASH_IDX (op->match)])
+	      riscv_hash[OP_HASH_IDX (op->match)] = op;
+	  }
 
       init = 1;
     }
+
+  /* Unswizzle the bottom 2 bits so that we get back the original instruction
+     for SFPU */
+  if ((word & 0x3) != 0x3)
+    word = SFPU_OP_UNSWIZZLE(word);
 
   if (info->private_data == NULL)
     {
@@ -477,7 +579,9 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   info->target = 0;
   info->target2 = 0;
 
-  op = riscv_hash[OP_HASH_IDX (word)];
+  op = (word & 0xc0000000) != 0xc0000000 ?
+       riscv_hash[SFPU_OP_HASH_IDX (word)] :
+       riscv_hash[OP_HASH_IDX (word)];
   if (op != NULL)
     {
       unsigned xlen = 0;
