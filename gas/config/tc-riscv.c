@@ -2736,11 +2736,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      {
 			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number > 1)
+			    || (imm_expr->X_add_number != 0  &&
+			        imm_expr->X_add_number != 2))
 			  {
 			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0...1"));
+				      "value must be 0 or 2"));
 			    break;
 			  }
 		      }
