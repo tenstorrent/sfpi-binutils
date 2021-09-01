@@ -514,14 +514,16 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 {
   const struct riscv_opcode *op;
   static bfd_boolean init = 0;
-  static const struct riscv_opcode *riscv_hash[OP_MASK_OP + 1];
+  static const struct riscv_opcode *riscv_hash[OP_MASK_SFPU_OP + 1];
   struct riscv_private_data *pd;
   int insnlen;
+  int is_sfpu = 0;
 
 #define OP_HASH_IDX(i) ((i) & (riscv_insn_length (i) == 2 ? 0x3 : OP_MASK_OP))
 #define SFPU_OP_HASH_IDX(i) \
-        (((i) & 0xffffff00) == (MATCH_SFPNOP & 0xffffff00) ? SFP_OPCODE_END : \
-                             ((i) >> OP_SH_SFPU_OP) & OP_MASK_SFPU_OP)
+        (((i) & 0xffffff00) == (MATCH_SFPNOP & 0xffffff00) ? \
+	  SFP_OPCODE_END - SFP_OPCODE_START + OP_MASK_OP + 1 : \
+          (((i) >> OP_SH_SFPU_OP) & OP_MASK_SFPU_OP) - SFP_OPCODE_START + OP_MASK_OP + 1)
 
   /* Build a hash table to shorten the search time.  */
   if (! init)
@@ -543,8 +545,10 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 
   /* Unswizzle the bottom 2 bits so that we get back the original instruction
      for SFPU */
-  if ((word & 0x3) != 0x3)
+  if ((word & 0x3) != 0x3) {
     word = SFPU_OP_UNSWIZZLE(word);
+    is_sfpu = 1;
+  }
 
   if (info->private_data == NULL)
     {
@@ -579,9 +583,8 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   info->target = 0;
   info->target2 = 0;
 
-  op = (word & 0xc0000000) != 0xc0000000 ?
-       riscv_hash[SFPU_OP_HASH_IDX (word)] :
-       riscv_hash[OP_HASH_IDX (word)];
+  op = is_sfpu ?  riscv_hash[SFPU_OP_HASH_IDX (word)] :
+                  riscv_hash[OP_HASH_IDX (word)];
   if (op != NULL)
     {
       unsigned xlen = 0;
