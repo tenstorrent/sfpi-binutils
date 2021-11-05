@@ -2944,11 +2944,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		case 'j': /* imm16_math */
 		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 		      || imm_expr->X_op != O_constant
-		      || imm_expr->X_add_number < -32768
-		      || imm_expr->X_add_number >  32767)
+		      || imm_expr->X_add_number < 0
+		      || imm_expr->X_add_number > 65535)
 		    {
 		      as_bad (_("bad value for imm16_math field, "
-				"value must be -32768...32767"));
+				"value must be 0...65535"));
 		      break;
 		    }
 
