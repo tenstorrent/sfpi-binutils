@@ -403,7 +403,7 @@ enum riscv_insn_class
    INSN_CLASS_ZICSR,
    INSN_CLASS_ZIFENCEI,
    INSN_CLASS_ZIHINTPAUSE,
-   INSN_CLASS_I_M_A_Y
+   INSN_CLASS_I_Y
   };
 
 /* This structure holds information for a particular instruction.  */

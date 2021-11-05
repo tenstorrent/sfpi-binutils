@@ -265,10 +265,8 @@ riscv_multi_subset_supports (enum riscv_insn_class insn_class)
     case INSN_CLASS_ZIHINTPAUSE:
       return riscv_subset_supports ("zihintpause");
 
-    case INSN_CLASS_I_M_A_Y:
+    case INSN_CLASS_I_Y:
       return riscv_subset_supports ("i")  &&
-	     riscv_subset_supports ("m")  &&
-             riscv_subset_supports ("a")  &&
              riscv_subset_supports ("y");
 
     default:
@@ -477,7 +475,7 @@ riscv_target_format (void)
 static inline unsigned int
 insn_length (const struct riscv_cl_insn *insn)
 {
-  return insn->insn_mo->insn_class == INSN_CLASS_I_M_A_Y ?
+  return insn->insn_mo->insn_class == INSN_CLASS_I_Y ?
          4 : riscv_insn_length (insn->insn_opcode);
 }
 
@@ -494,7 +492,7 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
 
   /*  Zero out the lower most two bits as they were set to indicate the
       instruction as a 4 byte instruction */
-  if (mo->insn_class == INSN_CLASS_I_M_A_Y)
+  if (mo->insn_class == INSN_CLASS_I_Y)
     insn->insn_opcode &= 0xfffffffc;
 }
 
@@ -1251,7 +1249,7 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	}
     }
 
-  if (ip->insn_mo->insn_class == INSN_CLASS_I_M_A_Y)
+  if (ip->insn_mo->insn_class == INSN_CLASS_I_Y)
     ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
