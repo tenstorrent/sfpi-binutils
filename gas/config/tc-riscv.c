@@ -2824,14 +2824,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			if (imm_expr->X_add_number == 1)
 			  {
 			    if (! strcasecmp(insn->name, "SFPDIVP2")  &&
-				(   imm12_math_op > 127
-				 || imm12_math_op < -128))
-			      {
-				as_bad (_("bad value for imm12_math field, "
-					  "value must be -128...127"));
-				break;
-			      }
-			    if (! strcasecmp(insn->name, "SFPSETEXP")  &&
 				(   imm12_math_op > 255
 				 || imm12_math_op < 0))
 			      {
@@ -2839,20 +2831,36 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 					  "value must be 0...255"));
 				break;
 			      }
-			    if (! strcasecmp(insn->name, "SFPSHFT")  &&
-				(   imm12_math_op > 32
-				 || imm12_math_op < -32))
-			      {
-				as_bad (_("bad value for imm12_math field, "
-					  "value must be -32...32"));
-				break;
-			      }
-			    if (! strcasecmp(insn->name, "SFPSETMAN")  &&
-				(   imm12_math_op > 1023
+			    if (! strcasecmp(insn->name, "SFPSETEXP")  &&
+				(   imm12_math_op > 4095
 				 || imm12_math_op < 0))
 			      {
 				as_bad (_("bad value for imm12_math field, "
-					  "value must be 0...1023"));
+					  "value must be 0...4095"));
+				break;
+			      }
+			    if (! strcasecmp(insn->name, "SFPSHFT")  &&
+				(   imm12_math_op > 2047
+				 || imm12_math_op < -2048))
+			      {
+				as_bad (_("bad value for imm12_math field, "
+					  "value must be -2048...2047"));
+				break;
+			      }
+			    if (! strcasecmp(insn->name, "SFPSETMAN")  &&
+				(   imm12_math_op > 4095
+				 || imm12_math_op < 0))
+			      {
+				as_bad (_("bad value for imm12_math field, "
+					  "value must be 0...4095"));
+				break;
+			      }
+			    if (! strcasecmp(insn->name, "SFPSETSGN")  &&
+				(   imm12_math_op > 4095
+				 || imm12_math_op < 0))
+			      {
+				as_bad (_("bad value for imm12_math field, "
+					  "value must be 0...4095"));
 				break;
 			      }
 		          }
@@ -2904,11 +2912,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    || imm_expr->X_add_number == 9)
 			  {
 			    if (! strcasecmp(insn->name, "SFPIADD")  &&
-				(   imm12_math_op > 2047
-				 || imm12_math_op < -2048))
+				(   imm12_math_op > 4095
+				 || imm12_math_op < 0))
 			      {
 				as_bad (_("bad value for imm12_math field, "
-					  "value must be -2048...2047"));
+					  "value must be 0...4095"));
 				break;
 			      }
 		          }
