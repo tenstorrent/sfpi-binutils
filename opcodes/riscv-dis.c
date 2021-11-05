@@ -456,10 +456,10 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 			    break;
 			  case 0x82:  /* SFPSETEXP */
 			  case 0x83:  /* SFPSETMAN */
-			    print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			  default:
-			    print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			}
 		      }
@@ -470,12 +470,12 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 			    print (info->stream, "0x%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			  default:
-			    print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			}
 		      }
 		    else
-		      print (info->stream, "0x%ud", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+		      print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 		  }
 		  break;
 		case 'j': /* imm16_math */
