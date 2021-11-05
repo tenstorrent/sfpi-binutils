@@ -43,6 +43,13 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #elif defined IN_DISASSEMBLER
   static int sfpu_mode = 0;
 
+  /* TODO:
+   * We are hard-coding this to 4 because we know for now that on the SFPU, we
+   * will never have anything other than a 4-byte instruction.  In case, this
+   * changes in future, then we need to fix it here.
+   */
+  return 4;
+
   if (insn > 0xffff  &&
       (   (((insn >> 24) & 0xff) >= SFP_OPCODE_START  &&
            ((insn >> 24) & 0xff) < SFP_OPCODE_END)
