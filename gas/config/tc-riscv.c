@@ -2824,11 +2824,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			if (imm_expr->X_add_number == 1)
 			  {
 			    if (! strcasecmp(insn->name, "SFPDIVP2")  &&
-				(   imm12_math_op > 255
-				 || imm12_math_op < 0))
+				(   imm12_math_op > 2047
+				 || imm12_math_op < -2048))
 			      {
 				as_bad (_("bad value for imm12_math field, "
-					  "value must be 0...255"));
+					  "value must be -2048...2047"));
 				break;
 			      }
 			    if (! strcasecmp(insn->name, "SFPSETEXP")  &&
@@ -2912,11 +2912,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    || imm_expr->X_add_number == 9)
 			  {
 			    if (! strcasecmp(insn->name, "SFPIADD")  &&
-				(   imm12_math_op > 4095
-				 || imm12_math_op < 0))
+				(   imm12_math_op > 2047
+				 || imm12_math_op < -2048))
 			      {
 				as_bad (_("bad value for imm12_math field, "
-					  "value must be 0...4095"));
+					  "value must be -2048...2047"));
 				break;
 			      }
 		          }
