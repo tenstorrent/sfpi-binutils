@@ -188,6 +188,7 @@ struct riscv_set_options
   int arch_attr; /* Emit arch attribute.  */
   int csr_check; /* Enable the CSR checking.  */
   int sfpu; /* Generate SFPU code.  */
+  int wormhole; /* Generate SFPU code for Wormhole.  */
 };
 
 static struct riscv_set_options riscv_opts =
@@ -198,7 +199,8 @@ static struct riscv_set_options riscv_opts =
   1,	/* relax */
   DEFAULT_RISCV_ATTR, /* arch_attr */
   0,	/* csr_check */
-  0.    /* sfpu */
+  0,    /* sfpu */
+  0.    /* wormhole */
 };
 
 static void
@@ -208,6 +210,15 @@ riscv_set_sfpu (bfd_boolean sfpu_value)
     elf_flags |= EF_RISCV_SFPU;
 
   riscv_opts.sfpu = sfpu_value;
+}
+
+static void
+riscv_set_wormhole (bfd_boolean wormhole_value)
+{
+  if (wormhole_value)
+    elf_flags |= EF_RISCV_SFPU_WORMHOLE;
+
+  riscv_opts.wormhole = wormhole_value;
 }
 
 static void
@@ -2681,17 +2692,30 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    break;
 		  INSERT_OPERAND (YMULADD_SRCC, *ip, regno);
 		  continue;
-		case 'd': /* LOAD/STORE RD L0-L3 */
+		case 'd': /* LOAD/STORE RD L0-L3 (L0-L7 for Wormhole) */
 		  {
 		    char x = *++args;
 
 		    if (x == '1') {
-		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-			  || regno > 3)
-			{
-			  as_bad (_("bad register for lreg_dest field, "
-				    "register must be L0...L3"));
-			  break;
+		      if (riscv_opts.wormhole)
+		        {
+			  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			      || regno > 7)
+			    {
+			      as_bad (_("bad register for lreg_dest field, "
+					"register must be L0...L7"));
+			      break;
+			    }
+			}
+		      else
+		        {
+			  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			      || regno > 3)
+			    {
+			      as_bad (_("bad register for lreg_dest field, "
+					"register must be L0...L3"));
+			      break;
+			    }
 			}
 		    } else if (x == '2') {
 		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
@@ -2705,13 +2729,26 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  }
 		  INSERT_OPERAND (YLOADSTORE_RD, *ip, regno);
 		  continue;
-		case 'e': /* MUL/ADD DEST L0-L3 */
-		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-		      || regno > 3)
+		case 'e': /* MUL/ADD DEST L0-L3 (L0-L7 for Wormhole) */
+		  if (riscv_opts.wormhole)
 		    {
-		      as_bad (_("bad register for lreg_dest field, "
-				"register must be L0...L3"));
-		      break;
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 7)
+			{
+			  as_bad (_("bad register for lreg_dest field, "
+				    "register must be L0...L7"));
+			  break;
+			}
+		    }
+		  else
+		    {
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 3)
+			{
+			  as_bad (_("bad register for lreg_dest field, "
+				    "register must be L0...L3"));
+			  break;
+			}
 		    }
 		  INSERT_OPERAND (YMULADD_DEST, *ip, regno);
 		  continue;
@@ -2784,13 +2821,26 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    }
 		  INSERT_OPERAND (YCC_LREG_C, *ip, regno);
 		  continue;
-		case 'h': /* CC Instructions LREG_DEST L0-L3 */
-		  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-		      || regno > 3)
+		case 'h': /* CC Instructions LREG_DEST L0-L3 (L0-L7 for Wormhole) */
+		  if (riscv_opts.wormhole)
 		    {
-		      as_bad (_("bad register for lreg_dest field, "
-				"register must be L0...L3"));
-		      break;
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 7)
+			{
+			  as_bad (_("bad register for lreg_dest field, "
+				    "register must be L0...L7"));
+			  break;
+			}
+		    }
+		  else
+		    {
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 3)
+			{
+			  as_bad (_("bad register for lreg_dest field, "
+				    "register must be L0...L3"));
+			  break;
+			}
 		    }
 		  INSERT_OPERAND (YCC_LREG_DEST, *ip, regno);
 		  continue;
@@ -3083,6 +3133,7 @@ enum options
   OPTION_MPRIV_SPEC,
   OPTION_BIG_ENDIAN,
   OPTION_LITTLE_ENDIAN,
+  OPTION_SFPU_WORMHOLE,
   OPTION_END_OF_ENUM
 };
 
@@ -3103,6 +3154,7 @@ struct option md_longopts[] =
   {"mpriv-spec", required_argument, NULL, OPTION_MPRIV_SPEC},
   {"mbig-endian", no_argument, NULL, OPTION_BIG_ENDIAN},
   {"mlittle-endian", no_argument, NULL, OPTION_LITTLE_ENDIAN},
+  {"mwormhole", no_argument, NULL, OPTION_SFPU_WORMHOLE},
 
   {NULL, no_argument, NULL, 0}
 };
@@ -3187,6 +3239,10 @@ md_parse_option (int c, const char *arg)
 
     case OPTION_LITTLE_ENDIAN:
       target_big_endian = 0;
+      break;
+
+    case OPTION_SFPU_WORMHOLE:
+      riscv_set_wormhole(TRUE);
       break;
 
     default:
@@ -3613,6 +3669,10 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
     riscv_set_sfpu (TRUE);
   else if (strcmp (name, "nosfpu") == 0)
     riscv_set_sfpu (FALSE);
+  else if (strcmp (name, "wormhole") == 0)
+    riscv_set_wormhole (TRUE);
+  else if (strcmp (name, "nowormhole") == 0)
+    riscv_set_wormhole (FALSE);
   else
     {
       as_warn (_("Unrecognized .option directive: %s\n"), name);
