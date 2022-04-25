@@ -348,6 +348,10 @@ static const char * const riscv_pred_succ[16] =
 #define OP_SH_YCC_INSTR_MOD1		0
 #define OP_MASK_YCC_INSTR_MOD1		0xf
 
+#define OP_SH_WLOADSTORE_DEST_REG_ADDR   0
+#define OP_MASK_WLOADSTORE_DEST_REG_ADDR 0x3fff
+#define OP_SH_WLOADSTORE_ADDR_MODE       14
+#define OP_MASK_WLOADSTORE_ADDR_MODE     0x3
 /* ABI names for selected x-registers.  */
 
 #define X_RA 1
@@ -410,7 +414,8 @@ enum riscv_insn_class
    INSN_CLASS_ZICSR,
    INSN_CLASS_ZIFENCEI,
    INSN_CLASS_ZIHINTPAUSE,
-   INSN_CLASS_I_Y
+   INSN_CLASS_I_Y,  /* Gray Skull */
+   INSN_CLASS_I_W,  /* Worm Hole */
   };
 
 /* This structure holds information for a particular instruction.  */

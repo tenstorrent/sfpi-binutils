@@ -409,6 +409,7 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	    break;
 	  }
 
+	case 'w':
 	case 'y':
 	  {
 	      switch (*++d)
@@ -486,6 +487,12 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		  break;
 		case 'o': /* mul/add instr_mod0 */
 	          print (info->stream, "%ld", EXTRACT_OPERAND (YMULADD_INSTR_MOD0, l));
+		  break;
+		case 'p': /* wormhole load/store addr_mode */
+	          print (info->stream, "%ld", EXTRACT_OPERAND (WLOADSTORE_ADDR_MODE, l));
+		  break;
+		case 'q': /* wormhole dest_reg_addr */
+	          print (info->stream, "%d", ((short)EXTRACT_OPERAND (WLOADSTORE_DEST_REG_ADDR, l)));
 		  break;
 		}
 	    }
