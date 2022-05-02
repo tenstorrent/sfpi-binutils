@@ -331,11 +331,6 @@ static const char * const riscv_pred_succ[16] =
 #define OP_SH_YDEST_REG_ADDR		0
 #define OP_MASK_YDEST_REG_ADDR		0xffff
 
-#define OP_SH_YLUT_RD			20
-#define OP_MASK_YLUT_RD			0xf
-#define OP_SH_YLUT_INSTR_MOD0		16
-#define OP_MASK_YLUT_INSTR_MOD0		0xf
-
 #define OP_SH_YMULI_IMM16_MATH		8
 #define OP_MASK_YMULI_IMM16_MATH	0xffff
 
@@ -352,6 +347,29 @@ static const char * const riscv_pred_succ[16] =
 #define OP_MASK_WLOADSTORE_DEST_REG_ADDR 0x3fff
 #define OP_SH_WLOADSTORE_ADDR_MODE       14
 #define OP_MASK_WLOADSTORE_ADDR_MODE     0x3
+
+#define OP_SH_WINCRWC_RWC_A       6
+#define OP_MASK_WINCRWC_RWC_A     0xf
+#define OP_SH_WINCRWC_RWC_B       10
+#define OP_MASK_WINCRWC_RWC_B     0xf
+#define OP_SH_WINCRWC_RWC_CR      18
+#define OP_MASK_WINCRWC_RWC_CR    0x3f
+#define OP_SH_WINCRWC_RWC_D       14
+#define OP_MASK_WINCRWC_RWC_D     0xf
+
+#define OP_SH_WREPLAY_LOAD_MODE       	0
+#define OP_MASK_WREPLAY_LOAD_MODE     	0x1
+#define OP_SH_WREPLAY_EXEC_WHILE_LOAD   1
+#define OP_MASK_WREPLAY_EXEC_WHILE_LOAD 0x7
+#define OP_SH_WREPLAY_LEN       	4
+#define OP_MASK_WREPLAY_LEN     	0x3ff
+#define OP_SH_WREPLAY_START_IDX       	14
+#define OP_MASK_WREPLAY_START_IDX     	0x3ff
+
+#define OP_SH_WSTOCH_RND_MODE		21
+#define OP_MASK_WSTOCH_RND_MODE		0x1
+#define OP_SH_WSTOCH_RND_IMM8_MATH	16
+#define OP_MASK_WSTOCH_RND_IMM8_MATH	0x1f
 /* ABI names for selected x-registers.  */
 
 #define X_RA 1

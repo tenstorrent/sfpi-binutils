@@ -1067,11 +1067,6 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    /* 'd' can have a numeric extension for various purposes.  Hence increment p */
 	    case 'd': USE_BITS (OP_MASK_YLOADSTORE_RD, OP_SH_YLOADSTORE_RD); p++; break;
 	    case 'e': USE_BITS (OP_MASK_YMULADD_DEST, OP_SH_YMULADD_DEST); break;
-	    /* 'm' can have a numeric extension for various purposes.  Hence increment p */
-	    case 'm': USE_BITS (OP_MASK_YLOADSTORE_INSTR_MOD0, OP_SH_YLOADSTORE_INSTR_MOD0); p++; break;
-	    case 'n': USE_BITS (OP_MASK_YDEST_REG_ADDR, OP_SH_YDEST_REG_ADDR); break;
-	    case 'o': USE_BITS (OP_MASK_YMULADD_INSTR_MOD0, OP_SH_YMULADD_INSTR_MOD0); break;
-
 	    case 'f': USE_BITS (OP_MASK_YCC_IMM12_MATH, OP_SH_YCC_IMM12_MATH); break;
 	    case 'g': USE_BITS (OP_MASK_YCC_LREG_C, OP_SH_YCC_LREG_C); break;
 	    case 'h': USE_BITS (OP_MASK_YCC_LREG_DEST, OP_SH_YCC_LREG_DEST); break;
@@ -1079,8 +1074,38 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    case 'i': USE_BITS (OP_MASK_YCC_INSTR_MOD1, OP_SH_YCC_INSTR_MOD1); p++; break;
 
 	    case 'j': USE_BITS (OP_MASK_YMULI_IMM16_MATH, OP_SH_YMULI_IMM16_MATH); break;
+	    case 'k': switch (c = *p++)
+	      {
+		case '1': USE_BITS (OP_MASK_WINCRWC_RWC_CR, OP_SH_WINCRWC_RWC_CR); break;
+		case '2': USE_BITS (OP_MASK_WINCRWC_RWC_D, OP_SH_WINCRWC_RWC_D); break;
+		case '3': USE_BITS (OP_MASK_WINCRWC_RWC_B, OP_SH_WINCRWC_RWC_B); break;
+		case '4': USE_BITS (OP_MASK_WINCRWC_RWC_A, OP_SH_WINCRWC_RWC_A); break;
+	      }
+	      break;
+
+	    case 'l': switch (c = *p++)
+	      {
+		case '1': USE_BITS (OP_MASK_WREPLAY_START_IDX, OP_SH_WREPLAY_START_IDX); break;
+		case '2': USE_BITS (OP_MASK_WREPLAY_LEN, OP_SH_WREPLAY_LEN); break;
+		case '3': USE_BITS (OP_MASK_WREPLAY_EXEC_WHILE_LOAD, OP_SH_WREPLAY_EXEC_WHILE_LOAD); break;
+		case '4': USE_BITS (OP_MASK_WREPLAY_LOAD_MODE, OP_SH_WREPLAY_LOAD_MODE); break;
+	      }
+	      break;
+	    /* 'm' can have a numeric extension for various purposes.  Hence increment p */
+	    case 'm': USE_BITS (OP_MASK_YLOADSTORE_INSTR_MOD0, OP_SH_YLOADSTORE_INSTR_MOD0); p++; break;
+	    case 'n': USE_BITS (OP_MASK_YDEST_REG_ADDR, OP_SH_YDEST_REG_ADDR); break;
+	    case 'o': USE_BITS (OP_MASK_YMULADD_INSTR_MOD0, OP_SH_YMULADD_INSTR_MOD0); break;
+
 	    case 'p': USE_BITS (OP_MASK_WLOADSTORE_ADDR_MODE, OP_SH_WLOADSTORE_ADDR_MODE); break;
 	    case 'q': USE_BITS (OP_MASK_WLOADSTORE_DEST_REG_ADDR, OP_SH_WLOADSTORE_DEST_REG_ADDR); break;
+	    /* 'r' can have a numeric extension for various purposes.  Hence increment p */
+	    case 'r': switch (c = *p++)
+	      {
+		case '1': USE_BITS (OP_MASK_WSTOCH_RND_MODE, OP_SH_WSTOCH_RND_MODE); break;
+		case '2': USE_BITS (OP_MASK_WSTOCH_RND_IMM8_MATH, OP_SH_WSTOCH_RND_IMM8_MATH); break;
+	      }
+	      break;
+
 	    default:
 	      as_bad (_("internal: bad SFPU opcode"
 			" (unknown operand type `y%c'): %s %s"),
@@ -2763,81 +2788,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    }
 		  INSERT_OPERAND (YMULADD_DEST, *ip, regno);
 		  continue;
-		case 'm': /* load/store instr_mod0 */
-		  {
-		    char x = *++args;
-		    if (x == '1')
-		      {
-			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number > 15)
-			  {
-			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0...15"));
-			    break;
-			  }
-
-			if ((! strcasecmp(insn->name, "SFPLOAD")  ||
-			     ! strcasecmp(insn->name, "SFPSTORE"))  &&
-			      insn->insn_class == INSN_CLASS_I_W  &&
-			      imm_expr->X_add_number == 11)
-			  {
-			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0...10 or 12...15"));
-			    break;
-			  }
-
-			if (! strcasecmp(insn->name, "SFPLOADI")  &&
-			      insn->insn_class == INSN_CLASS_I_W  &&
-			     (  (imm_expr->X_add_number > 4  &&  imm_expr->X_add_number < 8)
-			      || imm_expr->X_add_number > 10))
-			  {
-			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0...4 or 8...10"));
-			    break;
-			  }
-		      }
-		    else if (x == '2')
-		      {
-			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-			    || imm_expr->X_op != O_constant
-			    || (imm_expr->X_add_number != 0  &&
-			        imm_expr->X_add_number != 2))
-			  {
-			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0 or 2"));
-			    break;
-			  }
-		      }
-		    else if (x == '3')
-		      {
-			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number > 7)
-			  {
-			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0...7"));
-			    break;
-			  }
-
-			if (! strcasecmp(insn->name, "SFPLUT")  &&
-			      insn->insn_class == INSN_CLASS_I_W  &&
-			      imm_expr->X_add_number != 0  &&
-			      imm_expr->X_add_number != 4)
-			  {
-			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0 or 4"));
-			    break;
-			  }
-		      }
-		  }
-
-		  INSERT_OPERAND (YLOADSTORE_INSTR_MOD0, *ip, imm_expr->X_add_number);
-		  imm_expr->X_op = O_absent;
-		  s = expr_end;
-		  continue;
 		case 'f': /* imm12_math */
 		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 		      || imm_expr->X_op != O_constant)
@@ -2865,8 +2815,24 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		case 'h': /* CC Instructions LREG_DEST L0-L3 (L0-L7 for Wormhole) */
 		  if (riscv_opts.wormhole)
 		    {
-		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-			  || regno > 7)
+		      if (insn->insn_class == INSN_CLASS_I_W  &&
+			  ! strcasecmp(insn->name, "SFPCONFIG"))
+			{
+			  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			      || imm_expr->X_op != O_constant
+			      || imm_expr->X_add_number < 0
+			      || imm_expr->X_add_number == 9
+			      || imm_expr->X_add_number == 10
+			      || imm_expr->X_add_number > 15)
+			    {
+			      as_bad (_("bad value for config_dest field, "
+					"value must be 0...8 or 11...15"));
+			      break;
+			    }
+			  regno = imm_expr->X_add_number;
+			}
+		      else if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			       || regno > 7)
 			{
 			  as_bad (_("bad register for lreg_dest field, "
 				    "register must be L0...L7"));
@@ -2935,6 +2901,19 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			      {
 				as_bad (_("bad value for imm12_math field, "
 					  "value must be 0...4095"));
+				break;
+			      }
+			  }
+			else if (insn->insn_class == INSN_CLASS_I_W  &&
+			         ! strcasecmp(insn->name, "SFPSHFT2"))
+			  {
+			    if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+				|| imm_expr->X_op != O_constant
+				|| imm_expr->X_add_number < 0
+				|| imm_expr->X_add_number > 6)
+			      {
+				as_bad (_("bad value for instr_mod1 field, "
+					  "value must be 0...6"));
 				break;
 			      }
 			  }
@@ -3090,6 +3069,33 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			      }
 			  }
 		      }
+		    else if (x == '7')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number == 9
+			    || imm_expr->X_add_number == 11
+			    || imm_expr->X_add_number == 13
+			    || imm_expr->X_add_number > 14)
+			  {
+			    as_bad (_("bad value for instr_mod1 field, "
+				      "value must be 0...14, but cannot be 9, 11 or 13"));
+			    break;
+			  }
+		      }
+		    else if (x == '8')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 8)
+			  {
+			    as_bad (_("bad value for instr_mod1 field, "
+				      "value must be 0...8"));
+			    break;
+			  }
+		      }
 		  }
 
 		  INSERT_OPERAND (YCC_INSTR_MOD1, *ip, imm_expr->X_add_number);
@@ -3108,6 +3114,235 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    }
 
 		  INSERT_OPERAND (YMULI_IMM16_MATH, *ip, imm_expr->X_add_number);
+		  imm_expr->X_op = O_absent;
+		  s = expr_end;
+		  continue;
+		case 'k': /* wormhole incrwc operands */
+		  switch (*++args)
+		    {
+		      case '1':
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -32
+			  || imm_expr->X_add_number >  63)
+			{
+			  as_bad (_("bad value for rwc_cr field, "
+				    "value must be -32...31 for signed "
+				    "values and 0...63 for unsigned values"));
+			  break;
+			}
+
+		      INSERT_OPERAND (WINCRWC_RWC_CR, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
+		      break;
+
+		      case '2':
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 7)
+			{
+			  as_bad (_("bad register for rwc_d field, "
+				    "register must be L0...L7"));
+			  break;
+			}
+		      INSERT_OPERAND (WINCRWC_RWC_D, *ip, regno);
+		      break;
+
+		      case '3':
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 7)
+			{
+			  as_bad (_("bad register for rwc_b field, "
+				    "register must be L0...L7"));
+			  break;
+			}
+		      INSERT_OPERAND (WINCRWC_RWC_B, *ip, regno);
+		      break;
+
+		      case '4':
+		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+			  || regno > 7)
+			{
+			  as_bad (_("bad register for rwc_a field, "
+				    "register must be L0...L7"));
+			  break;
+			}
+		      INSERT_OPERAND (WINCRWC_RWC_A, *ip, regno);
+		      break;
+		    }
+		  continue;
+		case 'l': /* wormhole replay operands */
+		  switch (*++args)
+		    {
+		      case '1':
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -512
+			  || imm_expr->X_add_number >  1024)
+			{
+			  as_bad (_("bad value for start_idx field, "
+				    "value must be -512...511 for signed "
+				    "values and 0...1024 for unsigned values"));
+			  break;
+			}
+
+		      INSERT_OPERAND (WREPLAY_START_IDX, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
+		      break;
+
+		      case '2':
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -512
+			  || imm_expr->X_add_number >  1024)
+			{
+			  as_bad (_("bad value for len field, "
+				    "value must be -512...511 for signed "
+				    "values and 0...1024 for unsigned values"));
+			  break;
+			}
+
+		      INSERT_OPERAND (WREPLAY_LEN, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
+		      break;
+
+		      case '3':
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -4
+			  || imm_expr->X_add_number >  7)
+			{
+			  as_bad (_("bad value for execute_while_loading field, "
+				    "value must be -4...3 for signed "
+				    "values and 0...7 for unsigned values"));
+			  break;
+			}
+
+		      INSERT_OPERAND (WREPLAY_EXEC_WHILE_LOAD, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
+		      break;
+
+		      case '4':
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < 0
+			  || imm_expr->X_add_number > 1)
+			{
+			  as_bad (_("bad value for load_mode field, "
+				    "value must be 0 or 1"));
+			  break;
+			}
+
+		      INSERT_OPERAND (WREPLAY_LOAD_MODE, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
+		      break;
+		    }
+		  continue;
+		case 'm': /* load/store instr_mod0 */
+		  {
+		    char x = *++args;
+		    if (x == '1')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 15)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...15"));
+			    break;
+			  }
+
+			if (! strcasecmp(insn->name, "SFPLOADMACRO")  &&
+			      insn->insn_class == INSN_CLASS_I_W  &&
+			      (   imm_expr->X_add_number == 10
+			       || imm_expr->X_add_number == 11))
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...9 or 12...15"));
+			    break;
+			  }
+
+			if ((! strcasecmp(insn->name, "SFPLOAD")  ||
+			     ! strcasecmp(insn->name, "SFPSTORE"))  &&
+			      insn->insn_class == INSN_CLASS_I_W  &&
+			      imm_expr->X_add_number == 11)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...10 or 12...15"));
+			    break;
+			  }
+
+			if (! strcasecmp(insn->name, "SFPLOADI")  &&
+			      insn->insn_class == INSN_CLASS_I_W  &&
+			     (  (imm_expr->X_add_number > 4  &&  imm_expr->X_add_number < 8)
+			      || imm_expr->X_add_number > 10))
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...4 or 8...10"));
+			    break;
+			  }
+		      }
+		    else if (x == '2')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || (imm_expr->X_add_number != 0  &&
+			        imm_expr->X_add_number != 2))
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0 or 2"));
+			    break;
+			  }
+		      }
+		    else if (x == '3')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number > 7)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0...7"));
+			    break;
+			  }
+
+			if (! strcasecmp(insn->name, "SFPLUT")  &&
+			      insn->insn_class == INSN_CLASS_I_W  &&
+			      imm_expr->X_add_number != 0  &&
+			      imm_expr->X_add_number != 4)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0 or 4"));
+			    break;
+			  }
+		      }
+		    else if (x == '4')
+		      {
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			    || imm_expr->X_op != O_constant
+			    || imm_expr->X_add_number < 0
+			    || imm_expr->X_add_number == 1
+			    || imm_expr->X_add_number == 5
+			    || imm_expr->X_add_number == 8
+			    || imm_expr->X_add_number == 9
+			    || imm_expr->X_add_number == 11
+			    || imm_expr->X_add_number == 12
+			    || imm_expr->X_add_number == 13
+			    || imm_expr->X_add_number > 14)
+			  {
+			    as_bad (_("bad value for instr_mod0 field, "
+				      "value must be 0, 2...4, 6, 7, 10 or 14"));
+			    break;
+			  }
+		      }
+		  }
+
+		  INSERT_OPERAND (YLOADSTORE_INSTR_MOD0, *ip, imm_expr->X_add_number);
 		  imm_expr->X_op = O_absent;
 		  s = expr_end;
 		  continue;
@@ -3188,8 +3423,45 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  imm_expr->X_op = O_absent;
 		  s = expr_end;
 		  continue;
+		case 'r': /* wormhole replay operands */
+		  switch (*++args)
+		    {
+		      case '1':
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < 0
+			  || imm_expr->X_add_number > 1)
+			{
+			  as_bad (_("bad value for rnd_mode field, "
+				    "value must be 0 or 1"));
+			  break;
+			}
+
+		      INSERT_OPERAND (WSTOCH_RND_MODE, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
+		      break;
+
+		      case '2':
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -16
+			  || imm_expr->X_add_number >  32)
+			{
+			  as_bad (_("bad value for len field, "
+				    "value must be -16...15 for signed "
+				    "values and 0...32 for unsigned values"));
+			  break;
+			}
+
+		      INSERT_OPERAND (WSTOCH_RND_IMM8_MATH, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
+		      break;
+		    }
+		  continue;
 		}
-	      break;
+	      break;  // End of SFPU Operands
 
 	    case 'z':
 	      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)

@@ -863,7 +863,17 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfpmov",     0, INSN_CLASS_I_Y,   "yg,yh,yi2",      MATCH_SFPMOV,    MASK_SFPMOV,    sfp_match_opcode, INSN_ALIAS },
 {"sfpmov",     0, INSN_CLASS_I_W,   "wg,wh,wi2",      MATCH_SFPMOV,    MASK_SFPMOV,    sfp_match_opcode, INSN_ALIAS },
 {"sfpnop",     0, INSN_CLASS_I_Y,   "",               MATCH_SFPNOP,    MASK_SFPNOP,    sfp_match_opcode, INSN_ALIAS },
-{"sfpnop",     0, INSN_CLASS_I_W,   "",               MATCH_SFPNOP,    MASK_SFPNOP,    sfp_match_opcode, INSN_ALIAS },
+{"sfpnop",     0, INSN_CLASS_I_W,   "",               MATCH_SFPWNOP,   MASK_SFPWNOP,   sfp_match_opcode, INSN_ALIAS },
+{"sfpincrwc",  0, INSN_CLASS_I_W,   "wk1,wk2,wk3,wk4",MATCH_SFPINCRWC, MASK_SFPINCRWC, sfp_match_opcode, 0 },
+{"sfpreplay",  0, INSN_CLASS_I_W,   "wl1,wl2,wl3,wl4",MATCH_SFPREPLAY, MASK_SFPREPLAY, sfp_match_opcode, 0 },
+{"sfpxor",     0, INSN_CLASS_I_W,   "wg,wh",          MATCH_SFPXOR,    MASK_SFPXOR,    sfp_match_opcode, 0 },
+{"sfpcast",    0, INSN_CLASS_I_W,   "wc,we,wi2",      MATCH_SFPCAST,   MASK_SFPCAST,   sfp_match_opcode, 0 },
+{"sfpshft2",   0, INSN_CLASS_I_W,   "wc,we,wi2",      MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
+{"sfpconfig",  0, INSN_CLASS_I_W,   "wj,wh,wi7",      MATCH_SFPCONFIG, MASK_SFPCONFIG, sfp_match_opcode, 0 },
+{"sfpswap",    0, INSN_CLASS_I_W,   "wg,wh,wi8",      MATCH_SFPSWAP,   MASK_SFPSWAP,   sfp_match_opcode, 0 },
+{"sfplutfp32", 0, INSN_CLASS_I_W,   "we,wm4",         MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
+{"sfploadmacro",0, INSN_CLASS_I_W,  "wd,wm1,wp,wq",   MATCH_SFPLDMACRO,MASK_SFPLDMACRO,sfp_match_opcode, 0 },
+{"sfpstochrnd",0, INSN_CLASS_I_W,   "wr1,wr2,wb,wc,we,wi1", MATCH_SFPSTOCH_RND,    MASK_SFPSTOCH_RND,    sfp_match_opcode, 0 },
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

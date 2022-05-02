@@ -662,7 +662,31 @@
 
 #define MATCH_SFPNOP   0x02000003
 #define MASK_SFPNOP    0xffffffff
-#define SFP_OPCODE_END 0x8c
+
+#define MATCH_SFPINCRWC 0x38000003
+#define MASK_SFPINCRWC 0xffffffff
+#define MATCH_SFPREPLAY 0x04000003
+#define MASK_SFPREPLAY 0xffffffff
+
+#define MATCH_SFPXOR 0x8d000003
+#define MASK_SFPXOR 0xffffffff
+#define MATCH_SFPSTOCH_RND 0x8e000003
+#define MASK_SFPSTOCH_RND 0xffffffff
+#define MATCH_SFPWNOP 0x8f000003
+#define MASK_SFPWNOP 0xffffffff
+#define MATCH_SFPCAST 0x90000003
+#define MASK_SFPCAST 0xffffffff
+#define MATCH_SFPCONFIG 0x91000003
+#define MASK_SFPCONFIG 0xffffffff
+#define MATCH_SFPSWAP 0x92000003
+#define MASK_SFPSWAP 0xffffffff
+#define MATCH_SFPLDMACRO 0x93000003
+#define MASK_SFPLDMACRO 0xffffffff
+#define MATCH_SFPSHFT2 0x94000003
+#define MASK_SFPSHFT2 0xffffffff
+#define MATCH_SFPLUTFP32 0x95000003
+#define MASK_SFPLUTFP32 0xffffffff
+#define SFP_OPCODE_END 0x96
 
 /* Privileged CSR addresses (v1.11).  */
 #define CSR_USTATUS 0x0
