@@ -871,7 +871,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfpshft2",   0, INSN_CLASS_I_W,   "wc,we,wi2",      MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
 {"sfpconfig",  0, INSN_CLASS_I_W,   "wj,wh,wi7",      MATCH_SFPCONFIG, MASK_SFPCONFIG, sfp_match_opcode, 0 },
 {"sfpswap",    0, INSN_CLASS_I_W,   "wg,wh,wi8",      MATCH_SFPSWAP,   MASK_SFPSWAP,   sfp_match_opcode, 0 },
-{"sfplutfp32", 0, INSN_CLASS_I_W,   "we,wm4",         MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
+{"sfplutfp32", 0, INSN_CLASS_I_W,   "we,wo",          MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
 {"sfploadmacro",0, INSN_CLASS_I_W,  "wd,wm1,wp,wq",   MATCH_SFPLDMACRO,MASK_SFPLDMACRO,sfp_match_opcode, 0 },
 {"sfpstochrnd",0, INSN_CLASS_I_W,   "wr1,wr2,wb,wc,we,wi1", MATCH_SFPSTOCH_RND,    MASK_SFPSTOCH_RND,    sfp_match_opcode, 0 },
 

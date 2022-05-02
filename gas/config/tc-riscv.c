@@ -2830,6 +2830,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			      break;
 			    }
 			  regno = imm_expr->X_add_number;
+			  imm_expr->X_op = O_absent;
+			  s = expr_end;
 			}
 		      else if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
 			       || regno > 7)
@@ -3321,25 +3323,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    break;
 			  }
 		      }
-		    else if (x == '4')
-		      {
-			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number == 1
-			    || imm_expr->X_add_number == 5
-			    || imm_expr->X_add_number == 8
-			    || imm_expr->X_add_number == 9
-			    || imm_expr->X_add_number == 11
-			    || imm_expr->X_add_number == 12
-			    || imm_expr->X_add_number == 13
-			    || imm_expr->X_add_number > 14)
-			  {
-			    as_bad (_("bad value for instr_mod0 field, "
-				      "value must be 0, 2...4, 6, 7, 10 or 14"));
-			    break;
-			  }
-		      }
 		  }
 
 		  INSERT_OPERAND (YLOADSTORE_INSTR_MOD0, *ip, imm_expr->X_add_number);
@@ -3365,7 +3348,26 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		case 'o': /* mad/mul/add instr_mod0 */
 		  if (insn->insn_class == INSN_CLASS_I_W)
 		    {
-		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+		      if (! strcasecmp(insn->name, "SFPLUTFP32"))
+			{
+			  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			      || imm_expr->X_op != O_constant
+			      || imm_expr->X_add_number < 0
+			      || imm_expr->X_add_number == 1
+			      || imm_expr->X_add_number == 5
+			      || imm_expr->X_add_number == 8
+			      || imm_expr->X_add_number == 9
+			      || imm_expr->X_add_number == 11
+			      || imm_expr->X_add_number == 12
+			      || imm_expr->X_add_number == 13
+			      || imm_expr->X_add_number > 14)
+			    {
+			      as_bad (_("bad value for instr_mod0 field, "
+					"value must be 0, 2...4, 6, 7, 10 or 14"));
+			      break;
+			    }
+			}
+		      else if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 			  || imm_expr->X_op != O_constant
 			  || imm_expr->X_add_number != 0)
 			{
