@@ -811,7 +811,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfploadi",   0, INSN_CLASS_I_Y,   "yd1,ym1,yn",     MATCH_SFPLOADI,  MASK_SFPLOADI,  sfp_match_opcode, INSN_ALIAS },
 {"sfploadi",   0, INSN_CLASS_I_W,   "wd1,wm1,wn",     MATCH_SFPLOADI,  MASK_SFPLOADI,  sfp_match_opcode, INSN_ALIAS },
 {"sfpstore",   0, INSN_CLASS_I_Y,   "yd2,ym2,yn",     MATCH_SFPSTORE,  MASK_SFPSTORE,  sfp_match_opcode, INSN_ALIAS },
-{"sfpstore",   0, INSN_CLASS_I_W,   "wd2,wm2,wp,wq",  MATCH_SFPSTORE,  MASK_SFPSTORE,  sfp_match_opcode, INSN_ALIAS },
+{"sfpstore",   0, INSN_CLASS_I_W,   "wd2,wm1,wp,wq",  MATCH_SFPSTORE,  MASK_SFPSTORE,  sfp_match_opcode, INSN_ALIAS },
 {"sfplut",     0, INSN_CLASS_I_Y,   "yd1,ym3",        MATCH_SFPLUT,    MASK_SFPLUT,    sfp_match_opcode, INSN_ALIAS },
 {"sfplut",     0, INSN_CLASS_I_W,   "wd1,wm3",        MATCH_SFPLUT,    MASK_SFPLUT,    sfp_match_opcode, INSN_ALIAS },
 {"sfpmuli",    0, INSN_CLASS_I_Y,   "yj,yh,yi3",      MATCH_SFPMULI,   MASK_SFPMULI,   sfp_match_opcode, INSN_ALIAS },
@@ -872,6 +872,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfpconfig",  0, INSN_CLASS_I_W,   "wj,wh,wi7",      MATCH_SFPCONFIG, MASK_SFPCONFIG, sfp_match_opcode, 0 },
 {"sfpswap",    0, INSN_CLASS_I_W,   "wg,wh,wi8",      MATCH_SFPSWAP,   MASK_SFPSWAP,   sfp_match_opcode, 0 },
 {"sfplutfp32", 0, INSN_CLASS_I_W,   "we,wo",          MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
+{"sfptransp",  0, INSN_CLASS_I_W,   "",               MATCH_SFPTRANSP, MASK_SFPTRANSP, sfp_match_opcode, 0 },
 {"sfploadmacro",0, INSN_CLASS_I_W,  "wd,wm1,wp,wq",   MATCH_SFPLDMACRO,MASK_SFPLDMACRO,sfp_match_opcode, 0 },
 {"sfpstochrnd",0, INSN_CLASS_I_W,   "wr1,wr2,wb,wc,we,wi1", MATCH_SFPSTOCH_RND,    MASK_SFPSTOCH_RND,    sfp_match_opcode, 0 },
 
