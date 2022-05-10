@@ -430,10 +430,6 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		case 'e': /* MUL/ADD DEST L0-L3 */
 	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YMULADD_DEST, l)]);
 		  break;
-		case 'm': /* load/store instr_mod0 */
-	          print (info->stream, "%ld", EXTRACT_OPERAND (YLOADSTORE_INSTR_MOD0, l));
-		  ++d;
-		  break;
 		case 'f': /* imm12_math */
 	          print (info->stream, "0x%03lX", EXTRACT_OPERAND (YCC_IMM12_MATH, l));
 		  break;
@@ -441,26 +437,32 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_C, l)]);
 		  break;
 		case 'h': /* CC Instructions LREG_DEST L0-L3 */
-	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
+		  #if 0
+		  if (info->mach == bfd_mach_riscv32_sfpu_wormhole  &&
+		      (l >> 24) == 0x0)
+		    print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
+		  else
+		  #endif
+		    print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
 		  break;
 		case 'i': /* CC Instructions instr_mod1 */
 		  {
 		    char x = *++d;
 		    if (x == '1')
-		      print (info->stream, "0x%ld", EXTRACT_OPERAND (YCC_INSTR_MOD1, l));
+		      print (info->stream, "%ld", EXTRACT_OPERAND (YCC_INSTR_MOD1, l));
 		    else if (x == '2')
 		      {
 			switch (EXTRACT_OPERAND (SFPU_OP, l)) {
 			  case 0x76:  /* SFPDIVP2 */
 			  case 0x7A:  /* SFPSHFT */
-			    print (info->stream, "0x%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			  case 0x82:  /* SFPSETEXP */
 			  case 0x83:  /* SFPSETMAN */
-			    print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			  default:
-			    print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			}
 		      }
@@ -468,19 +470,23 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		      {
 			switch (EXTRACT_OPERAND (SFPU_OP, l)) {
 			  case 0x79:
-			    print (info->stream, "0x%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			  default:
-			    print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+			    print (info->stream, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 			    break;
 			}
 		      }
 		    else
-		      print (info->stream, "0x%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
+		      print (info->stream, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
 		  }
 		  break;
 		case 'j': /* imm16_math */
 	          print (info->stream, "%d", ((short)EXTRACT_OPERAND (YMULI_IMM16_MATH, l)));
+		  break;
+		case 'm': /* load/store instr_mod0 */
+	          print (info->stream, "%ld", EXTRACT_OPERAND (YLOADSTORE_INSTR_MOD0, l));
+		  ++d;
 		  break;
 		case 'n': /* dest_reg_addr */
 	          print (info->stream, "%d", ((short)EXTRACT_OPERAND (YDEST_REG_ADDR, l)));

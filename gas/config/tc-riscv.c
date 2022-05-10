@@ -3140,36 +3140,54 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      break;
 
 		      case '2':
-		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-			  || regno > 7)
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -8
+			  || imm_expr->X_add_number >  15)
 			{
-			  as_bad (_("bad register for rwc_d field, "
-				    "register must be L0...L7"));
+			  as_bad (_("bad value for rwc_cr field, "
+				    "value must be -8...7 for signed "
+				    "values and 0...15 for unsigned values"));
 			  break;
 			}
-		      INSERT_OPERAND (WINCRWC_RWC_D, *ip, regno);
+
+		      INSERT_OPERAND (WINCRWC_RWC_D, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
 		      break;
 
 		      case '3':
-		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-			  || regno > 7)
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -8
+			  || imm_expr->X_add_number >  15)
 			{
-			  as_bad (_("bad register for rwc_b field, "
-				    "register must be L0...L7"));
+			  as_bad (_("bad value for rwc_cr field, "
+				    "value must be -8...7 for signed "
+				    "values and 0...15 for unsigned values"));
 			  break;
 			}
-		      INSERT_OPERAND (WINCRWC_RWC_B, *ip, regno);
+
+		      INSERT_OPERAND (WINCRWC_RWC_B, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
 		      break;
 
 		      case '4':
-		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-			  || regno > 7)
+		      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+			  || imm_expr->X_op != O_constant
+			  || imm_expr->X_add_number < -8
+			  || imm_expr->X_add_number >  15)
 			{
-			  as_bad (_("bad register for rwc_a field, "
-				    "register must be L0...L7"));
+			  as_bad (_("bad value for rwc_cr field, "
+				    "value must be -8...7 for signed "
+				    "values and 0...15 for unsigned values"));
 			  break;
 			}
-		      INSERT_OPERAND (WINCRWC_RWC_A, *ip, regno);
+
+		      INSERT_OPERAND (WINCRWC_RWC_A, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      s = expr_end;
 		      break;
 		    }
 		  continue;
