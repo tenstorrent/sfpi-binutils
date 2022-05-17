@@ -3145,7 +3145,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  || imm_expr->X_add_number < -8
 			  || imm_expr->X_add_number >  15)
 			{
-			  as_bad (_("bad value for rwc_cr field, "
+			  as_bad (_("bad value for rwc_d field, "
 				    "value must be -8...7 for signed "
 				    "values and 0...15 for unsigned values"));
 			  break;
@@ -3162,7 +3162,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  || imm_expr->X_add_number < -8
 			  || imm_expr->X_add_number >  15)
 			{
-			  as_bad (_("bad value for rwc_cr field, "
+			  as_bad (_("bad value for rwc_b field, "
 				    "value must be -8...7 for signed "
 				    "values and 0...15 for unsigned values"));
 			  break;
@@ -3179,7 +3179,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  || imm_expr->X_add_number < -8
 			  || imm_expr->X_add_number >  15)
 			{
-			  as_bad (_("bad value for rwc_cr field, "
+			  as_bad (_("bad value for rwc_a field, "
 				    "value must be -8...7 for signed "
 				    "values and 0...15 for unsigned values"));
 			  break;
@@ -3443,7 +3443,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  imm_expr->X_op = O_absent;
 		  s = expr_end;
 		  continue;
-		case 'r': /* wormhole replay operands */
+		case 'r': /* wormhole STOCH_RND operands */
 		  switch (*++args)
 		    {
 		      case '1':
@@ -3468,7 +3468,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  || imm_expr->X_add_number < -16
 			  || imm_expr->X_add_number >  32)
 			{
-			  as_bad (_("bad value for len field, "
+			  as_bad (_("bad value for imm8_math field, "
 				    "value must be -16...15 for signed "
 				    "values and 0...32 for unsigned values"));
 			  break;

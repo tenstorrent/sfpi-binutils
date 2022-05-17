@@ -437,12 +437,10 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	          print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_C, l)]);
 		  break;
 		case 'h': /* CC Instructions LREG_DEST L0-L3 */
-		  #if 0
 		  if (info->mach == bfd_mach_riscv32_sfpu_wormhole  &&
-		      (l >> 24) == 0x0)
-		    print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
+		      EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
+		    print (info->stream, "%lu", EXTRACT_OPERAND (YCC_LREG_DEST, l));
 		  else
-		  #endif
 		    print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
 		  break;
 		case 'i': /* CC Instructions instr_mod1 */
@@ -484,6 +482,36 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		case 'j': /* imm16_math */
 	          print (info->stream, "%d", ((short)EXTRACT_OPERAND (YMULI_IMM16_MATH, l)));
 		  break;
+		case 'k': /* Wormhole INCRWC operands */
+		  {
+		    char x = *++d;
+		    if (x == '1')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WINCRWC_RWC_CR, l));
+		    else if (x == '2')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WINCRWC_RWC_D, l));
+		    else if (x == '3')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WINCRWC_RWC_B, l));
+		    else if (x == '4')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WINCRWC_RWC_A, l));
+		    else
+		      print (info->stream, _("# internal error, undefined modifier (k%c)"), x);
+		  }
+		  break;
+		case 'l': /* Wormhole REPLAY operands */
+		  {
+		    char x = *++d;
+		    if (x == '1')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WREPLAY_START_IDX, l));
+		    else if (x == '2')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WREPLAY_LEN, l));
+		    else if (x == '3')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WREPLAY_EXEC_WHILE_LOAD, l));
+		    else if (x == '4')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WREPLAY_LOAD_MODE, l));
+		    else
+		      print (info->stream, _("# internal error, undefined modifier (l%c)"), x);
+		  }
+		  break;
 		case 'm': /* load/store instr_mod0 */
 	          print (info->stream, "%ld", EXTRACT_OPERAND (YLOADSTORE_INSTR_MOD0, l));
 		  ++d;
@@ -499,6 +527,17 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		  break;
 		case 'q': /* wormhole dest_reg_addr */
 	          print (info->stream, "%d", ((short)EXTRACT_OPERAND (WLOADSTORE_DEST_REG_ADDR, l)));
+		  break;
+		case 'r': /* Wormhole STOCH_RND operands */
+		  {
+		    char x = *++d;
+		    if (x == '1')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WSTOCH_RND_MODE, l));
+		    else if (x == '2')
+		      print (info->stream, "%ld", EXTRACT_OPERAND (WSTOCH_RND_IMM8_MATH, l));
+		    else
+		      print (info->stream, _("# internal error, undefined modifier (r%c)"), x);
+		  }
 		  break;
 		}
 	    }
