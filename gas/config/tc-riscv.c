@@ -2768,8 +2768,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		case 'e': /* MUL/ADD DEST L0-L3 (L0-L7 for Wormhole) */
 		  if (riscv_opts.wormhole)
 		    {
+                      // It is technically legal to store to register 8..15,
+                      // however it doesn't make sense since those regs are
+                      // read only.  We use that for a workaround for a HW bug
+                      // in WH B0 where we throw away the result by storing to
+                      // register 9
 		      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
-			  || regno > 7)
+			  || ((strcasecmp(insn->name, "SFPSHFT2") && regno > 7) ||
+                              (!strcasecmp(insn->name, "SFPSHFT2") && regno > 7 && regno != 9)))
 			{
 			  as_bad (_("bad register for lreg_dest field, "
 				    "register must be L0...L7"));
