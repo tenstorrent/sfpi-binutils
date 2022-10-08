@@ -1247,12 +1247,24 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
   {NULL, 0, 0, 0, 0}
 };
 
+static struct riscv_supported_ext riscv_supported_sfpu_y_ext[] =
+{
+    "y", ISA_SPEC_CLASS_NONE, 1, 0, 0,
+};
+
+static struct riscv_supported_ext riscv_supported_sfpu_w_ext[] =
+{
+    "w", ISA_SPEC_CLASS_NONE, 1, 0, 0,
+};
+
 const struct riscv_supported_ext *riscv_all_supported_ext[] =
 {
   riscv_supported_std_ext,
   riscv_supported_std_z_ext,
   riscv_supported_std_s_ext,
   riscv_supported_std_zxm_ext,
+  riscv_supported_sfpu_y_ext,
+  riscv_supported_sfpu_w_ext,
   NULL
 };
 
@@ -1340,6 +1352,10 @@ riscv_recognized_prefixed_ext (const char *ext)
     /* Only the single x is unrecognized.  */
     if (strcmp (ext, "x") != 0)
       return true;
+  case RV_ISA_CLASS_SFPU:
+    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_y_ext);
+  case RV_ISA_CLASS_SFPU_WORMHOLE:
+    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_w_ext);
   default:
     break;
   }
@@ -1514,6 +1530,8 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     case RV_ISA_CLASS_S: table = riscv_supported_std_s_ext; break;
     case RV_ISA_CLASS_X:
       break;
+    case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_y_ext; break;
+    case RV_ISA_CLASS_SFPU_WORMHOLE: table = riscv_supported_sfpu_w_ext; break;
     default:
       table = riscv_supported_std_ext;
     }
@@ -2410,6 +2428,10 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "svinval");
     case INSN_CLASS_H:
       return riscv_subset_supports (rps, "h");
+    case INSN_CLASS_I_Y:
+      return riscv_subset_supports (rps, "y");
+    case INSN_CLASS_I_W:
+      return riscv_subset_supports (rps, "w");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2535,6 +2557,10 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "svinval";
     case INSN_CLASS_H:
       return _("h");
+    case INSN_CLASS_I_Y:
+      return "y";
+    case INSN_CLASS_I_W:
+      return "w";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
