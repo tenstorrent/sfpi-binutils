@@ -1249,12 +1249,12 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
 
 static struct riscv_supported_ext riscv_supported_sfpu_y_ext[] =
 {
-    "y", ISA_SPEC_CLASS_NONE, 1, 0, 0,
+    {"y", ISA_SPEC_CLASS_NONE, 1, 0, 0}
 };
 
 static struct riscv_supported_ext riscv_supported_sfpu_w_ext[] =
 {
-    "w", ISA_SPEC_CLASS_NONE, 1, 0, 0,
+    {"w", ISA_SPEC_CLASS_NONE, 1, 0, 0}
 };
 
 const struct riscv_supported_ext *riscv_all_supported_ext[] =
@@ -1551,6 +1551,15 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     }
 }
 
+bool
+riscv_ext_dont_care_version (const char *subset)
+{
+  if (strcmp (subset, "y") == 0
+      || strcmp (subset, "w") == 0)
+    return true;
+  return false;
+}
+
 /* Find the default versions for the extension before adding them to
    the subset list, if their versions are RISCV_UNKNOWN_VERSION.
    Afterwards, report errors if we can not find their default versions.  */
@@ -1569,6 +1578,13 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
        || minor_version == RISCV_UNKNOWN_VERSION)
     riscv_get_default_ext_version (rps->isa_spec, subset,
 				   &major_version, &minor_version);
+
+  if (riscv_ext_dont_care_version (subset))
+    {
+      riscv_add_subset (rps->subset_list, subset,
+			major_version, minor_version);
+      return;
+    }
 
   /* We don't care the versions of the implicit extensions.  */
   if (!implicit
