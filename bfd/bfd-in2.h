@@ -7927,6 +7927,7 @@ bool bfd_init_section_compress_status
 bool bfd_compress_section
    (bfd *abfd, asection *section, bfd_byte *uncompressed_buffer);
 
+extern int riscv_machine_target;
 #ifdef __cplusplus
 }
 #endif

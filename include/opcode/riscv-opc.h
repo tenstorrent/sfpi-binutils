@@ -2113,6 +2113,9 @@
 #define MASK_CBO_INVAL 0xfff07fff
 #define MATCH_CBO_ZERO 0x40200f
 #define MASK_CBO_ZERO 0xfff07fff
+
+#include "riscv-opc-sfpu.h"
+
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01
@@ -2855,6 +2858,9 @@ DECLARE_INSN(cbo_clean, MATCH_CBO_CLEAN, MASK_CBO_CLEAN);
 DECLARE_INSN(cbo_flush, MATCH_CBO_FLUSH, MASK_CBO_FLUSH);
 DECLARE_INSN(cbo_inval, MATCH_CBO_INVAL, MASK_CBO_INVAL);
 DECLARE_INSN(cbo_zero, MATCH_CBO_ZERO, MASK_CBO_ZERO);
+
+#include "riscv-opc-sfpu-insns.h"
+
 #endif /* DECLARE_INSN */
 #ifdef DECLARE_CSR
 /* Unprivileged Counter/Timers CSRs.  */

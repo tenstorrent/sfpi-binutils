@@ -250,6 +250,24 @@ static struct riscv_set_options riscv_opts =
   0. /* wormhole */
 };
 
+static void
+riscv_set_grayskull (bfd_boolean grayskull_value)
+{
+  if (grayskull_value)
+    elf_flags |= EF_RISCV_SFPU_GRAYSKULL;
+
+  riscv_opts.grayskull = grayskull_value;
+}
+
+static void
+riscv_set_wormhole (bfd_boolean wormhole_value)
+{
+  if (wormhole_value)
+    elf_flags |= EF_RISCV_SFPU_WORMHOLE;
+
+  riscv_opts.wormhole = wormhole_value;
+}
+
 /* Enable or disable the rvc flags for riscv_opts.  Turn on the rvc flag
    for elf_flags once we have enabled c extension.  */
 
@@ -1413,8 +1431,17 @@ init_opcode_hash (const struct riscv_opcode *opcodes,
 void
 md_begin (void)
 {
-  unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
-
+  int temp = riscv_opts.wormhole;
+  //unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
+  unsigned long mach;
+  if (xlen == 64) {
+    mach = bfd_mach_riscv64;
+  } else {
+    if (riscv_opts.wormhole)
+      mach = bfd_mach_riscv32_sfpu_wormhole;
+    else
+      mach = bfd_mach_riscv32;
+  }
   if (! bfd_set_arch_mach (stdoutput, bfd_arch_riscv, mach))
     as_warn (_("could not set architecture and machine"));
 
@@ -4116,6 +4143,2271 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      break;
 		    }
 		  continue;
+                case 's': /* wormhole STOCH_RND operands */
+                  switch (*++args)
+                    {
+                      case '1':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        {
+                          as_bad (_("bad value for OpAReg_Index field, "
+                                    "values and 0...63 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (DMA_REG_OP_A, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+		      case '2':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        { 
+                          as_bad (_("bad value for OpBReg_Index field, "
+                                    "values and 0...63 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (DMA_REG_OP_B, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case '3':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        {
+                          as_bad (_("bad value for OpResReg_Index field, "
+                                    "values and 0...63 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (DMA_REG_OP_RES, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case '4':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for dma_reg_op_b_isconst field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (DMA_REG_OP_B_ISCONST, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case '5':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 31)
+                        {
+                          as_bad (_("bad value for dma_reg_op_opsel field, "
+                                    "values and 0...31 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (DMA_REG_OP_OPSEL, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case '6':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                          {
+                            as_bad (_("bad value for payload_sigsel_size field, "
+                                      "value must be 0...3"));
+                            break;
+                          }
+                        INSERT_OPERAND (PAYLOAD_SIGSEL_SIZE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case '7':
+                  	if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      	|| imm_expr->X_op != O_constant
+                      	|| imm_expr->X_add_number < 0
+                     	|| imm_expr->X_add_number > 16383)
+                    	{
+                      	  as_bad (_("bad value for payload_sigsel field, "
+                                "values between 0...16383 "));
+                      	  break;
+                    	}
+
+                  	INSERT_OPERAND (PAYLOAD_SIGSEL, *ip, imm_expr->X_add_number);
+                  	imm_expr->X_op = O_absent;
+                  	s = expr_end;
+                  	break;
+                      case '8':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for set_sig_mode field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+                        
+                      INSERT_OPERAND (SET_SIG_MODE, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case '9':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 127)
+                        {
+                          as_bad (_("bad value for set_sig_mode field, "
+                                    "value must be between 0 to 127"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (REG_INDEX16B, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case 'a':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  7)
+                        {
+                          as_bad (_("bad value for cnt_set_mask field, "
+                                    "values and 0...7 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (CNT_SET_MASK, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case 'b':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        {
+                          as_bad (_("bad value for ch1_y field, "
+                                    "values and 0...63 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (CH1_Y, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case 'c':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  7)
+                        {
+                          as_bad (_("bad value for ch1_x field, "
+                                    "values and 0...7 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (CH1_X, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case 'd':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  7)
+                        {
+                          as_bad (_("bad value for ch0_y field, "
+                                    "values and 0...7 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (CH0_Y, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case 'e':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  7)
+                        {
+                          as_bad (_("bad value for ch0_x field, "
+                                    "values and 0...7 for unsigned values"));
+                          break;
+                        }
+
+                      	INSERT_OPERAND (CH0_X, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+			break;
+                      case 'f':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 63)
+                          {
+                            as_bad (_("bad value for bit_mask field, "
+                                      "value must be 0...63"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (BIT_MASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+
+                      case 'g':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 16383)
+                          {
+                            as_bad (_("bad value for wait_res field, "
+                                      "value must be 0...16383"));
+                            break;
+                          }
+                        INSERT_OPERAND (WAIT_RES_14BIT, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case 'h':
+                  	if (my_getOpcodeExpression (imm_expr, imm_reloc, s, p)
+                      	|| imm_expr->X_op != O_constant
+                      	|| imm_expr->X_add_number < 0
+                      	|| imm_expr->X_add_number > 127)
+                    	{
+                      	  as_bad (_("bad value for addr_mode field, "
+                                "value must be 0...127 and "));
+                      	  break;
+                    	}
+
+                  	INSERT_OPERAND (ADDR_MODE, *ip, imm_expr->X_add_number);
+                  	imm_expr->X_op = O_absent;
+                  	s = expr_end;
+                  	break;
+                      case 'i':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for index_en field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (INDEX_EN, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+                      case 'j':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 16383)
+                        {
+                          as_bad (_("bad value for dest field, "
+                                "values between 0...16383 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (DST, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'k': 
+			  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 1)
+                          {
+                            as_bad (_("bad value for memhier_sel field, "
+                                    "value must be 0 or 1"));
+                            break;
+                          }
+
+                          INSERT_OPERAND (MEMHIER_SEL, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                        break;
+                	case 'l': 
+                      	if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  15)
+                        { 
+                          as_bad (_("bad value for swap_or_incr_val field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                      	INSERT_OPERAND (SWAP_OR_INCR_VAL, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+                	case 'm': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  511)
+                        { 
+                          as_bad (_("bad value for cmp_or_wrap_or_swap_mask field, "
+                                    "values and 0...511 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (WRAP_VAL_OR_SWAP_MASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'n': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4)
+                          {
+                            as_bad (_("bad value for sel32b field, "
+                                      "value must be 0...3"));
+                            break;
+                          }
+                        INSERT_OPERAND (SEL32B, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'o':
+                      	if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        {
+                          as_bad (_("bad value for data_regindex field, "
+                                    "value must be between 0 to 63"));
+                          break;
+                        }
+
+                      	INSERT_OPERAND (DATA_REG_IDX, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+                	case 'p':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        { 
+                          as_bad (_("bad value for addr_regindex field, "
+                                    "value must be between 0 to 63"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (ADDR_REG_IDX, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'q': 
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for no_incr field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                      	INSERT_OPERAND (NO_INCR, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+                	case 'r': 
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 16777215)
+                        {
+                          as_bad (_("bad value for mutex_idx field, "
+                                    "value must be 0 or 16777215"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (MUTEX_IDX, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+                	case 's': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                          {
+                            as_bad (_("bad value for clear_dvalid field, "
+                                      "value must be 0...3"));
+                            break;
+                          }
+                        INSERT_OPERAND (CLEAR_DVALID, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 't': 
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 4194303)
+                        {
+                          as_bad (_("bad value for reset field, "
+                                    "value must be 0....4194303"));
+                          break;
+                        }
+
+                      	INSERT_OPERAND (RESET, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+                	case 'u':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        {
+                          as_bad (_("bad value for rotate_weights field, "
+                                    "value must be between 0 to 63"));
+                          break;
+                        }
+                        
+                        INSERT_OPERAND (ROTATE_WEIGHTS, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'v': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                          {
+                            as_bad (_("bad value for addrmode field, "
+                                      "value must be 0...3"));
+                            break;
+                          }
+                        INSERT_OPERAND (ADDRMODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'w': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 32767)
+                        {
+                          as_bad (_("bad value for dst field, "
+                                "values and 0...32767 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (DST_15BIT, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'x': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for dest_accum_en field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (DEST_ACCUM_EN, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'y': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                          { 
+                            as_bad (_("bad value for instr_mod19 field, "
+                                      "value must be 0...3"));
+                            break;
+                          }
+                        INSERT_OPERAND (INSTR_MOD19, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case 'z': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 15)
+                        { 
+                          as_bad (_("bad value for addrmode field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (EL_ADDRMODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    }
+                  continue;
+                case 't':
+                  switch (*++args)
+                    {
+                	case '0': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number >  16777215)
+                        { 
+                          as_bad (_("bad value for flush_spec field, "
+                                "values and 0...16777215 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (FLUSH_SPEC, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '1': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 7)
+                          {
+                            as_bad (_("bad value for instrmod19 field, "
+                                      "value must be 0...7"));
+                            break;
+                          }
+                        INSERT_OPERAND (INSTRMOD19, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '2': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        { 
+                          as_bad (_("bad value for max_pool_index_en field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (MAX_POOL_INDEX_EN, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '3': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 8388607)
+                        {
+                          as_bad (_("bad value for reset_srcb_gate_control field, "
+                                "values and 0...8388607 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (RESET_SRCB_GATE_CONTROL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '4': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        { 
+                          as_bad (_("bad value for reset_srca_gate_control field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (RESET_SRCA_GATE_CONTROL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '5': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 15)
+                          {
+                            as_bad (_("bad value for rwc_cr field, "
+                                      "value must be 0...15"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (RWC_CR, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '6':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 15)
+                          {
+                            as_bad (_("bad value for rwc_d field, "
+                                      "value must be 0...15"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (RWC_D, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '7':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 15)
+                          {
+                            as_bad (_("bad value for rwc_b field, "
+                                      "value must be 0...15"));
+                            break;
+                          }
+                          
+                        INSERT_OPERAND (RWC_B, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                	case '8':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 15)
+                          {
+                            as_bad (_("bad value for rwc_a field, "
+                                      "value must be 0...15"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (RWC_A, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case '9':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                          {
+                            as_bad (_("bad value for size_sel field, "
+                                      "value must be 0...3"));
+                            break;
+                          }
+                        INSERT_OPERAND (SIZE_SEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'a':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 255)
+                          {
+                            as_bad (_("bad value for offset_index field, "
+                                      "value must be 0...255"));
+                            break;
+                          }
+                        INSERT_OPERAND (OFFSET_INDEX, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'b':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                          {
+                            as_bad (_("bad value for auto_inc_spec field, "
+                                      "value must be 0...3"));
+                            break;
+                          }
+                        INSERT_OPERAND (AUTO_INC_SPEC, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'c':
+                      	if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number >  15)
+                          {
+                            as_bad (_("bad value for tdma_data_reg_idx field, "
+                                    "values and 0...15 for unsigned values"));
+                            break;
+                          }
+
+                      	INSERT_OPERAND (TDMA_DATA_REG_IDX, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+	                case 'd':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 16383)
+                        {
+                          as_bad (_("bad value for reg_addr field, "
+                                "values and 0...16383 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (REGADDR, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'e':
+                      	if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 31)
+                          {
+                            as_bad (_("bad value for  rotate weights field, "
+                                    "values must be 0...31 range"));
+                            break;
+                          }
+
+                      	INSERT_OPERAND (ROTATEWEIGHTS, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+	                case 'f':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for mop_type field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (MOP_TYPE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'g':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 127)
+                          {
+                            as_bad (_("bad value for loop_count field, "
+                        	"value must be 0...127"));
+                            break;
+                          }
+                        INSERT_OPERAND (LOOP_COUNT, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end; 
+                        break;
+	                case 'h':
+	                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+	                      || imm_expr->X_op != O_constant
+	                      || imm_expr->X_add_number < 0
+	                      || imm_expr->X_add_number >  32767)
+	                    {
+	                      as_bad (_("bad value for zmask_lo16 field, "
+	                                "value must be 0...32767"));
+	                      break;
+	                    }
+	
+	                  INSERT_OPERAND (ZMASK_LO16, *ip, imm_expr->X_add_number);
+	                  imm_expr->X_op = O_absent;
+	                  s = expr_end;
+			  break;
+	                case 'i':
+                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number >  16777215)
+                          {
+                            as_bad (_("bad value for flush_spec field, "
+                                "values and 0...16777215 for unsigned values"));
+                            break;
+                          }
+
+                          INSERT_OPERAND (ZMASK_HI16, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                          break;
+	                case 'j':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for reset_srca_gate_control field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (DEST_32B_LO, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'k':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number >  63)
+                          {
+                            as_bad (_("bad value for src field, "
+                                    "values and 0...63 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (SRC, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'l':                        
+			if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 7)
+                          {
+                            as_bad (_("bad value for instrmod field, "
+                                      "value must be 0...7"));
+                            break;
+                          }
+                        INSERT_OPERAND (INSTRMODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'm':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4095)
+                          { 
+                            as_bad (_("bad value for dest_mov field, "
+                                    "values and 0...4095 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (DST_MOV, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'n':
+                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              || imm_expr->X_op != O_constant
+                              || imm_expr->X_add_number < 0
+                              || imm_expr->X_add_number >  7)
+                            {
+                              as_bad (_("bad value for srca field, "
+                                        "values and 0...7 for unsigned values"));
+                              break;
+                            }
+
+                          INSERT_OPERAND (SRCA, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                          break;
+	                case 'o':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number >  4095)
+                          {
+                            as_bad (_("bad value for srcb field, "
+                                    "values and 0...4095 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (SRCB, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'p':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 511)
+                          {
+                            as_bad (_("bad value for addrmode_pacr field, "
+                                    "values and 0...511 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (ADDRMODE_PACR, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'q':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 7)
+                            {
+                            as_bad (_("bad value for zero_write field, "
+                                      "value must be 0...7"));
+                            break;
+                            }
+                        INSERT_OPERAND (ZERO_WRITE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'r':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        { 
+                          as_bad (_("bad value for ovrd_thread_id field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (OVRD_TREAD_ID, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 's':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 7)
+                            {
+                            as_bad (_("bad value for concat field, "
+                                      "value must be 0...7"));
+                            break;
+                            }
+                        INSERT_OPERAND (CONCAT, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 't':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 7)
+                            {
+                            as_bad (_("bad value for flush field, "
+                                      "value must be 0...7"));
+                            break;
+                            }
+                        INSERT_OPERAND (FLUSH, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'u':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        { 
+                          as_bad (_("bad value for last field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (LAST, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'v':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        { 
+                          as_bad (_("bad value for push field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (PUSH, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'w':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        { 
+                          as_bad (_("bad value for addr_sel field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (ADDR_SEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'x':
+                      	if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  1023)
+                          {
+                            as_bad (_("bad value for wr_data field, "
+                                    "values and 0...1023 for unsigned values"));
+                            break;
+                          }
+
+                      	INSERT_OPERAND (WR_DATA, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+	                case 'y':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  15)
+                        {
+                          as_bad (_("bad value for pack_sel field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (PACK_SEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'z':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 63)
+                          {
+                            as_bad (_("bad value for stream_id field, "
+                                      "value must be 0...63"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (STREAM_ID, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+		    }
+		    continue;
+                case 'u':
+                  switch (*++args)
+                    {
+                    case '0':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for flush field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (FLUSH_SET, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case '1':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 255)
+                          {
+                            as_bad (_("bad value for gpr_address field, "
+                                      "value must be 0...255"));
+                            break;
+                          }
+                        INSERT_OPERAND (GPR_ADDRESS, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case '2':
+                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              || imm_expr->X_op != O_constant
+                              || imm_expr->X_add_number < 0
+                              || imm_expr->X_add_number > 32767)
+                            {
+                              as_bad (_("bad value for cfg_reg field, "
+                                        "value must be 0...32767"));
+                              break;
+                            }
+
+                          INSERT_OPERAND (CFG_REG, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                          break;
+                    case '3':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for target_sel field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (TARGET_SEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case '4':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for byte_offset field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (BYTE_OFFSET, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case '5':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for constid_2 field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (CONTEXTID_2, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case '6':
+                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              || imm_expr->X_op != O_constant
+                              || imm_expr->X_add_number < 0
+                              || imm_expr->X_add_number >  767)
+                            {
+                              as_bad (_("bad value for cfg_reg field, "
+                                        "value must be 0...767"));
+                              break;
+                            }
+
+                          INSERT_OPERAND (FLOP_INDEX, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                          break;
+                    case '7':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 63)
+                          { 
+                            as_bad (_("bad value for reg_index field, "
+                                      "value must be 0...63"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (REG_INDEX, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case '8':
+                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              || imm_expr->X_op != O_constant
+                              || imm_expr->X_add_number < 0
+                              || imm_expr->X_add_number >  767)
+                            {
+                              as_bad (_("bad value for cfg_reg field, "
+                                        "value must be 0...767"));
+                              break;
+                            }
+
+                          INSERT_OPERAND (START_IDX, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                          break;
+                    case '9':
+                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              || imm_expr->X_op != O_constant
+                              || imm_expr->X_add_number < 0
+                              || imm_expr->X_add_number >  767)
+                            {
+                              as_bad (_("bad value for len field, "
+                                        "value must be 0...767"));
+                              break;
+                            }
+
+                          INSERT_OPERAND (LEN, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                          break;
+                    case 'a':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  15)
+                        { 
+                          as_bad (_("bad value for pack_sel field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (EXECUTE_WHILE_LOADING, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'b':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for load_mode field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (LOAD_MODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'c':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 255)
+                          {
+                            as_bad (_("bad value for mask field, "
+                                      "value must be 0...255"));
+                            break;
+                          }
+                        INSERT_OPERAND (MASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'd':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 255)
+                          {
+                            as_bad (_("bad value for data field, "
+                                      "value must be 0...255"));
+                            break;
+                          }
+                        INSERT_OPERAND (DATA, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'e':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 255)
+                          {
+                            as_bad (_("bad value for cfg_reg_addr field, "
+                                      "value must be 0...255"));
+                            break;
+                          }
+                        INSERT_OPERAND (CFG_REG_ADDR, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'f':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 3145727)
+                        {
+                          as_bad (_("bad value for sem_sel field, "
+                                    "values and 0...3145727 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (SEM_SEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'g':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 63)
+                          { 
+                            as_bad (_("bad value for max_value field, "
+                                      "value must be 0...63"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (MAX_VALUE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'h':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 63)
+                          {
+                            as_bad (_("bad value for init_value field, "
+                                      "value must be 0...63"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (INIT_VALUE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                    case 'i':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 12287)
+                          { 
+                            as_bad (_("bad value for semsel_seminit field, "
+                                    "values and 0...12287 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (SEMSEL_SEMINIT, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+        	        case 'j':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 511)
+                          {
+                            as_bad (_("bad value for stall_res field, "
+                                    "values and 0...511 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (STALL_RES, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'k':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 8191)
+                          {
+                            as_bad (_("bad value for semsel field, "
+                                    "values and 0...8191 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (SEMSEL_SEMWAIT, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'l':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for wait_sem_cond field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (WAIT_SEM_COND, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'm':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        { 
+                          as_bad (_("bad value for channel_index field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (CHANNEL_INDEX, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'n':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4)
+                            {
+                            as_bad (_("bad value for dimensionindex field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (DIMENSIONINDEX, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'o':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 16383)
+                        {
+                          as_bad (_("bad value for reg_addr field, "
+                                "values and 0...16383 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (VALUE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'p':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 2047)
+                        {
+                          as_bad (_("bad value for x_end2 field, "
+                                "values and 0...2047 for unsigned values"));
+                          break;
+                        }
+			INSERT_OPERAND (X_END2, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'q':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1023)
+                        { 
+                          as_bad (_("bad value for x_start field, "
+                                "values and 0...1023 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (X_START, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'r':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number >  63)
+                        {
+                          as_bad (_("bad value for rwc_cr field, "
+                                    "values and 0...63 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (BITMASK, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+	                case 's':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 8388607)
+                        {
+                          as_bad (_("bad value for regmask field, "
+                                "values and 0...8388607 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (REGMASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 't':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for halo_mask field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (HALO_MASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'u':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 16777215)
+                        {
+                          as_bad (_("bad value for reg_mask field, "
+                                "values and 0...16777215 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (REG_MASK_2, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'v':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 255)
+                          {
+                            as_bad (_("bad value for setc16_reg field, "
+                                      "value must be 0...255"));
+                            break;
+                          }
+                        INSERT_OPERAND (SETC16_REG, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'w':
+	                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+	                      || imm_expr->X_op != O_constant
+	                      || imm_expr->X_add_number < 0
+	                      || imm_expr->X_add_number > 65535)
+	                    {
+	                      as_bad (_("bad value for setc16_value field, "
+	                                "values and 0...65535 for unsigned values"));
+	                      break;
+	                    }
+	
+	                  INSERT_OPERAND (SETC16_VALUE, *ip, imm_expr->X_add_number);
+	                  imm_expr->X_op = O_absent;
+	                  s = expr_end;
+			  break;
+	                case 'x':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 16777215)
+                        {
+                          as_bad (_("bad value for setvalid field, "
+                                "values and 0...16777215 for unsigned values"));
+                          break;
+                        }
+                        
+                        INSERT_OPERAND (SETVALID, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'y':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4095)
+                          {
+                            as_bad (_("bad value for rwc_bias field, "
+                                    "values and 0...4095 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (RWC_BIAS, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'z':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 63)
+                        {
+                          as_bad (_("bad value for set_inc_ctrl field, "
+                                    "values and 0...63 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (SET_INC_CTRL, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+		    }
+	 	   continue; 
+                case 'v':
+                  switch (*++args)
+                    {
+	                case '0':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4095)
+                          {
+                            as_bad (_("bad value for y_end field, "
+                                    "values and 0...4095 for unsigned values"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (Y_END, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case '1': 
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 15)
+                        {
+                          as_bad (_("bad value for y_start field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (Y_START, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+	                case '2':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 15)
+                        {
+                          as_bad (_("bad value for x_end field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (X_END, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+	                case '3':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for clear_ab_vld field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (CLEAR_AB_VLD, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case '4':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 15)
+                        {
+                          as_bad (_("bad value for lreg_ind field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (LREG_IND, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+	                case '5':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 15)
+                        {
+                          as_bad (_("bad value for instr_mod0 field, "
+                                    "values and 0...15 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (INSTR_MOD0, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+	                case '6':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for sfpu_addr_mode field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (SFPU_ADDR_MODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case '7':
+	                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+	                      || imm_expr->X_op != O_constant
+	                      || imm_expr->X_add_number < 0
+	                      || imm_expr->X_add_number > 16383)
+	                    {
+	                      as_bad (_("bad value for dest_reg_addr field, "
+	                                "values and 0...16383 for unsigned values"));
+	                      break;
+	                    }
+	
+	                  INSERT_OPERAND (DEST_REG_ADDR, *ip, imm_expr->X_add_number);
+	                  imm_expr->X_op = O_absent;
+	                  s = expr_end;
+			  break;
+	                case '8':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 3145727)
+                        {
+                          as_bad (_("bad value for log2_amount2 field, "
+                                    "values and 0...3145727 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (LOG2_AMOUNT2, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case '9':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for shift_mode field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (SHIFT_MODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'a':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 31)
+                          {
+                            as_bad (_("bad value for  rot_shift field, "
+                                    "values must be 0...31 range"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (ROT_SHIFT, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'b':
+                      	if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1023)
+                        {
+                          as_bad (_("bad value for shift_row field, "
+                                    "values and 0...1023 for unsigned values"));
+                          break;
+                        }
+
+                      	INSERT_OPERAND (SHIFT_ROW, *ip, imm_expr->X_add_number);
+                      	imm_expr->X_op = O_absent;
+                      	s = expr_end;
+                      	break;
+	                case 'c':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 32767)
+                        {
+                          as_bad (_("bad value for wait_res field, "
+                                    "values and 0...32767 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (WAIT_RES, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'd':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for sizesel field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (SIZESEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'e':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for regsizesel field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (REGSIZESEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'f':
+                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 127)
+                          {     
+                            as_bad (_("bad value for offsetindex field, "
+                                "value must be 0...127"));
+                            break;
+                          }
+
+                          INSERT_OPERAND (OFFSETINDEX, *ip, imm_expr->X_add_number);
+                          imm_expr->X_op = O_absent;
+                          s = expr_end;
+                          break;
+	                case 'g':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for unpack_block_selection field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (UNPACK_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'h': 
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 255)
+                          {
+                            as_bad (_("bad value for addrmode_unpacrop field, "
+                                      "value must be 0...255"));
+                            break;
+                          }
+                        INSERT_OPERAND (ADDRMODE_UNPACROP, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+			break;
+	                case 'i':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4)
+                            {
+                            as_bad (_("bad value for cfgcontextcntinc field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (CFGCONTEXTCNTINC, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'j':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 7)
+                        {
+                          as_bad (_("bad value for cfgcontextid field, "
+                                    "values and 0...7 for unsigned values"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (CFGCONTEXTID, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      s = expr_end;
+                      break;
+	                case 'k':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4)
+                            {
+                            as_bad (_("bad value for addrcntcontextid field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (ADDRCNTCONTEXTID, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'l':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for setdatvalid field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (SETDATVALID, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'm':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for rareb_en field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (RAREB_EN, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'n':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for zerowrite2 field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (ZEROWRITE2, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'o':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for autoinccontextid field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (AUTOINCCONTEXTID, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'p':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for rowsearch field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (ROWSEARCH, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'q':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for searchcashflow field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (SEARCHCASHFLOW, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'r':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 8388607)
+                        {
+                          as_bad (_("bad value for reset_noop field, "
+                                "values and 0...8388607 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (NOOP, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 's':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for wr128b field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (WR128B, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 't':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 32767)
+                        {
+                          as_bad (_("bad value for cfgreg field, "
+                                    "values and 0...32767 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (CFGREG, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'u':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for mov_block_selection field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (MOV_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'v':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 8388607)
+                        {
+                          as_bad (_("bad value for last_xmovop field, "
+                                "values and 0...8388607 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (LAST_XMOVOP, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'w':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 31)
+                          {
+                            as_bad (_("bad value for clearcode field, "
+                                    "values must be 0...31 range"));
+                            break;
+                          }
+
+                        INSERT_OPERAND (CLEARCODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'x':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1048575)
+                        { 
+                          as_bad (_("bad value for zeroval field, "
+                                "values and 0...1048575 for unsigned values"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (ZEROVAL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'y':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for writemode field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (WRITEMODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+	                case 'z':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 1)
+                        {
+                          as_bad (_("bad value for bankmask field, "
+                                    "value must be 0 or 1"));
+                          break;
+                        }
+
+                        INSERT_OPERAND (BANKMASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+		    }
+		    continue;
+                case 'w':
+                  switch (*++args)
+                    {
+		      case '0':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 3)
+                            {
+                            as_bad (_("bad value for srcmask field, "
+                                      "value must be 0...3"));
+                            break;
+                            }
+                        INSERT_OPERAND (SRCMASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+		      case '1':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 511)
+                            {
+                            as_bad (_("bad value for incwrap_val field, "
+                                      "value must be 0...511"));
+                            break;
+                            }
+                        INSERT_OPERAND (CMP_VAL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case '2':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 15)
+                            {
+                            as_bad (_("bad value for incwrap_val field, "
+                                      "value must be 0...15"));
+                            break;
+                            }
+                        INSERT_OPERAND (PKEDG_X_START, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+		      case '3':	
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 31)
+                            {
+                            as_bad (_("bad value for mov_instr_mod field, "
+                                      "value must be 0...31"));
+                            break;
+                            }
+                        INSERT_OPERAND (MOV_INSTR_MOD, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case '4':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 31)
+                            {
+                            as_bad (_("bad value for mov_src field, "
+                                      "value must be 0...31"));
+                            break;
+                            }
+                        INSERT_OPERAND (MOV_SRC, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case '5':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 1023)
+                            {
+                            as_bad (_("bad value for mov_dst field, "
+                                      "value must be 0...1023"));
+                            break;
+                            }
+                        INSERT_OPERAND (MOV_DST, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case '6':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 1023)
+                            {
+                            as_bad (_("bad value for stall_res_grayskull field, "
+                                      "value must be 0...1023"));
+                            break;
+                            }
+                        INSERT_OPERAND (GRAY_STALL_RES, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case '7':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 4095)
+                            {
+                            as_bad (_("bad value for sem_sel_grayskull field, "
+                                      "value must be 0...4095"));
+                            break;
+                            }
+                        INSERT_OPERAND (GRAY_SEM_SEL, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+                      case '8':
+                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number > 7)
+                            {
+                            as_bad (_("bad value for addr_mode field, "
+                                      "value must be 0...7"));
+                            break;
+                            }
+                        INSERT_OPERAND (POOL_ADDR_MODE, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        s = expr_end;
+                        break;
+		    }
+		  continue;
 		}
 	      break;  // End of SFPU Operands
 
@@ -4281,6 +6573,7 @@ enum options
   OPTION_MPRIV_SPEC,
   OPTION_BIG_ENDIAN,
   OPTION_LITTLE_ENDIAN,
+  OPTION_SFPU_GRAYSKULL,
   OPTION_SFPU_WORMHOLE,
   OPTION_END_OF_ENUM
 };
@@ -4302,6 +6595,7 @@ struct option md_longopts[] =
   {"mpriv-spec", required_argument, NULL, OPTION_MPRIV_SPEC},
   {"mbig-endian", no_argument, NULL, OPTION_BIG_ENDIAN},
   {"mlittle-endian", no_argument, NULL, OPTION_LITTLE_ENDIAN},
+  {"mgrayskull", no_argument, NULL, OPTION_SFPU_GRAYSKULL},
   {"mwormhole", no_argument, NULL, OPTION_SFPU_WORMHOLE},
 
   {NULL, no_argument, NULL, 0}
@@ -4385,6 +6679,10 @@ md_parse_option (int c, const char *arg)
 
     case OPTION_LITTLE_ENDIAN:
       target_big_endian = 0;
+      break;
+
+    case OPTION_SFPU_GRAYSKULL:
+      riscv_set_grayskull(TRUE);
       break;
 
     case OPTION_SFPU_WORMHOLE:
@@ -4801,10 +7099,10 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 	  free (s);
 	}
     }
-  else if (strcmp (name, "sfpu") == 0)
-    riscv_set_sfpu (TRUE);
-  else if (strcmp (name, "nosfpu") == 0)
-    riscv_set_sfpu (FALSE);
+  else if (strcmp (name, "grayskull") == 0)
+    riscv_set_grayskull (TRUE);
+  else if (strcmp (name, "nograyskull") == 0)
+    riscv_set_grayskull (FALSE);
   else if (strcmp (name, "wormhole") == 0)
     riscv_set_wormhole (TRUE);
   else if (strcmp (name, "nowormhole") == 0)
@@ -5430,9 +7728,19 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
       if (old_xlen != xlen)
 	{
 	  /* We must re-init bfd again if xlen is changed.  */
-	  unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
+	  unsigned long mach;
+  	  if (xlen == 64) {
+	    mach = bfd_mach_riscv64;
+	  }
+	  else {
+	    if (riscv_opts.wormhole)
+	      mach = bfd_mach_riscv32_sfpu_wormhole;
+	    else
+	      mach = bfd_mach_riscv32;
+	  }
+    
+	  //unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32_sfpu_wormhole;
 	  bfd_find_target (riscv_target_format (), stdoutput);
-
 	  if (! bfd_set_arch_mach (stdoutput, bfd_arch_riscv, mach))
 	    as_warn (_("could not set architecture and machine"));
 	}

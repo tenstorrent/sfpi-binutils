@@ -58,6 +58,8 @@
 #define ELF_ARCH			bfd_arch_riscv
 #define ELF_TARGET_ID			RISCV_ELF_DATA
 #define ELF_MACHINE_CODE		EM_RISCV
+#define ELF_MACHINE_ALT1    		EM_RISCV_GRAYSKULL
+#define ELF_MACHINE_ALT2    		EM_RISCV_WORMHOLE
 #define ELF_MAXPAGESIZE			0x1000
 #define ELF_COMMONPAGESIZE		0x1000
 
@@ -5112,6 +5114,8 @@ riscv_elf_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
 static bool
 riscv_elf_object_p (bfd *abfd)
 {
+    const struct elf_backend_data *bed;
+  bed = get_elf_backend_data (abfd);
   /* There are only two mach types in RISCV currently.  */
   if (strcmp (abfd->xvec->name, "elf32-littleriscv") == 0
       || strcmp (abfd->xvec->name, "elf32-bigriscv") == 0)
