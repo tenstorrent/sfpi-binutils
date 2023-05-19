@@ -128,4 +128,18 @@ extern void riscv_elf_final_processing (void);
 extern void riscv_md_end (void);
 extern int riscv_convert_symbolic_attribute (const char *);
 
+/* This is the set of options which the .option pseudo-op may modify.  */
+
+struct riscv_set_options
+{
+  int pic; /* Generate position-independent code.  */
+  int rvc; /* Generate RVC code.  */
+  int rve; /* Generate RVE code.  */
+  int relax; /* Emit relocs the linker is allowed to relax.  */
+  int arch_attr; /* Emit arch attribute.  */
+  int csr_check; /* Enable the CSR checking.  */
+  int grayskull; /* Generate SFPU code for Grayskull.  */
+  int wormhole; /* Generate SFPU code for Wormhole.  */
+};
+
 #endif /* TC_RISCV */

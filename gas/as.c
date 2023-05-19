@@ -51,6 +51,9 @@
 #define itbl_init()
 #endif
 
+extern const bfd_target riscv_elf32_vec;
+extern struct riscv_set_options riscv_opts;
+
 #ifdef USING_CGEN
 /* Perform any cgen specific initialisation for gas.  */
 extern void gas_cgen_begin (void);
@@ -1363,6 +1366,11 @@ main (int argc, char ** argv)
 
   output_file_create (out_file_name);
   gas_assert (stdoutput != 0);
+
+  if (riscv_opts.wormhole)
+    stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_WORMHOLE;
+  else if (riscv_opts.grayskull)
+    stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_GRAYSKULL;
 
   dot_symbol_init ();
 

@@ -48,6 +48,11 @@ static const char * const *riscv_fpr_names;
 /* Other options.  */
 static int no_aliases;	/* If set disassemble as most general inst.  */
 
+enum sfpu_mach_type {
+  SFPU_MACH_GRAYSKULL = 1,
+  SFPU_MACH_WORMHOLE = 2
+} sfpu_mach;
+
 static void
 set_default_riscv_dis_options (void)
 {
@@ -539,6 +544,368 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		      print (info->stream, _("# internal error, undefined modifier (r%c)"), x);
 		  }
 		  break;
+		case 's':
+		  {
+		    char x = *++d;
+		    switch (x)
+		      {
+		      case '1':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_A, l)); break;
+		      case '2':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_B, l)); break;
+		      case '3':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_RES, l)); break;
+		      case '4':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_B_ISCONST, l)); break;
+		      case '5':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_OPSEL, l)); break;
+		      case '6':
+			print (info->stream, "%ld", EXTRACT_OPERAND (PAYLOAD_SIGSEL_SIZE, l)); break;
+		      case '7':
+			print (info->stream, "%ld", EXTRACT_OPERAND (PAYLOAD_SIGSEL, l)); break;
+		      case '8':
+			print (info->stream, "%ld", EXTRACT_OPERAND (SET_SIG_MODE, l)); break;
+		      case '9':
+			print (info->stream, "%ld", EXTRACT_OPERAND (REG_INDEX16B, l)); break;
+		      case 'a':
+			print (info->stream, "%ld", EXTRACT_OPERAND (CNT_SET_MASK, l)); break;
+		      case 'b':
+			print (info->stream, "%ld", EXTRACT_OPERAND (CH1_Y, l)); break;
+		      case 'c':
+			print (info->stream, "%ld", EXTRACT_OPERAND (CH1_X, l)); break;
+		      case 'd':
+			print (info->stream, "%ld", EXTRACT_OPERAND (CH0_Y, l)); break;
+		      case 'e':
+			print (info->stream, "%ld", EXTRACT_OPERAND (CH0_X, l)); break;
+		      case 'f':
+			print (info->stream, "%ld", EXTRACT_OPERAND (BIT_MASK, l)); break;
+		      case 'g':
+			print (info->stream, "%ld", EXTRACT_OPERAND (WAIT_RES_14BIT, l)); break;
+		      case 'h':
+			print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_MODE, l)); break;
+		      case 'i':
+			print (info->stream, "%ld", EXTRACT_OPERAND (INDEX_EN, l)); break;
+		      case 'j':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DST, l)); break;
+		      case 'k':
+			print (info->stream, "%ld", EXTRACT_OPERAND (MEMHIER_SEL, l)); break;
+		      case 'l':
+			print (info->stream, "%ld", EXTRACT_OPERAND (SWAP_OR_INCR_VAL, l)); break;
+		      case 'm':
+			print (info->stream, "%ld", EXTRACT_OPERAND (WRAP_VAL_OR_SWAP_MASK, l)); break;
+		      case 'n':
+			print (info->stream, "%ld", EXTRACT_OPERAND (SEL32B, l)); break;
+		      case 'o':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DATA_REG_IDX, l)); break;
+		      case 'p':
+			print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_REG_IDX, l)); break;
+		      case 'q':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (NO_INCR, l)); break;
+                      case 'r':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (MUTEX_IDX, l)); break;
+		      case 's':
+			print (info->stream, "%ld", EXTRACT_OPERAND (CLEAR_DVALID, l)); break;
+		      case 't':
+			print (info->stream, "%ld", EXTRACT_OPERAND (RESET, l)); break;
+		      case 'u':
+			print (info->stream, "%ld", EXTRACT_OPERAND (ROTATE_WEIGHTS, l)); break;
+		      case 'v':
+			print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE, l)); break;
+		      case 'w':
+			print (info->stream, "%ld", EXTRACT_OPERAND (DST_15BIT, l)); break;
+                      case 'x':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (DEST_ACCUM_EN, l)); break;
+                      case 'y':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTR_MOD19, l)); break;
+                      case 'z':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (EL_ADDRMODE, l)); break;
+		      default:
+			print (info->stream, _("# internal error, undefined modifier (ys%c)"), x);
+			break;
+		      }
+		      break;
+		  }
+		case 't':
+		  {
+		    char x = *++d;
+		    switch (x)
+		      {
+		      case '0':
+			print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH_SPEC, l)); break;
+		      case '1':
+			print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMOD19, l)); break;
+		      case '2':
+			print (info->stream, "%ld", EXTRACT_OPERAND (MAX_POOL_INDEX_EN, l)); break;
+		      case '3':
+			print (info->stream, "%ld", EXTRACT_OPERAND (RESET_SRCB_GATE_CONTROL, l));
+			break;
+		      case '4':
+			print (info->stream, "%ld", EXTRACT_OPERAND (RESET_SRCA_GATE_CONTROL, l));
+			break;
+		      case '5':
+			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_CR, l)); break;
+		      case '6':
+			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_D, l)); break;
+		      case '7':
+			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_B, l)); break;
+		      case '8':
+			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_A, l)); break;
+		      case '9':
+			print (info->stream, "%ld", EXTRACT_OPERAND (SIZE_SEL, l)); break;
+		      case 'a':
+			print (info->stream, "%ld", EXTRACT_OPERAND (OFFSET_INDEX, l)); break;
+		      case 'b':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (AUTO_INC_SPEC, l)); break;
+		      case 'c':
+			print (info->stream, "%ld", EXTRACT_OPERAND (TDMA_DATA_REG_IDX, l)); break;
+		      case 'd':
+			print (info->stream, "%ld", EXTRACT_OPERAND (REGADDR, l)); break;
+		      case 'e':
+			print (info->stream, "%ld", EXTRACT_OPERAND (ROTATEWEIGHTS, l)); break;
+		      case 'f':
+			print (info->stream, "%ld", EXTRACT_OPERAND (MOP_TYPE, l)); break;
+		      case 'g':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (LOOP_COUNT, l)); break;
+                      case 'h':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ZMASK_LO16, l)); break;
+                      case 'i':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ZMASK_HI16, l)); break;
+                      case 'j':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (DEST_32B_LO, l)); break;
+                      case 'k':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SRC, l)); break;
+                      case 'l':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMODE, l)); break;
+                      case 'm':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (DST_MOV, l)); break;
+                      case 'n':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SRCA, l)); break;
+                      case 'o':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SRCB, l)); break;
+                      case 'p':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE_PACR, l)); break;
+                      case 'q':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ZERO_WRITE, l)); break;
+                      case 'r':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (OVRD_TREAD_ID, l)); break;
+                      case 's':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CONCAT, l)); break;
+                      case 't':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH, l)); break;
+                      case 'u':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (LAST, l)); break;
+                      case 'v':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (PUSH, l)); break;
+                      case 'w':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_SEL, l)); break;
+                      case 'x':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (WR_DATA, l)); break;
+                      case 'y':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (PACK_SEL, l)); break;
+                      case 'z':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (STREAM_ID, l)); break;
+		      default:
+			print (info->stream, _("# internal error, undefined modifier (yt%c)"), x); 
+			break;
+		      }
+		      break;
+		  }
+                case 'u': /* */
+                  {
+                    char x = *++d;
+                    switch (x)
+                      {
+                      case '0':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH_SET, l)); break;
+                      case '1':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (GPR_ADDRESS, l)); break;
+                      case '2':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CFG_REG, l)); break;
+                      case '3':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (TARGET_SEL, l)); break;
+                      case '4':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (BYTE_OFFSET, l)); break;
+                      case '5':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CONTEXTID_2, l)); break;
+                      case '6':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (FLOP_INDEX, l)); break;
+                      case '7':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (REG_INDEX, l)); break;
+                      case '8':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (START_IDX, l)); break;
+                      case '9':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (LEN, l)); break;
+                      case 'a':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (EXECUTE_WHILE_LOADING, l));
+			break;
+                      case 'b':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (LOAD_MODE, l)); break;
+                      case 'c':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (MASK, l)); break;
+                      case 'd':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (DATA, l)); break;
+                      case 'e':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CFG_REG_ADDR, l)); break;
+                      case 'f':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SEM_SEL, l)); break;
+                      case 'g':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (MAX_VALUE, l)); break;
+                      case 'h':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (INIT_VALUE, l)); break;
+                      case 'i':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SEMSEL_SEMINIT, l)); break;
+                      case 'j':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (STALL_RES, l)); break;
+                      case 'k':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SEMSEL_SEMWAIT, l)); break;
+                      case 'l':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (WAIT_SEM_COND, l)); break;
+                      case 'm':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CHANNEL_INDEX, l)); break;
+                      case 'n':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (DIMENSIONINDEX, l)); break;
+                      case 'o':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (VALUE, l)); break;
+                      case 'p':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (X_END2, l)); break;
+                      case 'q':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (X_START, l)); break;
+                      case 'r':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (BITMASK, l)); break;
+                      case 's':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (REGMASK, l)); break;
+                      case 't':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (HALO_MASK, l)); break;
+                      case 'u':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (REG_MASK_2, l)); break;
+                      case 'v':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SETC16_REG, l)); break;
+                      case 'w':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SETC16_VALUE, l)); break;
+                      case 'x':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SETVALID, l)); break;
+                      case 'y':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (RWC_BIAS, l)); break;
+                      case 'z':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SET_INC_CTRL, l)); break;
+                      default:
+                        print (info->stream, _("# internal error, undefined modifier (l%c)"), x); 
+			break;
+                      }
+		      break;
+                  }
+                case 'v':
+                  {
+                    char x = *++d;
+                    switch (x)
+                      {
+                      case '0':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (Y_END, l)); break;
+                      case '1':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (Y_START, l)); break;
+                      case '2':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (X_END, l)); break;
+                      case '3':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CLEAR_AB_VLD, l)); break;
+		      case '4':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (LREG_IND, l)); break;
+                      case '5':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTR_MOD0, l)); break;
+                      case '6':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SFPU_ADDR_MODE, l)); break;
+                      case '7':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (DEST_REG_ADDR, l)); break;
+
+                      case '8':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (LOG2_AMOUNT2, l)); break;
+                      case '9':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SHIFT_MODE, l)); break;
+                      case 'a':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ROT_SHIFT, l));
+                        break;
+                      case 'b':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SHIFT_ROW, l)); break;
+                      case 'c':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (WAIT_RES, l)); break;
+                      case 'd':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SIZESEL, l)); break;
+                      case 'e':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (REGSIZESEL, l)); break;
+                      case 'f':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (OFFSETINDEX, l)); break;
+                      case 'g':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l));
+			break;
+                      case 'h':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE_UNPACROP, l)); break;
+                      case 'i':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CFGCONTEXTCNTINC, l)); break;
+                      case 'j':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CFGCONTEXTID, l)); break;
+                      case 'k':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDRCNTCONTEXTID, l)); break;
+                      case 'l':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SETDATVALID, l)); break;
+                      case 'm':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (RAREB_EN, l)); break;
+                      case 'n':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ZEROWRITE2, l)); break;
+                      case 'o':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (AUTOINCCONTEXTID, l)); break;
+                      case 'p':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ROWSEARCH, l)); break;
+                      case 'q':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SEARCHCASHFLOW, l)); break;
+                      case 'r':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (NOOP, l)); break;
+                      case 's':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (WR128B, l)); break;
+                      case 't':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CFGREG, l)); break;
+                      case 'u':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_BLOCK_SELECTION, l)); break;
+                      case 'v':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (LAST_XMOVOP, l)); break;
+                      case 'w':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CLEARCODE, l)); break;
+                      case 'x':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (ZEROVAL, l)); break;
+                      case 'y':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (WRITEMODE, l)); break;
+                      case 'z':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (BANKMASK, l)); break;
+                      default:
+                        print (info->stream, _("# internal error, undefined modifier (l%c)"), x);
+                        break;
+		      }
+		    break;
+		  }
+                case 'w':
+                  {
+                    char x = *++d;
+                    switch (x)
+                      {
+                      case '0':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (SRCMASK, l)); break;
+		      case '1':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (CMP_VAL, l)); break;
+		      case '2':
+			print (info->stream, "%ld", EXTRACT_OPERAND (PKEDG_X_START, l)); break;
+		      case '3':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_INSTR_MOD, l)); break;
+		      case '4':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_SRC, l)); break;
+		      case '5':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_DST, l)); break;
+		      case '6':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (GRAY_STALL_RES, l)); break;
+                      case '7':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (GRAY_SEM_SEL, l)); break;
+		      case '8':
+                        print (info->stream, "%ld", EXTRACT_OPERAND (POOL_ADDR_MODE, l)); break;
+		      }
+		  }
+		  break;
 		}
 	    }
 	  break;
@@ -564,13 +931,14 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 static int
 riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 {
-  const struct riscv_opcode *op;
+  const struct riscv_opcode *op, *op1;
   static bfd_boolean init = 0;
   static const struct riscv_opcode *riscv_hash[OP_MASK_SFPU_OP + 1];
+  static const struct riscv_opcode *riscv_hash_grayskull[OP_MASK_SFPU_OP + 1];
+  static const struct riscv_opcode *riscv_hash_wormhole[OP_MASK_SFPU_OP + 1];
   struct riscv_private_data *pd;
   int insnlen;
   int is_sfpu = 0;
-
 #define OP_HASH_IDX(i) ((i) & (riscv_insn_length (i) == 2 ? 0x3 : OP_MASK_OP))
 #define SFPU_OP_HASH_IDX(i) \
         (((i) & 0xffffff00) == (MATCH_SFPNOP & 0xffffff00) ? \
@@ -580,21 +948,29 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   /* Build a hash table to shorten the search time.  */
   if (! init)
     {
-      for (op = riscv_opcodes; op->name; op++)
-	if (!strncasecmp(op->name, "sfp", 3))
+      for (op = riscv_opcodes; op->name; op++) {
+        if (!strncasecmp(op->name, "sfp", 3) ||
+               !strncasecmp(op->name, "tt", 2))
+          {
+            if (op->insn_class == INSN_CLASS_I_W) {
+              if (!riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)])
+                riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)] = op;
+            }
+            else if (op->insn_class == INSN_CLASS_I_Y) {
+              if (!riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)]) {
+                riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)] = op;
+              }
+            }
+          }
+        else 
 	  {
-	    if (!riscv_hash[SFPU_OP_HASH_IDX (op->match)])
-	      riscv_hash[SFPU_OP_HASH_IDX (op->match)] = op;
-	  }
-	else 
-	  {
-	    if (!riscv_hash[OP_HASH_IDX (op->match)])
-	      riscv_hash[OP_HASH_IDX (op->match)] = op;
-	  }
-
+            if (!riscv_hash[OP_HASH_IDX (op->match)]) {
+              riscv_hash[OP_HASH_IDX (op->match)] = op;
+            }
+          }
+        }
       init = 1;
     }
-
   /* Unswizzle the bottom 2 bits so that we get back the original instruction
      for SFPU */
   if ((word & 0x3) != 0x3) {
@@ -634,9 +1010,19 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   info->insn_type = dis_nonbranch;
   info->target = 0;
   info->target2 = 0;
+  // op = is_sfpu ?  riscv_hash[SFPU_OP_HASH_IDX (word)] :
+  //                 riscv_hash[OP_HASH_IDX (word)];
+  if (is_sfpu) {
+      if (sfpu_mach == SFPU_MACH_WORMHOLE)
+        op = riscv_hash_wormhole[SFPU_OP_HASH_IDX (word)];
+      else if (sfpu_mach == SFPU_MACH_GRAYSKULL)
+        op = riscv_hash_grayskull[SFPU_OP_HASH_IDX (word)];
+      else
+        op = riscv_hash[SFPU_OP_HASH_IDX (word)];
+  } else {
+    op = riscv_hash[OP_HASH_IDX (word)];
+  }
 
-  op = is_sfpu ?  riscv_hash[SFPU_OP_HASH_IDX (word)] :
-                  riscv_hash[OP_HASH_IDX (word)];
   if (op != NULL)
     {
       unsigned xlen = 0;
@@ -645,6 +1031,8 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
       if (info->mach == bfd_mach_riscv64)
 	xlen = 64;
       else if (info->mach == bfd_mach_riscv32)
+	xlen = 32;
+      else if (info->mach == bfd_mach_riscv32_sfpu_wormhole)
 	xlen = 32;
       else if (info->section != NULL)
 	{
@@ -768,6 +1156,10 @@ riscv_get_disassembler (bfd *abfd)
 						  attr[Tag_c].i,
 						  &default_priv_spec);
         }
+      if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_GRAYSKULL)
+        sfpu_mach = SFPU_MACH_GRAYSKULL;
+      else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_WORMHOLE)
+        sfpu_mach = SFPU_MACH_WORMHOLE;
     }
    return print_insn_riscv;
 }

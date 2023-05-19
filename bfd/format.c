@@ -46,10 +46,12 @@ SUBSECTION
 #include "sysdep.h"
 #include "bfd.h"
 #include "libbfd.h"
-
+#include "elf-bfd.h"
+#include "assert.h"
 /* IMPORT from targets.c.  */
 extern const size_t _bfd_target_vector_entries;
 
+int riscv_machine_target = -1;
 /*
 FUNCTION
 	bfd_check_format
@@ -275,6 +277,27 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 	goto err_ret;
 
       cleanup = BFD_SEND_FMT (abfd, _bfd_check_format, (abfd));
+      
+      // check if input object file machine code is either WORMHOLE or GRAYSKULL.
+      if (abfd->tdata.elf_obj_data && abfd->tdata.elf_obj_data->elf_header) {
+        if (riscv_machine_target == -1 &&
+              (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_GRAYSKULL ||
+              abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_WORMHOLE)) {
+            riscv_machine_target = abfd->tdata.elf_obj_data->elf_header->e_machine;
+        } else if (riscv_machine_target == EM_RISCV_GRAYSKULL) {
+	  if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_WORMHOLE) {
+	    _bfd_error_handler(_("%pB: Incorrect machine target. \nCurrent machine target is grayskull "
+			"but got wormhole object file"), abfd);
+	    xexit (0);
+	  }
+        } else if (riscv_machine_target == EM_RISCV_WORMHOLE) {
+	  if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_GRAYSKULL) {
+	    _bfd_error_handler(_("%pB: Incorrect machine target. \nCurrent machine target is wormhole "
+			"but got grayskull object file"), abfd);
+            xexit (0);
+          }
+	 }
+      }
 
       if (cleanup)
 	goto ok_ret;
