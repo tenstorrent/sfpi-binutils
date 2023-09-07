@@ -3593,10 +3593,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
 		      || imm_expr->X_op != O_constant
 		      || imm_expr->X_add_number < 0
-		      || imm_expr->X_add_number > 3)
+		      || imm_expr->X_add_number > 7)
 		    {
 		      as_bad (_("bad value for addr_mode field, "
-				"value must be 0...3"));
+				"value must be 0...7"));
 		      break;
 		    }
 
