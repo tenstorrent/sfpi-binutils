@@ -1160,7 +1160,8 @@ riscv_ext_dont_care_version (const char *subset)
       || strcmp (subset, "zicsr") == 0
       || strcmp (subset, "zifencei") == 0
       || strcmp (subset, "y") == 0
-      || strcmp (subset, "w") == 0)
+      || strcmp (subset, "w") == 0
+      || strcmp (subset, "l") == 0)
     return TRUE;
   return FALSE;
 }
@@ -1456,6 +1457,7 @@ riscv_get_prefix_class (const char *arch)
     case 'z': return RV_ISA_CLASS_Z;
     case 'y': return RV_ISA_CLASS_SFPU;
     case 'w': return RV_ISA_CLASS_SFPU_WORMHOLE;
+    case 'l': return RV_ISA_CLASS_SFPU_BLACKHOLE;
     default: return RV_ISA_CLASS_UNKNOWN;
     }
 }
@@ -1616,7 +1618,7 @@ static const char * const riscv_std_h_ext_strtab[] =
 
 static const char * const riscv_sfpu_ext_strtab[] =
 {
-  "sfp", "wormhole", NULL
+  "sfp", "wormhole", "blackhole", NULL
 };
 
 /* For the extension `ext`, search through the list of known extensions
@@ -1692,6 +1694,7 @@ static const riscv_parse_config_t parse_config[] =
   {RV_ISA_CLASS_H, "h", riscv_ext_h_valid_p},
   {RV_ISA_CLASS_SFPU, "y", riscv_ext_sfp_valid_p},
   {RV_ISA_CLASS_SFPU_WORMHOLE, "w", riscv_ext_sfp_valid_p},
+  {RV_ISA_CLASS_SFPU_BLACKHOLE, "l", riscv_ext_sfp_valid_p},
   {RV_ISA_CLASS_Z, "z", riscv_ext_z_valid_p},
   {RV_ISA_CLASS_X, "x", riscv_ext_x_valid_p},
   {RV_ISA_CLASS_UNKNOWN, NULL, NULL}

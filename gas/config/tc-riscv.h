@@ -140,6 +140,7 @@ struct riscv_set_options
   int csr_check; /* Enable the CSR checking.  */
   int grayskull; /* Generate SFPU code for Grayskull.  */
   int wormhole; /* Generate SFPU code for Wormhole.  */
+  int blackhole; /* Generate SFPU code for Blackhole.  */
 };
 
 #endif /* TC_RISCV */

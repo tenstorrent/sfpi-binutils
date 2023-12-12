@@ -3289,10 +3289,13 @@ disassemble_section (bfd *abfd, asection *section, void *inf)
 
       if (! prefix_addresses && do_print)
 	{
+	if(streq (sym->section->name, ".text") || (sym->section->name, ".text.startup"))
+	 {	
 	  pinfo->fprintf_func (pinfo->stream, "\n");
 	  objdump_print_addr_with_sym (abfd, section, sym, addr,
 				       pinfo, FALSE);
 	  pinfo->fprintf_func (pinfo->stream, ":\n");
+	 }
 	}
 
       if (sym != NULL && bfd_asymbol_value (sym) > addr)
@@ -3350,6 +3353,8 @@ disassemble_section (bfd *abfd, asection *section, void *inf)
 
       if (do_print)
 	{
+	if( streq(sym->section->name, ".text")  || (sym->section->name, ".text.startup"))
+	 {
 	  /* Resolve symbol name.  */
 	  if (visualize_jumps && abfd && sym && sym->name)
 	    {
@@ -3384,6 +3389,7 @@ disassemble_section (bfd *abfd, asection *section, void *inf)
 	    {
 	      detected_jumps = jump_info_free (detected_jumps);
 	    }
+	 }
 	}
 
       addr_offset = nextstop_offset;

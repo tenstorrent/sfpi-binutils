@@ -50,7 +50,8 @@ static int no_aliases;	/* If set disassemble as most general inst.  */
 
 enum sfpu_mach_type {
   SFPU_MACH_GRAYSKULL = 1,
-  SFPU_MACH_WORMHOLE = 2
+  SFPU_MACH_WORMHOLE = 2,
+  SFPU_MACH_BLACKHOLE = 3
 } sfpu_mach;
 
 static void
@@ -416,6 +417,7 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 
 	case 'w':
 	case 'y':
+	case 'l':  
 	  {
 	      switch (*++d)
 		{
@@ -445,6 +447,9 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		  if (info->mach == bfd_mach_riscv32_sfpu_wormhole  &&
 		      EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
 		    print (info->stream, "%lu", EXTRACT_OPERAND (YCC_LREG_DEST, l));
+		  else if (info->mach == bfd_mach_riscv32_sfpu_blackhole  &&
+                       EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
+                     print (info->stream, "%lu", EXTRACT_OPERAND (YCC_LREG_DEST, l));
 		  else
 		    print (info->stream, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
 		  break;
@@ -906,6 +911,156 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 		      }
 		  }
 		  break;
+		  case 'x': //Blackhole
+                   {
+                    char x = *++d;
+                    switch (x)
+                      {
+			case 'a':x = *++d;
+                                switch (x)
+                                {
+				case '0':
+                                       	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_2, l)); break;
+				case '1':
+                                       	print (info->stream, "%ld", EXTRACT_OPERAND (CLEAR_DVALID, l)); break;
+				case '2':
+                                	print (info->stream, "%ld", EXTRACT_OPERAND (LSFPU_ADDR_MODE, l)); break;
+				case '3':
+                                	print (info->stream, "%ld", EXTRACT_OPERAND (LDEST_REG_ADDR, l)); break;
+				case '4':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
+				case '5':
+                                      	print (info->stream, "%ld", EXTRACT_OPERAND (DEST_REG_ADDR, l)); break;
+				case '6':
+                                       	print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMODE, l)); break;
+				case '7':
+                                      	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
+				case '8':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (INSTR_MOD19, l)); break;
+				case '9':
+                                       	print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMOD19, l)); break;
+				case 'a':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_DEST_2, l)); break;
+                              	case 'b':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_CONTEXT, l)); break;
+                            	case 'c':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ROW_PAD_ZERO, l)); break;
+                            	case 'd':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_DEST_ACCESS_MODE, l)); break;
+                             	case 'e':
+                                      	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_3, l)); break;
+                            	case 'f':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_CNT_CONTEXT, l)); break;
+                            	case 'g':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_ZERO_WRITE, l)); break;
+                             	case 'h':
+                                       	print (info->stream, "%ld", EXTRACT_OPERAND (L_READ_INTF_SEL, l)); break;
+                            	case 'i':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_OVERTHREAD_ID, l)); break;
+                            	case 'j':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (CONCAT, l)); break;
+                              	case 'k':
+                                  	print (info->stream, "%ld", EXTRACT_OPERAND (L_CTXT_CTRL, l)); break;
+                              	case 'l':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH, l)); break;
+                            	case 'm':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (LAST, l)); break;
+                            	case 'n':
+                                      	print (info->stream, "%ld", EXTRACT_OPERAND (PUSH, l)); break;
+                            	case 'o':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_SEL, l)); break;
+                            	case 'p':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_UNUSED, l)); break;
+                            	case 'q':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_DISABLE_STALL, l)); break;
+                             	case 'r':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_SEL, l)); break;
+                           	case 's':
+                             		print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_ID, l)); break;
+				case 't':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDRMODE_3, l)); break;
+				case 'u':
+                                       	print (info->stream, "%ld", EXTRACT_OPERAND (L_ROT_SHIFT, l)); break;
+				case 'v':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_DISABLE_MASK_OLD_VALUE, l)); break;
+                                case 'w':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_OPERATION, l)); break;
+                                case 'x':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_MASK_WIDTH, l)); break;
+                                case 'y':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_RIGHT_CSHIFT_AMT, l)); break;
+                                case 'z':
+					print (info->stream, "%ld", EXTRACT_OPERAND (L_SCRATCH_SEL, l)); break;
+				}break;
+			case 'b':x = *++d;
+                                switch (x)
+                                {
+				case '0':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_TARGET_SEL, l)); break;
+                                case '1':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_WAIT_STREAM_SEL, l)); break;
+                                case '2':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_ID_SEL, l)); break;
+                                case '3':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_REG_ADDR, l)); break;
+                                case '4':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_REG_2, l)); break;
+				case 'a':
+                                       	print (info->stream, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l)); break;
+                             	case 'b':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE_UNPACROP, l)); break;
+                             	case 'c':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_CONTEXT_CNT_INC, l)); break;
+                               	case 'd':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (CFGCONTEXTID, l)); break;
+                            	case 'e':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_CNT_CONTEXT_ID, l)); break;
+                           	case 'f':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (OVRD_TREAD_ID, l)); break;
+                             	case 'g':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (SETDATVALID, l)); break;
+                             	case 'h':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_SRC_BCAST, l)); break;
+                            	case 'i':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ZERO_WRITE_2, l)); break;
+                             	case 'j':
+                                  	print (info->stream, "%ld", EXTRACT_OPERAND (AUTOINCCONTEXTID, l)); break;
+				case 'k':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (ROWSEARCH, l)); break;
+                           	case 'l':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (SEARCHCASHFLOW, l)); break;
+                              	case 'm':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l)); break;
+                            	case 'n':
+                                 	print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_ID_2, l)); break;
+                              	case 'o':
+                                  	print (info->stream, "%ld", EXTRACT_OPERAND (L_MSG_CLR_CNT, l)); break;
+                         	case 'p':
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_SETDVALID, l)); break;
+                            	case 'q':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_CLR_TO_FMT_CNTRL, l)); break;
+                               	case 'r':
+                                 	print (info->stream, "%ld", EXTRACT_OPERAND (L_STALL_CLR_CNTRL, l)); break;
+                            	case 's':
+                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_BANK_CLR_CNTRL, l)); break;
+                            	case 't':
+                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_SRC_CLR_CNTRL, l)); break;
+                            	case 'u':
+                                  	print (info->stream, "%ld", EXTRACT_OPERAND (L_UNPACK_POP, l)); break;
+				case 'v':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_REG, l)); break;
+                                case 'w':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_LINGER_TIME, l)); break;
+                                case 'x':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_RESOURCE, l)); break;
+                                case 'y':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_OP_CLASS, l)); break;
+                                case 'z':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_TARGET_VALUE, l)); break;
+                                }break;											
+		      }
+		   }
+                  break;
 		}
 	    }
 	  break;
@@ -936,6 +1091,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   static const struct riscv_opcode *riscv_hash[OP_MASK_SFPU_OP + 1];
   static const struct riscv_opcode *riscv_hash_grayskull[OP_MASK_SFPU_OP + 1];
   static const struct riscv_opcode *riscv_hash_wormhole[OP_MASK_SFPU_OP + 1];
+  static const struct riscv_opcode *riscv_hash_blackhole[OP_MASK_SFPU_OP + 1];
   struct riscv_private_data *pd;
   int insnlen;
   int is_sfpu = 0;
@@ -948,27 +1104,61 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   /* Build a hash table to shorten the search time.  */
   if (! init)
     {
-      for (op = riscv_opcodes; op->name; op++) {
-        if (!strncasecmp(op->name, "sfp", 3) ||
-               !strncasecmp(op->name, "tt", 2))
-          {
-            if (op->insn_class == INSN_CLASS_I_W) {
-              if (!riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)])
-                riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)] = op;
-            }
-            else if (op->insn_class == INSN_CLASS_I_Y) {
-              if (!riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)]) {
-                riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)] = op;
+      // insert instructions into hash table if sfpu_mach is grayskull target.
+      if (sfpu_mach == SFPU_MACH_GRAYSKULL) {
+        for (op = riscv_opcodes; op->name; op++) {
+          if (!strncasecmp(op->name, "sfp", 3) ||
+                 !strncasecmp(op->name, "tt", 2))
+            {
+              if (op->insn_class == INSN_CLASS_I_Y) {
+                if (!riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)])
+                  riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)] = op;
               }
             }
-          }
-        else 
-	  {
-            if (!riscv_hash[OP_HASH_IDX (op->match)]) {
+          else 
+  	  {
+            if (!riscv_hash[OP_HASH_IDX (op->match)])
               riscv_hash[OP_HASH_IDX (op->match)] = op;
+          }
+        }
+      }
+      // insert instructions into hash table if sfpu_mach is wormhole target.
+      if (sfpu_mach == SFPU_MACH_WORMHOLE) {
+        for (op = riscv_opcodes; op->name; op++) {
+          if (!strncasecmp(op->name, "sfp", 3) ||
+               !strncasecmp(op->name, "tt", 2))
+            { 
+              if (op->insn_class == INSN_CLASS_I_W) {
+                if (!riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)])
+                  riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)] = op;
+              }
+            }
+          else
+            { 
+              if (!riscv_hash[OP_HASH_IDX (op->match)])
+                riscv_hash[OP_HASH_IDX (op->match)] = op;
             }
           }
         }
+          // insert instructions into hash table if sfpu_mach is blackhole target.
+      if (sfpu_mach == SFPU_MACH_BLACKHOLE) {
+        for (op = riscv_opcodes; op->name; op++) {
+          if (!strncasecmp(op->name, "sfp", 3) ||
+               !strncasecmp(op->name, "tt", 2))
+            {
+              if (op->insn_class == INSN_CLASS_I_L) {
+                if (!riscv_hash_blackhole[SFPU_OP_HASH_IDX (op->match)])
+                  riscv_hash_blackhole[SFPU_OP_HASH_IDX (op->match)] = op;
+              }
+            }
+          else
+            {
+              if (!riscv_hash[OP_HASH_IDX (op->match)])
+                riscv_hash[OP_HASH_IDX (op->match)] = op;
+            }
+          }
+        }
+
       init = 1;
     }
   /* Unswizzle the bottom 2 bits so that we get back the original instruction
@@ -1017,6 +1207,8 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
         op = riscv_hash_wormhole[SFPU_OP_HASH_IDX (word)];
       else if (sfpu_mach == SFPU_MACH_GRAYSKULL)
         op = riscv_hash_grayskull[SFPU_OP_HASH_IDX (word)];
+      else if (sfpu_mach == SFPU_MACH_BLACKHOLE)
+        op = riscv_hash_blackhole[SFPU_OP_HASH_IDX (word)];
       else
         op = riscv_hash[SFPU_OP_HASH_IDX (word)];
   } else {
@@ -1034,6 +1226,8 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	xlen = 32;
       else if (info->mach == bfd_mach_riscv32_sfpu_wormhole)
 	xlen = 32;
+      else if (info->mach == bfd_mach_riscv32_sfpu_blackhole)
+        xlen = 32;
       else if (info->section != NULL)
 	{
 	  Elf_Internal_Ehdr *ehdr = elf_elfheader (info->section->owner);
@@ -1160,6 +1354,8 @@ riscv_get_disassembler (bfd *abfd)
         sfpu_mach = SFPU_MACH_GRAYSKULL;
       else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_WORMHOLE)
         sfpu_mach = SFPU_MACH_WORMHOLE;
+      else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_BLACKHOLE)
+        sfpu_mach = SFPU_MACH_BLACKHOLE;
     }
    return print_insn_riscv;
 }

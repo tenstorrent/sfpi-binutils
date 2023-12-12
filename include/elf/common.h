@@ -356,6 +356,7 @@
 #define EM_LOONGARCH	258	/* Loongson Loongarch */
 #define EM_KF32		259	/* ChipON KungFu32 */
 #define EM_RISCV_WORMHOLE 260 	/* RISC-V with SFPU extension - Wormhole */
+#define EM_RISCV_BLACKHOLE 261   /* RISC-V with SFPU extension - Blackhole */
 /* If it is necessary to assign new unofficial EM_* values, please pick large
    random numbers (0x8523, 0xa7f2, etc.) to minimize the chances of collision
    with official or non-GNU unofficial values.

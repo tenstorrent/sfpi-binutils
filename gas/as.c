@@ -1371,7 +1371,8 @@ main (int argc, char ** argv)
     stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_WORMHOLE;
   else if (riscv_opts.grayskull)
     stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_GRAYSKULL;
-
+  else if (riscv_opts.blackhole)
+    stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_BLACKHOLE; 
   dot_symbol_init ();
 
 #ifdef tc_init_after_args

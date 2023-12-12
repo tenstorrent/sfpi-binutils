@@ -170,7 +170,8 @@ enum
   I_riscv64,
   I_riscv32,
   I_riscv32_sfpu,
-  I_riscv32_sfpu_wormhole
+  I_riscv32_sfpu_wormhole,
+  I_riscv32_sfpu_blackhole
 };
 
 #define NN(index) (&arch_info_struct[(index) + 1])
@@ -182,6 +183,7 @@ static const bfd_arch_info_type arch_info_struct[] =
   N (64, bfd_mach_riscv64, "riscv:rv64", FALSE, NN (I_riscv64)),
   N (32, bfd_mach_riscv32, "riscv:rv32", FALSE, NN (I_riscv32)),
   N (32, bfd_mach_riscv32_sfpu_wormhole, "riscv:rv32-sfpu-wormhole", FALSE, NN (I_riscv32)),
+  N (32, bfd_mach_riscv32_sfpu_blackhole, "riscv:rv32-sfpu-blackhole", FALSE, NN (I_riscv32)),
   N (32, bfd_mach_riscv32_sfpu, "riscv:rv32-sfpu", FALSE, NULL)
 };
 

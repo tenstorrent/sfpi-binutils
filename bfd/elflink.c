@@ -4113,7 +4113,9 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
       && ((bed->elf_machine_alt1 != 0
 	   && ehdr->e_machine == bed->elf_machine_alt1)
 	  || (bed->elf_machine_alt2 != 0
-	      && ehdr->e_machine == bed->elf_machine_alt2)))
+	      && ehdr->e_machine == bed->elf_machine_alt2)
+	  || (bed->elf_machine_alt3 != 0
+              && ehdr->e_machine == bed->elf_machine_alt3)))
     _bfd_error_handler
       /* xgettext:c-format */
       (_("alternate ELF machine code found (%d) in %pB, expecting %d"),
