@@ -2299,6 +2299,12 @@ bfd_alt_mach_code (bfd *abfd, int alternative)
 	    return false;
 	  break;
 
+	case 3:
+          code = get_elf_backend_data (abfd)->elf_machine_alt3;
+          if (code == 0)
+            return FALSE;
+          break;  
+
 	default:
 	  return false;
 	}

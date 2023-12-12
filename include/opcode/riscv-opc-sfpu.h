@@ -273,6 +273,25 @@
 #define MATCH_SFPZEROSRC		0x11000003
 #define MASK_SFPZEROSRC			0xffffffff
 
-#define SFP_OPCODE_END 0x96
+#define MATCH_SFPARECIP                 0x99000003
+#define MASK_SFPARECIP                  0xffffffff
+#define MATCH_SFPGT                     0x97000003
+#define MASK_SFPGT                      0xffffffff
+#define MATCH_SFPLE                     0x96000003
+#define MASK_SFPLE                      0xffffffff
+#define MATCH_SFPMUL24                  0x98000003
+#define MASK_SFPMUL24                   0xffffffff
+#define MATCH_SFPCFGSHIFTMASK           0xb8000003
+#define MASK_SFPCFGSHIFTMASK            0xffffffff
+#define MATCH_SFPMOVDBGB2D              0x0c000003
+#define MASK_SFPMOVDBGB2D               0xffffffff
+#define MATCH_SFPRESOURCEDECL           0x05000003
+#define MASK_SFPRESOURCEDECL            0xffffffff
+#define MATCH_SFPSTREAMWAIT             0xa7000003
+#define MASK_SFPSTREAMWAIT              0xffffffff
+#define MATCH_SFPSTREAMWRCFG            0xb7000003
+#define MASK_SFPSTREAMWRCFG             0xffffffff
+
+#define SFP_OPCODE_END 0xB9
 
 #endif  // RISCV_OPC_SFPU_H

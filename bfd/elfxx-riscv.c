@@ -1554,8 +1554,9 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
 bool
 riscv_ext_dont_care_version (const char *subset)
 {
-  if (strcmp (subset, "y") == 0
-      || strcmp (subset, "w") == 0)
+  if (strcmp (subset, "J") == 0
+      || strcmp (subset, "w") == 0
+      || strcmp (subset, "l") == 0)
     return true;
   return false;
 }
@@ -1869,8 +1870,6 @@ riscv_parse_prefixed_ext (riscv_parse_subset_t *rps,
 
   return p;
 }
-
-/* Add the implicit extensions.  */
 
 static void
 riscv_parse_add_implicit_subsets (riscv_parse_subset_t *rps)

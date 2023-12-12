@@ -362,6 +362,7 @@
 #define EM_TACHYUM	261	/* Tachyum */
 #define EM_56800EF	262	/* NXP 56800EF Digital Signal Controller (DSC) */
 #define EM_RISCV_WORMHOLE 0x5151/* RISC-V with SFPU extension - Wormhole */
+#define EM_RISCV_BLACKHOLE 0x6151/* RISC-V with SFPU extension - Blackhole */
 
 /* If it is necessary to assign new unofficial EM_* values, please pick large
    random numbers (0x8523, 0xa7f2, etc.) to minimize the chances of collision
