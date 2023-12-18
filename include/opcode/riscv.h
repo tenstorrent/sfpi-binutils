@@ -395,8 +395,8 @@ static const char * const riscv_pred_succ[16] =
 #define OP_MASK_L_ZERO_WRITE_2          0x1
 #define OP_SH_L_STREAM_ID_2             16 
 #define OP_MASK_L_STREAM_ID_2           0x7f
-#define OP_SH_L_MSG_CLR_CNT             13 
-#define OP_MASK_L_MSG_CLR_CNT           0x3
+#define OP_SH_L_MSG_CLR_CNT             12
+#define OP_MASK_L_MSG_CLR_CNT           0xf
 #define OP_SH_L_SETDVALID               8 
 #define OP_MASK_L_SETDVALID             0xf
 #define OP_SH_L_CLR_TO_FMT_CNTRL        6  
@@ -443,6 +443,17 @@ static const char * const riscv_pred_succ[16] =
 #define OP_MASK_WLOADSTORE_DEST_REG_ADDR 0x3fff
 #define OP_SH_WLOADSTORE_ADDR_MODE       14
 #define OP_MASK_WLOADSTORE_ADDR_MODE     0x3
+#define OP_SH_L_32BIT_MODE       18
+#define OP_MASK_L_32BIT_MODE     0x1
+#define OP_SH_L_CLR_ZERO_FLAGS   17
+#define OP_MASK_L_CLR_ZERO_FLAGS 0x1
+#define OP_SH_L_ADDR_MODE_4   14
+#define OP_MASK_L_ADDR_MODE_4 0x7
+#define OP_SH_L_WHERE   0
+#define OP_MASK_L_WHERE 0x3fff
+#define OP_SH_L_INSTRMODE     11
+#define OP_MASK_L_INSTRMODE   0x7
+
 
 #define OP_SH_WINCRWC_RWC_A       6
 #define OP_MASK_WINCRWC_RWC_A     0xf

@@ -1289,7 +1289,6 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
                 case 'a': switch (c = *p++)
                   {
                     case '0': USE_BITS (OP_MASK_L_ADDR_MODE_2, OP_SH_L_ADDR_MODE_2); break;
-                    case '1': USE_BITS (OP_MASK_CLEAR_DVALID, OP_SH_CLEAR_DVALID); break;
                     case '2': USE_BITS (OP_MASK_LSFPU_ADDR_MODE, OP_SH_LSFPU_ADDR_MODE); break;
                     case '3': USE_BITS (OP_MASK_LDEST_REG_ADDR, OP_SH_LDEST_REG_ADDR); break;
                     case '4': USE_BITS (OP_MASK_L_ADDR_MODE, OP_SH_L_ADDR_MODE); break;
@@ -1297,7 +1296,6 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
                     case '6': USE_BITS (OP_MASK_INSTRMODE, OP_SH_INSTRMODE); break;
                     case '7': USE_BITS (OP_MASK_L_ADDR_MODE, OP_SH_L_ADDR_MODE); break;
                     case '8': USE_BITS (OP_MASK_INSTR_MOD19, OP_SH_INSTR_MOD19); break;
-                    case '9': USE_BITS (OP_MASK_INSTRMOD19, OP_SH_INSTRMOD19); break;
                     case 'a': USE_BITS (OP_MASK_L_DEST_2, OP_SH_L_DEST_2); break;
                     case 'b': USE_BITS (OP_MASK_L_CFG_CONTEXT, OP_SH_L_CFG_CONTEXT); break;
                     case 'c': USE_BITS (OP_MASK_L_ROW_PAD_ZERO, OP_SH_L_ROW_PAD_ZERO); break;
@@ -1309,7 +1307,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
                     case 'i': USE_BITS (OP_MASK_L_OVERTHREAD_ID, OP_SH_L_OVERTHREAD_ID); break;
                     case 'j': USE_BITS (OP_MASK_CONCAT, OP_SH_CONCAT); break;
                     case 'k': USE_BITS (OP_MASK_L_CTXT_CTRL, OP_SH_L_CTXT_CTRL); break;
-                    case 'l': USE_BITS (OP_MASK_FLUSH, OP_SH_FLUSH); break;
+                    case 'l': USE_BITS (OP_MASK_FLUSH_SET, OP_SH_FLUSH_SET); break;
                     case 'm': USE_BITS (OP_MASK_LAST, OP_SH_LAST); break;
                     case 'n': USE_BITS (OP_MASK_PUSH, OP_SH_PUSH); break;
                     case 'o': USE_BITS (OP_MASK_ADDR_SEL, OP_SH_ADDR_SEL); break;
@@ -1359,6 +1357,15 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
                     case 'x': USE_BITS (OP_MASK_L_RESOURCE, OP_SH_L_RESOURCE); break;
                     case 'y': USE_BITS (OP_MASK_L_OP_CLASS, OP_SH_L_OP_CLASS); break;
                     case 'z': USE_BITS (OP_MASK_L_TARGET_VALUE, OP_SH_L_TARGET_VALUE); break;
+                  }
+                  break;
+                case 'c': switch (c = *p++)
+                  {
+                    case '0': USE_BITS (OP_MASK_L_32BIT_MODE, OP_SH_L_32BIT_MODE); break;
+                    case '1': USE_BITS (OP_MASK_L_CLR_ZERO_FLAGS, OP_SH_L_CLR_ZERO_FLAGS); break;
+                    case '2': USE_BITS (OP_MASK_L_ADDR_MODE_4, OP_SH_L_ADDR_MODE_4); break;
+                    case '3': USE_BITS (OP_MASK_L_WHERE, OP_SH_L_WHERE); break;
+                    case '4': USE_BITS (OP_MASK_L_INSTRMODE, OP_SH_L_INSTRMODE); break;
                   }
                   break;
               } 
@@ -6178,20 +6185,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 imm_expr->X_op = O_absent;
                                 s = expr_end;
                                 break;
-                              case '1':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                                    || imm_expr->X_op != O_constant
-                                    || imm_expr->X_add_number < 0
-                                    || imm_expr->X_add_number > 3)
-                                  {
-                                    as_bad (_("bad value for clear_valid field, "
-                                              "values and 0...3 for unsigned values"));
-                                    break;
-                                  }
-                                INSERT_OPERAND (CLEAR_DVALID, *ip, imm_expr->X_add_number);
-                                imm_expr->X_op = O_absent;
-                                s = expr_end;
-                                break;
                               case '2':
                                 if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
                                     || imm_expr->X_op != O_constant
@@ -6288,20 +6281,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                     break;
                                   }
                                 INSERT_OPERAND (INSTR_MOD19, *ip, imm_expr->X_add_number);
-                                imm_expr->X_op = O_absent;
-                                s = expr_end;
-                                break;
-                              case '9':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                                    || imm_expr->X_op != O_constant
-                                    || imm_expr->X_add_number < 0
-                                    || imm_expr->X_add_number > 7)
-                                  {
-                                    as_bad (_("bad value for instr_mod19 field, "
-                                              "values and 0...7 for unsigned values"));
-                                    break;
-                                  }
-                                INSERT_OPERAND (INSTRMOD19, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
                                 s = expr_end;
                                 break;
@@ -6469,7 +6448,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                               "values and 0...1 for unsigned values"));
                                     break;
                                   }
-                                INSERT_OPERAND (FLUSH, *ip, imm_expr->X_add_number);
+                                INSERT_OPERAND (FLUSH_SET, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
                                 s = expr_end;
                                 break;
@@ -7109,6 +7088,80 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 s = expr_end;
                                 break;
                             }break;
+                        case 'c':
+                          switch (*++args)
+                            {
+                              case '0':
+                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                    || imm_expr->X_op != O_constant
+                                    || imm_expr->X_add_number < 0
+                                    || imm_expr->X_add_number > 1)
+                                  {
+                                    as_bad (_("bad value for use_32_bit_mode field, "
+                                              "values and 0...1 for unsigned values"));
+                                    break;
+                                  }
+                                INSERT_OPERAND (L_32BIT_MODE, *ip, imm_expr->X_add_number);
+                                imm_expr->X_op = O_absent;
+                                s = expr_end;
+                                break;
+                              case '1':
+                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                    || imm_expr->X_op != O_constant
+                                    || imm_expr->X_add_number < 0
+                                    || imm_expr->X_add_number > 1)
+                                  {
+                                    as_bad (_("bad value for clear_zero_flags field, "
+                                              "values and 0...1 for unsigned values"));
+                                    break;
+                                  }
+                                INSERT_OPERAND (L_CLR_ZERO_FLAGS, *ip, imm_expr->X_add_number);
+                                imm_expr->X_op = O_absent;
+                                s = expr_end;
+                                break;
+                              case '2':
+                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                    || imm_expr->X_op != O_constant
+                                    || imm_expr->X_add_number < 0
+                                    || imm_expr->X_add_number > 7)
+                                  {
+                                    as_bad (_("bad value for addr_mode field, "
+                                              "value must be 0...7"));
+                                    break;
+                                  }
+                                INSERT_OPERAND (L_ADDR_MODE_4, *ip, imm_expr->X_add_number);
+                                imm_expr->X_op = O_absent;
+                                s = expr_end;
+                                break;
+                              case '3':
+                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                    || imm_expr->X_op != O_constant
+                                    || imm_expr->X_add_number < 0
+                                    || imm_expr->X_add_number > 16383)
+                                  {
+                                    as_bad (_("bad value for where  field, "
+                                              "values and 0...16383 for unsigned values"));
+                                    break;
+                                  }
+                                INSERT_OPERAND (L_WHERE, *ip, imm_expr->X_add_number);
+                                imm_expr->X_op = O_absent;
+                                s = expr_end;
+                                break;
+                              case '4':
+                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                    || imm_expr->X_op != O_constant
+                                    || imm_expr->X_add_number < 0
+                                    || imm_expr->X_add_number > 7)
+                                  {
+                                    as_bad (_("bad value for movb2d_instr_mod field, "
+                                              "values and 0...7 for unsigned values"));
+                                    break;
+                                  }
+                                INSERT_OPERAND (L_INSTRMODE, *ip, imm_expr->X_add_number);
+                                imm_expr->X_op = O_absent;
+                                s = expr_end;
+                                break;
+                            }
                         }
                      continue;
                 }
