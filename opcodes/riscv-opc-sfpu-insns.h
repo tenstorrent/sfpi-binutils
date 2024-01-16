@@ -1,5 +1,5 @@
-#ifndef RISCV_OPC_SFPU_H
-#define RISCV_OPC_SFPU_H
+#ifndef RISCV_OPC_SFPU_INSNS_H
+#define RISCV_OPC_SFPU_INSNS_H
 
 /* SFPU Gray Skull Instructions.  */
 {"sfpload",    0, INSN_CLASS_I_Y,   "Jd1,Jn,Jm1",     MATCH_SFPLOAD,   MASK_SFPLOAD,   sfp_match_opcode, INSN_ALIAS },
@@ -106,7 +106,7 @@
 {"sfpconfig",  0, INSN_CLASS_I_W,   "wh,wj,wi7",      MATCH_SFPCONFIG, MASK_SFPCONFIG, sfp_match_opcode, 0 },
 {"sfpconfig",  0, INSN_CLASS_I_L,   "lh,lj,li7",      MATCH_SFPCONFIG, MASK_SFPCONFIG, sfp_match_opcode, 0 },
 {"sfpswap",    0, INSN_CLASS_I_W,   "wh,wg,wi8",      MATCH_SFPSWAP,   MASK_SFPSWAP,   sfp_match_opcode, 0 },
-{"sfpswap",    0, INSN_CLASS_I_L,   "lh,lg,li8",      MATCH_SFPSWAP,   MASK_SFPSWAP,    sfp_match_opcode, 0 },	
+{"sfpswap",    0, INSN_CLASS_I_L,   "lh,lg,li1",      MATCH_SFPSWAP,   MASK_SFPSWAP,    sfp_match_opcode, 0 },	
 {"sfplutfp32", 0, INSN_CLASS_I_W,   "we,wo",          MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
 {"sfplutfp32", 0, INSN_CLASS_I_L,   "le,lo",          MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
 {"sfptransp",  0, INSN_CLASS_I_W,   "",               MATCH_SFPTRANSP, MASK_SFPTRANSP, sfp_match_opcode, 0 },
@@ -115,10 +115,10 @@
 {"sfploadmacro",0,INSN_CLASS_I_L,   "ld,lxa3,lm1,lxa2",MATCH_SFPLDMACRO,MASK_SFPLDMACRO,sfp_match_opcode, 0 },
 {"sfpstochrnd",0, INSN_CLASS_I_W,   "we,wb,wc,wi1,wr1,wr2", MATCH_SFPSTOCH_RND,  MASK_SFPSTOCH_RND,  sfp_match_opcode, 0 },
 {"sfpstochrnd",0, INSN_CLASS_I_L,   "le,lb,lc,li1,lr1,lr2", MATCH_SFPSTOCH_RND,  MASK_SFPSTOCH_RND,  sfp_match_opcode, 0 },
-{"sfparecip",  0, INSN_CLASS_I_L,   "lh,lg,lf,li8",   MATCH_SFPARECIP,  MASK_SFPARECIP,  sfp_match_opcode, INSN_ALIAS },
-{"sfpgt",      0, INSN_CLASS_I_L,   "lh,lg,lf,li8",   MATCH_SFPGT,      MASK_SFPGT,  sfp_match_opcode, INSN_ALIAS },
-{"sfpmul24",   0, INSN_CLASS_I_L,   "le,la,lb,lc,lo", MATCH_SFPMUL24,   MASK_SFPMUL24,  sfp_match_opcode, INSN_ALIAS },
-{"sfple",      0, INSN_CLASS_I_L,   "lh,lg,lf,li8",   MATCH_SFPLE,      MASK_SFPLE,  sfp_match_opcode, INSN_ALIAS },
+{"sfparecip",  0, INSN_CLASS_I_L,   "lh,lg,lf,li1",   MATCH_SFPARECIP,  MASK_SFPARECIP,  sfp_match_opcode, INSN_ALIAS },
+{"sfpgt",      0, INSN_CLASS_I_L,   "lh,lg,lf,li1",   MATCH_SFPGT,      MASK_SFPGT,  sfp_match_opcode, INSN_ALIAS },
+{"sfpmul24",   0, INSN_CLASS_I_L,   "le,la,lb,lc,li1", MATCH_SFPMUL24,   MASK_SFPMUL24,  sfp_match_opcode, INSN_ALIAS },
+{"sfple",      0, INSN_CLASS_I_L,   "lh,lg,lf,li1",   MATCH_SFPLE,      MASK_SFPLE,  sfp_match_opcode, INSN_ALIAS },
 
 
 /* DMA Reg Instructions */
@@ -284,6 +284,7 @@
 {"ttrstdma",      0, INSN_CLASS_I_Y, "",                MATCH_SFP_RSTDMA, MASK_SFP_RSTDMA,sfp_match_opcode, INSN_ALIAS },
 {"ttrstdma",      0, INSN_CLASS_I_W, "",                MATCH_SFP_RSTDMA, MASK_SFP_RSTDMA,sfp_match_opcode, INSN_ALIAS },
 {"ttrstdma",      0, INSN_CLASS_I_L, "",                MATCH_SFP_RSTDMA, MASK_SFP_RSTDMA,sfp_match_opcode, INSN_ALIAS },
+
 {"ttsemget",      0, INSN_CLASS_I_Y, "Juf",             MATCH_SFP_SEMGET, MASK_SFP_SEMGET,sfp_match_opcode, INSN_ALIAS },
 {"ttsemget",      0, INSN_CLASS_I_W, "wuf",             MATCH_SFP_SEMGET, MASK_SFP_SEMGET,sfp_match_opcode, INSN_ALIAS },
 {"ttsemget",      0, INSN_CLASS_I_L, "luf",             MATCH_SFP_SEMGET, MASK_SFP_SEMGET,sfp_match_opcode, INSN_ALIAS },
@@ -381,4 +382,4 @@
 {"ttstreamwait",  0, INSN_CLASS_I_L, "luj,lxbz,lxb0,lxb1",    MATCH_SFPSTREAMWAIT, MASK_SFPSTREAMWAIT, sfp_match_opcode, INSN_ALIAS },
 {"ttstreamwrcfg", 0, INSN_CLASS_I_L, "lxb2,lxb3,lxb4",        MATCH_SFPSTREAMWRCFG, MASK_SFPSTREAMWRCFG, sfp_match_opcode, INSN_ALIAS },
 
-#endif  // RISCV_OPC_SFPU_H
+#endif  // RISCV_OPC_SFPU_INSNS_H
