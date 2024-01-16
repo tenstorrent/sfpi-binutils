@@ -912,7 +912,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfpconfig",  0, INSN_CLASS_I_W,   "wh,wj,wi7",      MATCH_SFPCONFIG, MASK_SFPCONFIG, sfp_match_opcode, 0 },
 {"sfpconfig",  0, INSN_CLASS_I_L,   "lh,lj,li7",      MATCH_SFPCONFIG, MASK_SFPCONFIG, sfp_match_opcode, 0 },
 {"sfpswap",    0, INSN_CLASS_I_W,   "wh,wg,wi8",      MATCH_SFPSWAP,   MASK_SFPSWAP,   sfp_match_opcode, 0 },
-{"sfpswap",    0, INSN_CLASS_I_L,   "lh,lg,li8",      MATCH_SFPSWAP,   MASK_SFPSWAP,    sfp_match_opcode, 0 },	
+{"sfpswap",    0, INSN_CLASS_I_L,   "lh,lg,li1",      MATCH_SFPSWAP,   MASK_SFPSWAP,    sfp_match_opcode, 0 },	
 {"sfplutfp32", 0, INSN_CLASS_I_W,   "we,wo",          MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
 {"sfplutfp32", 0, INSN_CLASS_I_L,   "le,lo",          MATCH_SFPLUTFP32,MASK_SFPLUTFP32,sfp_match_opcode, 0 },
 {"sfptransp",  0, INSN_CLASS_I_W,   "",               MATCH_SFPTRANSP, MASK_SFPTRANSP, sfp_match_opcode, 0 },
@@ -921,10 +921,10 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sfploadmacro",0,INSN_CLASS_I_L,   "ld,lxa3,lm1,lxa2",MATCH_SFPLDMACRO,MASK_SFPLDMACRO,sfp_match_opcode, 0 },
 {"sfpstochrnd",0, INSN_CLASS_I_W,   "we,wb,wc,wi1,wr1,wr2", MATCH_SFPSTOCH_RND,  MASK_SFPSTOCH_RND,  sfp_match_opcode, 0 },	
 {"sfpstochrnd",0, INSN_CLASS_I_L,   "le,lb,lc,li1,lr1,lr2", MATCH_SFPSTOCH_RND,  MASK_SFPSTOCH_RND,  sfp_match_opcode, 0 },
-{"sfparecip",  0, INSN_CLASS_I_L,   "lh,lg,lf,li8",   MATCH_SFPARECIP,  MASK_SFPARECIP,  sfp_match_opcode, INSN_ALIAS },
-{"sfpgt",      0, INSN_CLASS_I_L,   "lh,lg,lf,li8",   MATCH_SFPGT,      MASK_SFPGT,  sfp_match_opcode, INSN_ALIAS },
-{"sfpmul24",   0, INSN_CLASS_I_L,   "le,la,lb,lc,lo", MATCH_SFPMUL24,   MASK_SFPMUL24,  sfp_match_opcode, INSN_ALIAS },
-{"sfple",      0, INSN_CLASS_I_L,   "lh,lg,lf,li8",   MATCH_SFPLE,      MASK_SFPLE,  sfp_match_opcode, INSN_ALIAS },
+{"sfparecip",  0, INSN_CLASS_I_L,   "lh,lg,lf,li1",   MATCH_SFPARECIP,  MASK_SFPARECIP,  sfp_match_opcode, INSN_ALIAS },
+{"sfpgt",      0, INSN_CLASS_I_L,   "lh,lg,lf,li1",   MATCH_SFPGT,      MASK_SFPGT,  sfp_match_opcode, INSN_ALIAS },
+{"sfpmul24",   0, INSN_CLASS_I_L,   "le,la,lb,lc,li1", MATCH_SFPMUL24,   MASK_SFPMUL24,  sfp_match_opcode, INSN_ALIAS },
+{"sfple",      0, INSN_CLASS_I_L,   "lh,lg,lf,li1",   MATCH_SFPLE,      MASK_SFPLE,  sfp_match_opcode, INSN_ALIAS },
 
 
 /* DMA Reg Instructions */
