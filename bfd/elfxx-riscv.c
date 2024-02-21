@@ -1298,8 +1298,9 @@ static const struct riscv_parse_prefix_config parse_config[] =
   {RV_ISA_CLASS_Z, "z"},
   {RV_ISA_CLASS_S, "s"},
   {RV_ISA_CLASS_X, "x"},
-  {RV_ISA_CLASS_SFPU, "y"},
+  {RV_ISA_CLASS_SFPU, "J"},
   {RV_ISA_CLASS_SFPU_WORMHOLE, "w"},
+  {RV_ISA_CLASS_SFPU_BLACKHOLE, "k"},
   {RV_ISA_CLASS_UNKNOWN, NULL}
 };
 
@@ -1556,7 +1557,8 @@ riscv_ext_dont_care_version (const char *subset)
 {
   if (strcmp (subset, "J") == 0
       || strcmp (subset, "w") == 0
-      || strcmp (subset, "l") == 0)
+      || strcmp (subset, "l") == 0
+      || strcmp (subset, "k") == 0)
     return true;
   return false;
 }
