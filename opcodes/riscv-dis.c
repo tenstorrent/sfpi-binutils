@@ -69,7 +69,8 @@ static int no_aliases;
 enum sfpu_mach_type {
   SFPU_MACH_GRAYSKULL = 1,
   SFPU_MACH_WORMHOLE = 2,
-  SFPU_MACH_BLACKHOLE = 3
+  SFPU_MACH_BLACKHOLE = 3,
+  MACH_RISCV = 4
 } sfpu_mach;
 
 static void
@@ -1066,6 +1067,8 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
                                 {
 				case '0':
                                        	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_2, l)); break;
+  				case '1':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (CLEAR_DVALID, l)); break;
 				case '2':
                                 	print (info->stream, "%ld", EXTRACT_OPERAND (LSFPU_ADDR_MODE, l)); break;
 				case '3':
@@ -1080,6 +1083,8 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
                                       	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
 				case '8':
                                      	print (info->stream, "%ld", EXTRACT_OPERAND (INSTR_MOD19, l)); break;
+  				case '9':
+                                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMOD19, l)); break;
 				case 'a':
                                      	print (info->stream, "%ld", EXTRACT_OPERAND (L_DEST_2, l)); break;
                               	case 'b':
@@ -1103,7 +1108,7 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
                               	case 'k':
                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_CTXT_CTRL, l)); break;
                               	case 'l':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH_SET, l)); break;
+                                     	print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH, l)); break;
                             	case 'm':
                                     	print (info->stream, "%ld", EXTRACT_OPERAND (LAST, l)); break;
                             	case 'n':
@@ -1199,21 +1204,6 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
                                 case 'z':
                                         print (info->stream, "%ld", EXTRACT_OPERAND (L_TARGET_VALUE, l)); break;
                                 }break;
-      case 'c':x = *++d;
-                                switch (x)
-                                {
-        case '0':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_32BIT_MODE, l)); break;
-                                case '1':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_CLR_ZERO_FLAGS, l)); break;
-                                case '2':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_4, l)); break;
-                                case '3':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_WHERE, l)); break;
-                                case '4':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_INSTRMODE, l)); break;
-
-                               }break;
 		      }
 		   }
                   break;
@@ -1315,7 +1305,13 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
             }
           }
         }
-
+      // insert instructions into hash table if it is riscv target.
+      if (sfpu_mach == MACH_RISCV) {
+        for (op = riscv_opcodes; op->name; op++) {
+          if (!riscv_hash[OP_HASH_IDX (op->match)])
+            riscv_hash[OP_HASH_IDX (op->match)] = op;
+        }
+      }
       init = 1;
     }
   /* Unswizzle the bottom 2 bits so that we get back the original instruction
@@ -1775,6 +1771,8 @@ riscv_get_disassembler (bfd *abfd)
         sfpu_mach = SFPU_MACH_WORMHOLE;
       else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_BLACKHOLE)
         sfpu_mach = SFPU_MACH_BLACKHOLE;
+      else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV)
+        sfpu_mach = MACH_RISCV;
     }
 
   riscv_release_subset_list (&riscv_subsets);

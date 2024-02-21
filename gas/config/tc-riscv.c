@@ -1702,6 +1702,8 @@ md_begin (void)
   } else {
     if (riscv_opts.wormhole)
       mach = bfd_mach_riscv32_sfpu_wormhole;
+    else if (riscv_opts.blackhole)
+      mach = bfd_mach_riscv32_sfpu_blackhole;
     else
       mach = bfd_mach_riscv32;
   }
@@ -8507,9 +8509,9 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
   else if (strcmp (name, "nowormhole") == 0)
     riscv_set_wormhole (FALSE);
   else if (strcmp (name, "blackhole") == 0)
-    riscv_set_wormhole (TRUE);
+    riscv_set_blackhole (TRUE);
   else if (strcmp (name, "noblackhole") == 0)
-    riscv_set_wormhole (FALSE);
+    riscv_set_blackhole (FALSE);
   else
     {
       as_warn (_("unrecognized .option directive: %s\n"), name);
@@ -9138,6 +9140,8 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
           else {
             if (riscv_opts.wormhole)
               mach = bfd_mach_riscv32_sfpu_wormhole;
+            else if (riscv_opts.blackhole)
+              mach = bfd_mach_riscv32_sfpu_blackhole;
             else
               mach = bfd_mach_riscv32;
           }
