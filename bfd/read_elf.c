@@ -5,7 +5,8 @@
 #include <sys/stat.h>
 #include <elf.h>
 #include <unistd.h>
-#include "load_elf.h"
+#include "read_elf.h"
+#include "reloc_sections.h"
 
 // Print the ELF Header
 void print_elf_header(Elf32_Ehdr *header, int debug_info, FILE *fp) {
@@ -97,6 +98,7 @@ void print_section_header(Elf32_Ehdr *header, void *file_data, int s_debug, FILE
   Elf32_Shdr *section_headers = (Elf32_Shdr *)(file_data + header->e_shoff);
   Elf32_Shdr *section_header_string_table = &section_headers[header->e_shstrndx];
   char *section_names = (char *)(file_data + section_header_string_table->sh_offset);
+  if(header->e_shnum)
   if(s_debug) {
     fprintf(fp, "\nSection Header:\n");
     fprintf(fp, "  Number of Sections: %u \n", header->e_shnum);
@@ -114,9 +116,9 @@ void print_section_header(Elf32_Ehdr *header, void *file_data, int s_debug, FILE
           if(s_debug == 3) {
             fprintf(fp, "\n  Offset       : %#x", section_headers[i].sh_offset);
             fprintf(fp, "\n  Section Link : %u", section_headers[i].sh_link);
-            fprintf(fp, "\n  Info         : %u", section_headers[i].sh_info);
-            fprintf(fp, "\n  AddrAlign    : %u", section_headers[i].sh_addralign);
-            fprintf(fp, "\n  EntSize:     : %u", section_headers[i].sh_entsize); 
+            fprintf(fp, "\n  Info         : %lu", (unsigned long)section_headers[i].sh_info);
+            fprintf(fp, "\n  AddrAlign    : %lu", (unsigned long)section_headers[i].sh_addralign);
+            fprintf(fp, "\n  EntSize:     : %lu", (unsigned long)section_headers[i].sh_entsize); 
           } 
         }      
       }
@@ -196,6 +198,7 @@ void print_program_type(uint32_t ph_type, FILE *fp) {
 */
 void print_program_header(Elf32_Ehdr *header, void *file_data, int p_debug, FILE *fp){
   Elf32_Phdr *program_header = (file_data + header->e_phoff);
+  if(header->e_phnum)
   if(p_debug) {
     fprintf(fp, "\n\nProgram Headers :");
     for(int i = 0; i < header->e_phnum; ++i){
@@ -215,9 +218,9 @@ void print_program_header(Elf32_Ehdr *header, void *file_data, int p_debug, FILE
           if(program_header[i].p_flags) {
             print_program_flags(program_header[i].p_flags, fp);
           }
-          fprintf(fp, "\n  File Size        : %u Bytes", program_header[i].p_filesz);
-          fprintf(fp, "\n  Memory Size      : %u Bytes", program_header[i].p_memsz);
-          fprintf(fp, "\n  Align            : %u", program_header[i].p_align);  
+          fprintf(fp, "\n  File Size        : %lu Bytes",  (unsigned long)program_header[i].p_filesz);
+          fprintf(fp, "\n  Memory Size      : %lu Bytes",  (unsigned long)program_header[i].p_memsz);
+          fprintf(fp, "\n  Align            : %lu",  (unsigned long)program_header[i].p_align);  
         }
       }
     }  
@@ -262,7 +265,7 @@ void elf_print_loadable_sections(struct elf_data *memory_blobs,
   
   print_content(memory_blobs, sec_load_info->total_number, fp);
   fprintf(fp, "\nThe number of sections loaded into memory : %d",
-              memory_blobs->no_of_sections);
+           memory_blobs->no_of_sections);
   fprintf(fp, "\nThe total size is loaded into memory : %d Bytes\n",
            sec_load_info->total_size);
   
@@ -339,6 +342,7 @@ int elf_load(char filepath[], FILE *fp) {
     return FAILURE;
   }
   elf_print_loadable_sections(load_data, sec_load_info, fp);
+  reloc_elf_section(load_data, sec_load_info->total_number, load_content, fp);
   free(file_mem);
   free(mem_blobs->memory_locations);
   free(mem_blobs);

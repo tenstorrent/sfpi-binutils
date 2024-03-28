@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <elf.h>
 #include <sys/mman.h>
-#include "load_elf.h"
+#include "read_elf.h"
 #include <stdint.h>
 
 void initializ_memory_struct(struct tt_memory *memory_locationsi, int total_sections);
@@ -15,15 +15,14 @@ void print_loadable_section_names(Elf32_Ehdr *header, void *file_data, FILE *fp)
   Elf32_Shdr *section_headers = (Elf32_Shdr *)(file_data + header->e_shoff);
   Elf32_Shdr *section_header_string_table = &section_headers[header->e_shstrndx];
   char *section_names = (char *)(file_data + section_header_string_table->sh_offset);
-
+  if( header->e_shnum){
   fprintf(fp, "\n\nLoadable Sections :");
   for(int i = 0, k = 1; i < header->e_shnum; ++i) {
-    if ((section_headers[i].sh_flags & SHF_ALLOC) && (section_headers[i].sh_size != 0)) {
+    if ((section_headers[i].sh_flags & SHF_ALLOC) && (section_headers[i].sh_size != 0))
       fprintf(fp, "\n   %d)%s",k++, section_names + section_headers[i].sh_name);
-    }
   }fprintf(fp, "\n");
 }
-
+}
 // Print total loadable section size and number.
 struct load_section_info *loadable_section_info(Elf32_Ehdr *header, void *file_data) {
   Elf32_Shdr *section_headers = (Elf32_Shdr *)(file_data + header->e_shoff);
@@ -31,7 +30,8 @@ struct load_section_info *loadable_section_info(Elf32_Ehdr *header, void *file_d
   load_data->total_size = 0; 
   load_data->total_number = 0;
   for(int i = 0; i < header->e_shnum; ++i) {
-    if ((section_headers[i].sh_flags & SHF_ALLOC) && (section_headers[i].sh_size != 0)) {
+    // if ((section_headers[i].sh_flags & SHF_ALLOC) && (section_headers[i].sh_size != 0)) {
+    if (section_headers[i].sh_size != 0) {
       load_data->total_size += section_headers[i].sh_size;
       load_data->total_number++;
     }
@@ -46,7 +46,7 @@ void print_content(struct elf_data *memory_blobs, int total_sections, FILE *fp) 
       fprintf(fp, "\n   Section:  %s", memory_blobs->memory_locations[i].section_name);
       fprintf(fp, "\n   Starting Address :%p", memory_blobs->memory_locations[i].start_address);
       fprintf(fp, "\n   End Address      :%p", memory_blobs->memory_locations[i].end_address);
-      fprintf(fp, "\n   Section Size     :%lu Bytes \n", memory_blobs->memory_locations[i].section_size);
+      fprintf(fp, "\n   Section Size     :%u Bytes \n", memory_blobs->memory_locations[i].section_size);
   }
 }
 
@@ -55,36 +55,45 @@ void initializ_memory_struct(struct tt_memory *memory_locations, int total_secti
   for(int i = 0; i < total_sections; ++i) {
     memory_locations[i].start_address = NULL;
     memory_locations[i].end_address = NULL;
+    memory_locations[i].reloc_check = false;
   }
 }
 
 // Loads the section into memory.
-struct elf_data *load_sections(Elf32_Ehdr *header, void *file_data, struct elf_data *mem_blobs) {
+struct elf_data *
+load_sections(Elf32_Ehdr *header, void *file_data, struct elf_data *mem_blobs)
+{
   Elf32_Shdr *section_headers = (Elf32_Shdr *)(file_data + header->e_shoff); 
   Elf32_Shdr *section_header_string_table = &section_headers[header->e_shstrndx];
   char *section_names = (char *)(file_data + section_header_string_table->sh_offset);
-//  int total_sections = number_of_loadable_sections(header, file_data);
   struct load_section_info *sec_load_info = loadable_section_info(header, file_data);
 
   if (mem_blobs == NULL) {
     fprintf(stderr, "Memory allocation failed\n");
   }
 
+  mem_blobs->elf_header = (Elf32_Ehdr *)malloc(sizeof(Elf32_Ehdr));
+  memcpy(mem_blobs->elf_header, header, sizeof(Elf32_Ehdr));
+  mem_blobs->section_headers = (Elf32_Shdr *)malloc(header->e_shnum * sizeof(Elf32_Shdr));
+  memcpy(mem_blobs->section_headers, section_headers, header->e_shnum * sizeof(Elf32_Shdr));
   mem_blobs->no_of_sections = 0;
+  mem_blobs->memory_locations = (struct tt_memory *)malloc(sizeof(struct tt_memory) *
+                                                           sec_load_info->total_number);
   initializ_memory_struct(mem_blobs->memory_locations, sec_load_info->total_number);
   int section = 0; 
   for(int i = 0; i < header->e_shnum; ++i) {
-    if ((section_headers[i].sh_flags & SHF_ALLOC) && (section_headers[i].sh_size != 0)) {
-      unsigned long *section_address = mmap(mem_blobs->memory_locations[section].start_address,
-                                            section_headers[i].sh_size,
-                                            PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    // if ((section_headers[i].sh_flags & SHF_ALLOC) && (section_headers[i].sh_size != 0)) {
+    if (section_headers[i].sh_size != 0) {
+      unsigned int *section_address = mmap(mem_blobs->memory_locations[section].start_address,
+                                           section_headers[i].sh_size,
+                                           PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
       // Copy the content of the section to the mapped memory
       memcpy(section_address, file_data + section_headers[i].sh_offset, section_headers[i].sh_size);
       mem_blobs->memory_locations[section].start_address = section_address;
       mem_blobs->memory_locations[section].end_address = section_address + (unsigned long)section_headers[i].sh_size;
       mem_blobs->memory_locations[section].section_size = section_headers[i].sh_size;
+      strcpy(mem_blobs->memory_locations[section].section_name, section_names + section_headers[i].sh_name);     
       mem_blobs->no_of_sections++;
-      strcpy(mem_blobs->memory_locations[section].section_name, section_names + section_headers[i].sh_name);      
       section++;
     }
   }
