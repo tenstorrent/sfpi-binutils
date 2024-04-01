@@ -88,7 +88,6 @@
 #define MASK_SFPSHFT2 0xffffffff
 #define MATCH_SFPLUTFP32 0x95000003
 #define MASK_SFPLUTFP32 0xffffffff
-#define SFP_OPCODE_END 0x96
 
 #ifdef DECLARE_INSN
 /* SFPU Instructions */

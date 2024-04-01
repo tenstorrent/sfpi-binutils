@@ -1381,12 +1381,6 @@ main (int argc, char ** argv)
   output_file_create (out_file_name);
   gas_assert (stdoutput != 0);
 
-  if (riscv_opts.wormhole)
-    stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_WORMHOLE;
-  else if (riscv_opts.grayskull)
-    stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_GRAYSKULL;
-  else if (riscv_opts.blackhole)
-    stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_BLACKHOLE; 
   dot_symbol_init ();
 
 #ifdef tc_init_after_args

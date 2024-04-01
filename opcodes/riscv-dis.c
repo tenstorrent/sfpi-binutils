@@ -697,512 +697,512 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  break;
 		case 's':
 		  {
-		    char x = *++d;
+		    char x = *++oparg;
 		    switch (x)
 		      {
 		      case '1':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_A, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DMA_REG_OP_A, l)); break;
 		      case '2':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_B, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DMA_REG_OP_B, l)); break;
 		      case '3':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_RES, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DMA_REG_OP_RES, l)); break;
 		      case '4':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_B_ISCONST, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DMA_REG_OP_B_ISCONST, l)); break;
 		      case '5':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DMA_REG_OP_OPSEL, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DMA_REG_OP_OPSEL, l)); break;
 		      case '6':
-			print (info->stream, "%ld", EXTRACT_OPERAND (PAYLOAD_SIGSEL_SIZE, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (PAYLOAD_SIGSEL_SIZE, l)); break;
 		      case '7':
-			print (info->stream, "%ld", EXTRACT_OPERAND (PAYLOAD_SIGSEL, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (PAYLOAD_SIGSEL, l)); break;
 		      case '8':
-			print (info->stream, "%ld", EXTRACT_OPERAND (SET_SIG_MODE, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SET_SIG_MODE, l)); break;
 		      case '9':
-			print (info->stream, "%ld", EXTRACT_OPERAND (REG_INDEX16B, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (REG_INDEX16B, l)); break;
 		      case 'a':
-			print (info->stream, "%ld", EXTRACT_OPERAND (CNT_SET_MASK, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CNT_SET_MASK, l)); break;
 		      case 'b':
-			print (info->stream, "%ld", EXTRACT_OPERAND (CH1_Y, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CH1_Y, l)); break;
 		      case 'c':
-			print (info->stream, "%ld", EXTRACT_OPERAND (CH1_X, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CH1_X, l)); break;
 		      case 'd':
-			print (info->stream, "%ld", EXTRACT_OPERAND (CH0_Y, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CH0_Y, l)); break;
 		      case 'e':
-			print (info->stream, "%ld", EXTRACT_OPERAND (CH0_X, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CH0_X, l)); break;
 		      case 'f':
-			print (info->stream, "%ld", EXTRACT_OPERAND (BIT_MASK, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (BIT_MASK, l)); break;
 		      case 'g':
-			print (info->stream, "%ld", EXTRACT_OPERAND (WAIT_RES_14BIT, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (WAIT_RES_14BIT, l)); break;
 		      case 'h':
-			print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_MODE, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDR_MODE, l)); break;
 		      case 'i':
-			print (info->stream, "%ld", EXTRACT_OPERAND (INDEX_EN, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INDEX_EN, l)); break;
 		      case 'j':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DST, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DST, l)); break;
 		      case 'k':
-			print (info->stream, "%ld", EXTRACT_OPERAND (MEMHIER_SEL, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MEMHIER_SEL, l)); break;
 		      case 'l':
-			print (info->stream, "%ld", EXTRACT_OPERAND (SWAP_OR_INCR_VAL, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SWAP_OR_INCR_VAL, l)); break;
 		      case 'm':
-			print (info->stream, "%ld", EXTRACT_OPERAND (WRAP_VAL_OR_SWAP_MASK, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (WRAP_VAL_OR_SWAP_MASK, l)); break;
 		      case 'n':
-			print (info->stream, "%ld", EXTRACT_OPERAND (SEL32B, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SEL32B, l)); break;
 		      case 'o':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DATA_REG_IDX, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DATA_REG_IDX, l)); break;
 		      case 'p':
-			print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_REG_IDX, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDR_REG_IDX, l)); break;
 		      case 'q':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (NO_INCR, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (NO_INCR, l)); break;
                       case 'r':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (MUTEX_IDX, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MUTEX_IDX, l)); break;
 		      case 's':
-			print (info->stream, "%ld", EXTRACT_OPERAND (CLEAR_DVALID, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CLEAR_DVALID, l)); break;
 		      case 't':
-			print (info->stream, "%ld", EXTRACT_OPERAND (RESET, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RESET, l)); break;
 		      case 'u':
-			print (info->stream, "%ld", EXTRACT_OPERAND (ROTATE_WEIGHTS, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ROTATE_WEIGHTS, l)); break;
 		      case 'v':
-			print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDRMODE, l)); break;
 		      case 'w':
-			print (info->stream, "%ld", EXTRACT_OPERAND (DST_15BIT, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DST_15BIT, l)); break;
                       case 'x':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (DEST_ACCUM_EN, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DEST_ACCUM_EN, l)); break;
                       case 'y':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTR_MOD19, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INSTR_MOD19, l)); break;
                       case 'z':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (EL_ADDRMODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (EL_ADDRMODE, l)); break;
 		      default:
-			print (info->stream, _("# internal error, undefined modifier (ys%c)"), x);
+			print (info->stream, dis_style_text, _("# internal error, undefined modifier (ys%c)"), x);
 			break;
 		      }
 		      break;
 		  }
 		case 't':
 		  {
-		    char x = *++d;
+		    char x = *++oparg;
 		    switch (x)
 		      {
 		      case '0':
-			print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH_SPEC, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (FLUSH_SPEC, l)); break;
 		      case '1':
-			print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMOD19, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INSTRMOD19, l)); break;
 		      case '2':
-			print (info->stream, "%ld", EXTRACT_OPERAND (MAX_POOL_INDEX_EN, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MAX_POOL_INDEX_EN, l)); break;
 		      case '3':
-			print (info->stream, "%ld", EXTRACT_OPERAND (RESET_SRCB_GATE_CONTROL, l));
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RESET_SRCB_GATE_CONTROL, l));
 			break;
 		      case '4':
-			print (info->stream, "%ld", EXTRACT_OPERAND (RESET_SRCA_GATE_CONTROL, l));
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RESET_SRCA_GATE_CONTROL, l));
 			break;
 		      case '5':
-			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_CR, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RWC_CR, l)); break;
 		      case '6':
-			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_D, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RWC_D, l)); break;
 		      case '7':
-			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_B, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RWC_B, l)); break;
 		      case '8':
-			print (info->stream, "%ld", EXTRACT_OPERAND (RWC_A, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RWC_A, l)); break;
 		      case '9':
-			print (info->stream, "%ld", EXTRACT_OPERAND (SIZE_SEL, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SIZE_SEL, l)); break;
 		      case 'a':
-			print (info->stream, "%ld", EXTRACT_OPERAND (OFFSET_INDEX, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (OFFSET_INDEX, l)); break;
 		      case 'b':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (AUTO_INC_SPEC, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (AUTO_INC_SPEC, l)); break;
 		      case 'c':
-			print (info->stream, "%ld", EXTRACT_OPERAND (TDMA_DATA_REG_IDX, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (TDMA_DATA_REG_IDX, l)); break;
 		      case 'd':
-			print (info->stream, "%ld", EXTRACT_OPERAND (REGADDR, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (REGADDR, l)); break;
 		      case 'e':
-			print (info->stream, "%ld", EXTRACT_OPERAND (ROTATEWEIGHTS, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ROTATEWEIGHTS, l)); break;
 		      case 'f':
-			print (info->stream, "%ld", EXTRACT_OPERAND (MOP_TYPE, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MOP_TYPE, l)); break;
 		      case 'g':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (LOOP_COUNT, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LOOP_COUNT, l)); break;
                       case 'h':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ZMASK_LO16, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ZMASK_LO16, l)); break;
                       case 'i':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ZMASK_HI16, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ZMASK_HI16, l)); break;
                       case 'j':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (DEST_32B_LO, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DEST_32B_LO, l)); break;
                       case 'k':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SRC, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SRC, l)); break;
                       case 'l':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INSTRMODE, l)); break;
                       case 'm':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (DST_MOV, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DST_MOV, l)); break;
                       case 'n':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SRCA, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SRCA, l)); break;
                       case 'o':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SRCB, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SRCB, l)); break;
                       case 'p':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE_PACR, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDRMODE_PACR, l)); break;
                       case 'q':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ZERO_WRITE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ZERO_WRITE, l)); break;
                       case 'r':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (OVRD_TREAD_ID, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (OVRD_TREAD_ID, l)); break;
                       case 's':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CONCAT, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CONCAT, l)); break;
                       case 't':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (FLUSH, l)); break;
                       case 'u':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (LAST, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LAST, l)); break;
                       case 'v':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (PUSH, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (PUSH, l)); break;
                       case 'w':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_SEL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDR_SEL, l)); break;
                       case 'x':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (WR_DATA, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (WR_DATA, l)); break;
                       case 'y':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (PACK_SEL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (PACK_SEL, l)); break;
                       case 'z':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (STREAM_ID, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (STREAM_ID, l)); break;
 		      default:
-			print (info->stream, _("# internal error, undefined modifier (yt%c)"), x); 
+			print (info->stream, dis_style_text, _("# internal error, undefined modifier (yt%c)"), x); 
 			break;
 		      }
 		      break;
 		  }
                 case 'u': /* */
                   {
-                    char x = *++d;
+                    char x = *++oparg;
                     switch (x)
                       {
                       case '0':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH_SET, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (FLUSH_SET, l)); break;
                       case '1':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (GPR_ADDRESS, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (GPR_ADDRESS, l)); break;
                       case '2':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CFG_REG, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CFG_REG, l)); break;
                       case '3':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (TARGET_SEL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (TARGET_SEL, l)); break;
                       case '4':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (BYTE_OFFSET, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (BYTE_OFFSET, l)); break;
                       case '5':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CONTEXTID_2, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CONTEXTID_2, l)); break;
                       case '6':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (FLOP_INDEX, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (FLOP_INDEX, l)); break;
                       case '7':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (REG_INDEX, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (REG_INDEX, l)); break;
                       case '8':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (START_IDX, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (START_IDX, l)); break;
                       case '9':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (LEN, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LEN, l)); break;
                       case 'a':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (EXECUTE_WHILE_LOADING, l));
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (EXECUTE_WHILE_LOADING, l));
 			break;
                       case 'b':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (LOAD_MODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LOAD_MODE, l)); break;
                       case 'c':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (MASK, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MASK, l)); break;
                       case 'd':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (DATA, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DATA, l)); break;
                       case 'e':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CFG_REG_ADDR, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CFG_REG_ADDR, l)); break;
                       case 'f':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SEM_SEL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SEM_SEL, l)); break;
                       case 'g':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (MAX_VALUE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MAX_VALUE, l)); break;
                       case 'h':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (INIT_VALUE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INIT_VALUE, l)); break;
                       case 'i':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SEMSEL_SEMINIT, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SEMSEL_SEMINIT, l)); break;
                       case 'j':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (STALL_RES, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (STALL_RES, l)); break;
                       case 'k':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SEMSEL_SEMWAIT, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SEMSEL_SEMWAIT, l)); break;
                       case 'l':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (WAIT_SEM_COND, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (WAIT_SEM_COND, l)); break;
                       case 'm':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CHANNEL_INDEX, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CHANNEL_INDEX, l)); break;
                       case 'n':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (DIMENSIONINDEX, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DIMENSIONINDEX, l)); break;
                       case 'o':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (VALUE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (VALUE, l)); break;
                       case 'p':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (X_END2, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (X_END2, l)); break;
                       case 'q':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (X_START, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (X_START, l)); break;
                       case 'r':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (BITMASK, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (BITMASK, l)); break;
                       case 's':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (REGMASK, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (REGMASK, l)); break;
                       case 't':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (HALO_MASK, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (HALO_MASK, l)); break;
                       case 'u':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (REG_MASK_2, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (REG_MASK_2, l)); break;
                       case 'v':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SETC16_REG, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SETC16_REG, l)); break;
                       case 'w':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SETC16_VALUE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SETC16_VALUE, l)); break;
                       case 'x':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SETVALID, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SETVALID, l)); break;
                       case 'y':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (RWC_BIAS, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RWC_BIAS, l)); break;
                       case 'z':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SET_INC_CTRL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SET_INC_CTRL, l)); break;
                       default:
-                        print (info->stream, _("# internal error, undefined modifier (l%c)"), x); 
+                        print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), x); 
 			break;
                       }
 		      break;
                   }
                 case 'v':
                   {
-                    char x = *++d;
+                    char x = *++oparg;
                     switch (x)
                       {
                       case '0':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (Y_END, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (Y_END, l)); break;
                       case '1':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (Y_START, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (Y_START, l)); break;
                       case '2':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (X_END, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (X_END, l)); break;
                       case '3':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CLEAR_AB_VLD, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CLEAR_AB_VLD, l)); break;
 		      case '4':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (LREG_IND, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LREG_IND, l)); break;
                       case '5':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTR_MOD0, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INSTR_MOD0, l)); break;
                       case '6':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SFPU_ADDR_MODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SFPU_ADDR_MODE, l)); break;
                       case '7':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (DEST_REG_ADDR, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DEST_REG_ADDR, l)); break;
 
                       case '8':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (LOG2_AMOUNT2, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LOG2_AMOUNT2, l)); break;
                       case '9':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SHIFT_MODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SHIFT_MODE, l)); break;
                       case 'a':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ROT_SHIFT, l));
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ROT_SHIFT, l));
                         break;
                       case 'b':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SHIFT_ROW, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SHIFT_ROW, l)); break;
                       case 'c':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (WAIT_RES, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (WAIT_RES, l)); break;
                       case 'd':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SIZESEL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SIZESEL, l)); break;
                       case 'e':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (REGSIZESEL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (REGSIZESEL, l)); break;
                       case 'f':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (OFFSETINDEX, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (OFFSETINDEX, l)); break;
                       case 'g':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l));
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l));
 			break;
                       case 'h':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE_UNPACROP, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDRMODE_UNPACROP, l)); break;
                       case 'i':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CFGCONTEXTCNTINC, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CFGCONTEXTCNTINC, l)); break;
                       case 'j':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CFGCONTEXTID, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CFGCONTEXTID, l)); break;
                       case 'k':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ADDRCNTCONTEXTID, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDRCNTCONTEXTID, l)); break;
                       case 'l':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SETDATVALID, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SETDATVALID, l)); break;
                       case 'm':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (RAREB_EN, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (RAREB_EN, l)); break;
                       case 'n':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ZEROWRITE2, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ZEROWRITE2, l)); break;
                       case 'o':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (AUTOINCCONTEXTID, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (AUTOINCCONTEXTID, l)); break;
                       case 'p':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ROWSEARCH, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ROWSEARCH, l)); break;
                       case 'q':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SEARCHCASHFLOW, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SEARCHCASHFLOW, l)); break;
                       case 'r':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (NOOP, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (NOOP, l)); break;
                       case 's':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (WR128B, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (WR128B, l)); break;
                       case 't':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CFGREG, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CFGREG, l)); break;
                       case 'u':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_BLOCK_SELECTION, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MOV_BLOCK_SELECTION, l)); break;
                       case 'v':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (LAST_XMOVOP, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LAST_XMOVOP, l)); break;
                       case 'w':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CLEARCODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CLEARCODE, l)); break;
                       case 'x':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (ZEROVAL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ZEROVAL, l)); break;
                       case 'y':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (WRITEMODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (WRITEMODE, l)); break;
                       case 'z':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (BANKMASK, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (BANKMASK, l)); break;
                       default:
-                        print (info->stream, _("# internal error, undefined modifier (l%c)"), x);
+                        print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), x);
                         break;
 		      }
 		    break;
 		  }
                 case 'w':
                   {
-                    char x = *++d;
+                    char x = *++oparg;
                     switch (x)
                       {
                       case '0':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (SRCMASK, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SRCMASK, l)); break;
 		      case '1':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (CMP_VAL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CMP_VAL, l)); break;
 		      case '2':
-			print (info->stream, "%ld", EXTRACT_OPERAND (PKEDG_X_START, l)); break;
+			print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (PKEDG_X_START, l)); break;
 		      case '3':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_INSTR_MOD, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MOV_INSTR_MOD, l)); break;
 		      case '4':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_SRC, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MOV_SRC, l)); break;
 		      case '5':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (MOV_DST, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (MOV_DST, l)); break;
 		      case '6':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (GRAY_STALL_RES, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (GRAY_STALL_RES, l)); break;
                       case '7':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (GRAY_SEM_SEL, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (GRAY_SEM_SEL, l)); break;
 		      case '8':
-                        print (info->stream, "%ld", EXTRACT_OPERAND (POOL_ADDR_MODE, l)); break;
+                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (POOL_ADDR_MODE, l)); break;
 		      }
 		  }
 		  break;
 		  case 'x': //Blackhole
                    {
-                    char x = *++d;
+                    char x = *++oparg;
                     switch (x)
                       {
-			case 'a':x = *++d;
+			case 'a':x = *++oparg;
                                 switch (x)
                                 {
 				case '0':
-                                       	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_2, l)); break;
+                                       	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_2, l)); break;
   				case '1':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (CLEAR_DVALID, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CLEAR_DVALID, l)); break;
 				case '2':
-                                	print (info->stream, "%ld", EXTRACT_OPERAND (LSFPU_ADDR_MODE, l)); break;
+                                	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LSFPU_ADDR_MODE, l)); break;
 				case '3':
-                                	print (info->stream, "%ld", EXTRACT_OPERAND (LDEST_REG_ADDR, l)); break;
+                                	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LDEST_REG_ADDR, l)); break;
 				case '4':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
 				case '5':
-                                      	print (info->stream, "%ld", EXTRACT_OPERAND (DEST_REG_ADDR, l)); break;
+                                      	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (DEST_REG_ADDR, l)); break;
 				case '6':
-                                       	print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMODE, l)); break;
+                                       	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INSTRMODE, l)); break;
 				case '7':
-                                      	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
+                                      	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
 				case '8':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (INSTR_MOD19, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INSTR_MOD19, l)); break;
   				case '9':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (INSTRMOD19, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (INSTRMOD19, l)); break;
 				case 'a':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_DEST_2, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_DEST_2, l)); break;
                               	case 'b':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_CONTEXT, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_CFG_CONTEXT, l)); break;
                             	case 'c':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ROW_PAD_ZERO, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ROW_PAD_ZERO, l)); break;
                             	case 'd':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_DEST_ACCESS_MODE, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_DEST_ACCESS_MODE, l)); break;
                              	case 'e':
-                                      	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_3, l)); break;
+                                      	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_MODE_3, l)); break;
                             	case 'f':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_CNT_CONTEXT, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_CNT_CONTEXT, l)); break;
                             	case 'g':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_ZERO_WRITE, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ZERO_WRITE, l)); break;
                              	case 'h':
-                                       	print (info->stream, "%ld", EXTRACT_OPERAND (L_READ_INTF_SEL, l)); break;
+                                       	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_READ_INTF_SEL, l)); break;
                             	case 'i':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_OVERTHREAD_ID, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_OVERTHREAD_ID, l)); break;
                             	case 'j':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (CONCAT, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CONCAT, l)); break;
                               	case 'k':
-                                  	print (info->stream, "%ld", EXTRACT_OPERAND (L_CTXT_CTRL, l)); break;
+                                  	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_CTXT_CTRL, l)); break;
                               	case 'l':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (FLUSH, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (FLUSH, l)); break;
                             	case 'm':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (LAST, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (LAST, l)); break;
                             	case 'n':
-                                      	print (info->stream, "%ld", EXTRACT_OPERAND (PUSH, l)); break;
+                                      	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (PUSH, l)); break;
                             	case 'o':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (ADDR_SEL, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDR_SEL, l)); break;
                             	case 'p':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_UNUSED, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_UNUSED, l)); break;
                             	case 'q':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_DISABLE_STALL, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_DISABLE_STALL, l)); break;
                              	case 'r':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_SEL, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_SEL, l)); break;
                            	case 's':
-                             		print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_ID, l)); break;
+                             		print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_STREAM_ID, l)); break;
 				case 't':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDRMODE_3, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDRMODE_3, l)); break;
 				case 'u':
-                                       	print (info->stream, "%ld", EXTRACT_OPERAND (L_ROT_SHIFT, l)); break;
+                                       	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ROT_SHIFT, l)); break;
 				case 'v':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_DISABLE_MASK_OLD_VALUE, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_DISABLE_MASK_OLD_VALUE, l)); break;
                                 case 'w':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_OPERATION, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_OPERATION, l)); break;
                                 case 'x':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_MASK_WIDTH, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_MASK_WIDTH, l)); break;
                                 case 'y':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_RIGHT_CSHIFT_AMT, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_RIGHT_CSHIFT_AMT, l)); break;
                                 case 'z':
-					print (info->stream, "%ld", EXTRACT_OPERAND (L_SCRATCH_SEL, l)); break;
+					print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_SCRATCH_SEL, l)); break;
 				}break;
-			case 'b':x = *++d;
+			case 'b':x = *++oparg;
                                 switch (x)
                                 {
 				case '0':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_TARGET_SEL, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_TARGET_SEL, l)); break;
                                 case '1':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_WAIT_STREAM_SEL, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_WAIT_STREAM_SEL, l)); break;
                                 case '2':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_ID_SEL, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_STREAM_ID_SEL, l)); break;
                                 case '3':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_REG_ADDR, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_STREAM_REG_ADDR, l)); break;
                                 case '4':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_REG_2, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_CFG_REG_2, l)); break;
 				case 'a':
-                                       	print (info->stream, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l)); break;
+                                       	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l)); break;
                              	case 'b':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (ADDRMODE_UNPACROP, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ADDRMODE_UNPACROP, l)); break;
                              	case 'c':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_CONTEXT_CNT_INC, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_CFG_CONTEXT_CNT_INC, l)); break;
                                	case 'd':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (CFGCONTEXTID, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (CFGCONTEXTID, l)); break;
                             	case 'e':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_ADDR_CNT_CONTEXT_ID, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_CNT_CONTEXT_ID, l)); break;
                            	case 'f':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (OVRD_TREAD_ID, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (OVRD_TREAD_ID, l)); break;
                              	case 'g':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (SETDATVALID, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SETDATVALID, l)); break;
                              	case 'h':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_SRC_BCAST, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_SRC_BCAST, l)); break;
                             	case 'i':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_ZERO_WRITE_2, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ZERO_WRITE_2, l)); break;
                              	case 'j':
-                                  	print (info->stream, "%ld", EXTRACT_OPERAND (AUTOINCCONTEXTID, l)); break;
+                                  	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (AUTOINCCONTEXTID, l)); break;
 				case 'k':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (ROWSEARCH, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (ROWSEARCH, l)); break;
                            	case 'l':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (SEARCHCASHFLOW, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (SEARCHCASHFLOW, l)); break;
                               	case 'm':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (UNPACK_BLOCK_SELECTION, l)); break;
                             	case 'n':
-                                 	print (info->stream, "%ld", EXTRACT_OPERAND (L_STREAM_ID_2, l)); break;
+                                 	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_STREAM_ID_2, l)); break;
                               	case 'o':
-                                  	print (info->stream, "%ld", EXTRACT_OPERAND (L_MSG_CLR_CNT, l)); break;
+                                  	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_MSG_CLR_CNT, l)); break;
                          	case 'p':
-                                     	print (info->stream, "%ld", EXTRACT_OPERAND (L_SETDVALID, l)); break;
+                                     	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_SETDVALID, l)); break;
                             	case 'q':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_CLR_TO_FMT_CNTRL, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_CLR_TO_FMT_CNTRL, l)); break;
                                	case 'r':
-                                 	print (info->stream, "%ld", EXTRACT_OPERAND (L_STALL_CLR_CNTRL, l)); break;
+                                 	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_STALL_CLR_CNTRL, l)); break;
                             	case 's':
-                                   	print (info->stream, "%ld", EXTRACT_OPERAND (L_BANK_CLR_CNTRL, l)); break;
+                                   	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_BANK_CLR_CNTRL, l)); break;
                             	case 't':
-                                    	print (info->stream, "%ld", EXTRACT_OPERAND (L_SRC_CLR_CNTRL, l)); break;
+                                    	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_SRC_CLR_CNTRL, l)); break;
                             	case 'u':
-                                  	print (info->stream, "%ld", EXTRACT_OPERAND (L_UNPACK_POP, l)); break;
+                                  	print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_UNPACK_POP, l)); break;
 				case 'v':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_CFG_REG, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_CFG_REG, l)); break;
                                 case 'w':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_LINGER_TIME, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_LINGER_TIME, l)); break;
                                 case 'x':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_RESOURCE, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_RESOURCE, l)); break;
                                 case 'y':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_OP_CLASS, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_OP_CLASS, l)); break;
                                 case 'z':
-                                        print (info->stream, "%ld", EXTRACT_OPERAND (L_TARGET_VALUE, l)); break;
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_TARGET_VALUE, l)); break;
                                 }break;
 		      }
 		   }

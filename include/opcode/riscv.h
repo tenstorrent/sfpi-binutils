@@ -368,7 +368,7 @@ static const char * const riscv_pred_succ[16] =
 #define NVECR 32
 #define NVECM 1
 
-#include "riscv-sfpu.h"
+#include "opcode/riscv-sfpu.h"
 
 /* ABI names for selected x-registers.  */
 

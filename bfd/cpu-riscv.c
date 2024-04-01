@@ -98,11 +98,11 @@ enum
    and each entry except the last should end with NN (my enum value).  */
 static const bfd_arch_info_type arch_info_struct[] =
 {
-  N (64, bfd_mach_riscv64, "riscv:rv64", FALSE, NN (I_riscv64)),
-  N (32, bfd_mach_riscv32, "riscv:rv32", FALSE, NN (I_riscv32)),
-  N (32, bfd_mach_riscv32_sfpu_blackhole, "riscv:rv32-sfpu-blackhole", FALSE, NN (I_riscv32_sfpu_blackhole)),
-  N (32, bfd_mach_riscv32_sfpu_wormhole, "riscv:rv32-sfpu-wormhole", FALSE, NN (I_riscv32_sfpu_wormhole)),
-  N (32, bfd_mach_riscv32_sfpu, "riscv:rv32-sfpu", FALSE, NULL)
+  N (64, bfd_mach_riscv64, "riscv:rv64", false, NN (I_riscv64)),
+  N (32, bfd_mach_riscv32, "riscv:rv32", false, NN (I_riscv32)),
+  N (32, bfd_mach_riscv32_sfpu_blackhole, "riscv:rv32-sfpu-blackhole", false, NN (I_riscv32_sfpu_blackhole)),
+  N (32, bfd_mach_riscv32_sfpu_wormhole, "riscv:rv32-sfpu-wormhole", false, NN (I_riscv32_sfpu_wormhole)),
+  N (32, bfd_mach_riscv32_sfpu, "riscv:rv32-sfpu", false, NULL)
 };
 
 /* The default architecture is riscv:rv64.  */

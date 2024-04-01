@@ -235,9 +235,9 @@ struct riscv_set_options
   int relax; /* Emit relocs the linker is allowed to relax.  */
   int arch_attr; /* Emit architecture and privileged elf attributes.  */
   int csr_check; /* Enable the CSR checking.  */
-  int sfpu; /* Generate SFPU code.  */
-  int wormhole; /* Generate SFPU code for Wormhole.  */
-  int blackhole; /* Generate SFPU code for Blackhole.  */
+  int grayskull; /* Generate SFPU code for Grayskull. */
+  int wormhole;  /* Generate SFPU code for Wormhole.  */
+  int blackhole; /* Generate SFPU code for Blackhole. */
 };
 
 static struct riscv_set_options riscv_opts =
@@ -247,9 +247,9 @@ static struct riscv_set_options riscv_opts =
   1, /* relax */
   DEFAULT_RISCV_ATTR, /* arch_attr */
   0, /* csr_check */
-  0, /* sfpu */
+  0, /* grayskull */
   0, /* wormhole */
-  0.        /* blackhole */
+  0. /* blackhole */
 };
 
 static void
@@ -289,15 +289,6 @@ riscv_set_rvc (bool rvc_value)
     elf_flags |= EF_RISCV_RVC;
 
   riscv_opts.rvc = rvc_value;
-}
-
-static void
-riscv_set_sfpu (bool sfpu_value)
-{
-  if (sfpu_value)
-    elf_flags |= EF_RISCV_SFPU;
-
-  riscv_opts.sfpu = sfpu_value;
 }
 
 /* This linked list records all enabled extensions, which are parsed from
@@ -1259,13 +1250,13 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	      case 'b': USE_BITS (OP_MASK_YMULADD_SRCB, OP_SH_YMULADD_SRCB); break;
 	      case 'c': USE_BITS (OP_MASK_YMULADD_SRCC, OP_SH_YMULADD_SRCC); break;
 	      /* 'd' can have a numeric extension for various purposes.  Hence increment p */
-	      case 'd': USE_BITS (OP_MASK_YLOADSTORE_RD, OP_SH_YLOADSTORE_RD); p++; break;
+	      case 'd': USE_BITS (OP_MASK_YLOADSTORE_RD, OP_SH_YLOADSTORE_RD); oparg++; break;
 	      case 'e': USE_BITS (OP_MASK_YMULADD_DEST, OP_SH_YMULADD_DEST); break;
 	      case 'f': USE_BITS (OP_MASK_YCC_IMM12_MATH, OP_SH_YCC_IMM12_MATH); break;
 	      case 'g': USE_BITS (OP_MASK_YCC_LREG_C, OP_SH_YCC_LREG_C); break;
 	      case 'h': USE_BITS (OP_MASK_YCC_LREG_DEST, OP_SH_YCC_LREG_DEST); break;
 	      /* 'i' can have a numeric extension for various purposes.  Hence increment p */
-	      case 'i': USE_BITS (OP_MASK_YCC_INSTR_MOD1, OP_SH_YCC_INSTR_MOD1); p++; break;
+	      case 'i': USE_BITS (OP_MASK_YCC_INSTR_MOD1, OP_SH_YCC_INSTR_MOD1); oparg++; break;
 
 	      case 'j': USE_BITS (OP_MASK_YMULI_IMM16_MATH, OP_SH_YMULI_IMM16_MATH); break;
 	      case 'k': switch (*++oparg)
@@ -1286,7 +1277,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		}
 		break;
 	      /* 'm' can have a numeric extension for various purposes.  Hence increment p */
-	      case 'm': USE_BITS (OP_MASK_YLOADSTORE_INSTR_MOD0, OP_SH_YLOADSTORE_INSTR_MOD0); p++; break;
+	      case 'm': USE_BITS (OP_MASK_YLOADSTORE_INSTR_MOD0, OP_SH_YLOADSTORE_INSTR_MOD0); oparg++; break;
 	      case 'n': USE_BITS (OP_MASK_YDEST_REG_ADDR, OP_SH_YDEST_REG_ADDR); break;
 	      case 'o': USE_BITS (OP_MASK_YMULADD_INSTR_MOD0, OP_SH_YMULADD_INSTR_MOD0); break;
 
@@ -1550,7 +1541,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		      case 'z': USE_BITS (OP_MASK_L_TARGET_VALUE, OP_SH_L_TARGET_VALUE); break;
 		    }
 		    break;
-                case 'c': switch (c = *p++)
+                case 'c': switch (*oparg++)
                   {
                     case '0': USE_BITS (OP_MASK_L_32BIT_MODE, OP_SH_L_32BIT_MODE); break;
                     case '1': USE_BITS (OP_MASK_L_CLR_ZERO_FLAGS, OP_SH_L_CLR_ZERO_FLAGS); break;
@@ -1694,18 +1685,23 @@ init_opcode_hash (const struct riscv_opcode *opcodes,
 void
 md_begin (void)
 {
-  int temp = riscv_opts.wormhole;
   //unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
   unsigned long mach;
   if (xlen == 64) {
     mach = bfd_mach_riscv64;
   } else {
-    if (riscv_opts.wormhole)
+    if (riscv_opts.wormhole) {
       mach = bfd_mach_riscv32_sfpu_wormhole;
-    else if (riscv_opts.blackhole)
+      stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_WORMHOLE;
+    } else if (riscv_opts.blackhole) {
       mach = bfd_mach_riscv32_sfpu_blackhole;
-    else
+      stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_BLACKHOLE; 
+    } else if (riscv_opts.grayskull) {
+      mach = bfd_mach_riscv32_sfpu;
+      stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_GRAYSKULL;
+    } else {
       mach = bfd_mach_riscv32;
+    }
   }
   if (! bfd_set_arch_mach (stdoutput, bfd_arch_riscv, mach))
     as_warn (_("could not set architecture and machine"));
@@ -3623,34 +3619,34 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
             case 'w':  // SFPU Wormhole Instructions
             case 'J':  // SFPU Grayskull Instructions
             case 'l':  // SFPU Blackhole Instructions
-              switch (*++opargs)
+              switch (*++oparg)
                 {
                 case 'a': /* MUL/ADD SRCA L0-L15 */
-                  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                  if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                       || !(regno <= 15))
                     break;
                   INSERT_OPERAND (YMULADD_SRCA, *ip, regno);
                   continue;
                 case 'b': /* MUL/ADD SRCB L0-L15 */
-                  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                  if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                       || !(regno <= 15))
                     break;
                   INSERT_OPERAND (YMULADD_SRCB, *ip, regno);
                   continue;
                 case 'c': /* MUL/ADD SRCC L0-L15 */
-                  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                  if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                       || !(regno <= 15))
                     break;
                   INSERT_OPERAND (YMULADD_SRCC, *ip, regno);
                   continue;
                 case 'd': /* LOAD/STORE RD L0-L3 (L0-L7 for Wormhole) */
                   {
-                    char x = *++opargs;
+                    char x = *++oparg;
 
                     if (x == '1') {
                       if (riscv_opts.wormhole || riscv_opts.blackhole)
                         {
-                          if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                          if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                               || regno > 7)
                             {
                               as_bad (_("bad register for lreg_dest field, "
@@ -3660,7 +3656,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         }
                       else
                         {
-                          if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                          if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                               || regno > 3)
                             {
                               as_bad (_("bad register for lreg_dest field, "
@@ -3669,7 +3665,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         }
                     } else if (x == '2') {
-                      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                           || regno > 15)
                         {
                           as_bad (_("bad register for lreg_dest field, "
@@ -3688,7 +3684,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       // read only.  We use that for a workaround for a HW bug
                       // in WH B0 where we throw away the result by storing to
                       // register 9
-                      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                           || ((strcasecmp(insn->name, "SFPSHFT2") && regno > 7) ||
                               (!strcasecmp(insn->name, "SFPSHFT2") && regno > 7 && regno != 9)))
                         {
@@ -3699,7 +3695,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                     }
                   else
                     {
-                      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                           || regno > 3)
                         {
                           as_bad (_("bad register for lreg_dest field, "
@@ -3710,7 +3706,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   INSERT_OPERAND (YMULADD_DEST, *ip, regno);
                   continue;
                 case 'f': /* imm12_math */
-                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                       || imm_expr->X_op != O_constant)
                     {
                       as_bad (_("bad value for imm12_math field, "
@@ -3721,10 +3717,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   imm12_math_op = imm_expr->X_add_number;
                   INSERT_OPERAND (YCC_IMM12_MATH, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'g': /* CC Instructions LREG_C L0-L15 */
-                  if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                  if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                       || !(regno <= 15))
                     {
                       as_bad (_("bad register for lreg_c field, "
@@ -3737,10 +3733,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   if (riscv_opts.wormhole || riscv_opts.blackhole)
                     {
                       if (! strcasecmp(insn->name, "SFPCONFIG") &&
-              (insn->insn_class == INSN_CLASS_I_W || 
-               insn->insn_class == INSN_CLASS_I_L))
+                          (insn->insn_class == INSN_CLASS_I_W || 
+                           insn->insn_class == INSN_CLASS_I_L))
                         {
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number == 9
@@ -3753,9 +3749,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                           regno = imm_expr->X_add_number;
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                         }
-                      else if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                      else if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                                || regno > 7)
                         {
                           as_bad (_("bad register for lreg_dest field, "
@@ -3765,7 +3761,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                     }
                   else
                     {
-                      if (!reg_lookup (&s, RCLASS_SFPUR, &regno)
+                      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                           || regno > 3)
                         {
                           as_bad (_("bad register for lreg_dest field, "
@@ -3777,10 +3773,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   continue;
                 case 'i': /* CC Instructions instr_mod1 */
                   {
-                    char x = *++opargs;
+                    char x = *++oparg;
                     if (x == '1')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 15)
@@ -3795,7 +3791,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         if (insn->insn_class == INSN_CLASS_I_W  &&
                             ! strcasecmp(insn->name, "SFPMOV"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || (imm_expr->X_add_number != 0  &&
                                     imm_expr->X_add_number != 1  &&
@@ -3810,7 +3806,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         else if (insn->insn_class == INSN_CLASS_I_W  &&
                                  ! strcasecmp(insn->name, "SFPSETEXP"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || imm_expr->X_add_number < 0
                                 || imm_expr->X_add_number > 2)
@@ -3831,7 +3827,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         else if (insn->insn_class == INSN_CLASS_I_W  &&
                                  ! strcasecmp(insn->name, "SFPSHFT2"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || imm_expr->X_add_number < 0
                                 || imm_expr->X_add_number > 6)
@@ -3844,7 +3840,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         else if (insn->insn_class == INSN_CLASS_I_L  &&
                             ! strcasecmp(insn->name, "SFPMOV"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || (imm_expr->X_add_number != 0  &&
                                     imm_expr->X_add_number != 1  &&
@@ -3859,7 +3855,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         else if (insn->insn_class == INSN_CLASS_I_L  &&
                                  ! strcasecmp(insn->name, "SFPSETEXP"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || imm_expr->X_add_number < 0
                                 || imm_expr->X_add_number > 2)
@@ -3880,7 +3876,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         else if (insn->insn_class == INSN_CLASS_I_L  &&
                                  ! strcasecmp(insn->name, "SFPSHFT2"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || imm_expr->X_add_number < 0
                                 || imm_expr->X_add_number > 6)
@@ -3893,7 +3889,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         else
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || imm_expr->X_add_number < 0
                                 || imm_expr->X_add_number > 1)
@@ -3950,7 +3946,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '3')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number == 2
@@ -3983,7 +3979,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '4')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || (imm_expr->X_add_number > 3  &&
@@ -3997,7 +3993,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '5')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number == 3
@@ -4029,7 +4025,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         if (insn->insn_class == INSN_CLASS_I_W  &&
                             ! strcasecmp(insn->name, "SFPLZ"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || (imm_expr->X_add_number & 0x1) != 0)
                               {
@@ -4041,7 +4037,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         else if (insn->insn_class == INSN_CLASS_I_L &&
                             ! strcasecmp(insn->name, "SFPLZ"))
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || (imm_expr->X_add_number & 0x1) != 0)
                               {
@@ -4053,7 +4049,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         else
                           {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
                                 || imm_expr->X_add_number < 0
                                 || (imm_expr->X_add_number > 2  &&
@@ -4068,7 +4064,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '7')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number == 9
@@ -4083,7 +4079,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '8')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 8)
@@ -4097,10 +4093,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   INSERT_OPERAND (YCC_INSTR_MOD1, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'j': /* imm16_math */
-                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                       || imm_expr->X_op != O_constant
                       || imm_expr->X_add_number < 0
                       || imm_expr->X_add_number > 65535)
@@ -4112,13 +4108,13 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   INSERT_OPERAND (YMULI_IMM16_MATH, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'k': /* wormhole incrwc operands */
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
                       case '1':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -32
                           || imm_expr->X_add_number >  63)
@@ -4131,11 +4127,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WINCRWC_RWC_CR, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
 
                       case '2':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -8
                           || imm_expr->X_add_number >  15)
@@ -4148,11 +4144,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WINCRWC_RWC_D, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
 
                       case '3':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -8
                           || imm_expr->X_add_number >  15)
@@ -4165,11 +4161,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WINCRWC_RWC_B, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
 
                       case '4':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -8
                           || imm_expr->X_add_number >  15)
@@ -4182,15 +4178,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WINCRWC_RWC_A, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                     }
                   continue;
                 case 'l': /* wormhole replay operands */
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
                       case '1':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -512
                           || imm_expr->X_add_number >  1024)
@@ -4203,11 +4199,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WREPLAY_START_IDX, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
 
                       case '2':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -512
                           || imm_expr->X_add_number >  1024)
@@ -4220,11 +4216,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WREPLAY_LEN, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
 
                       case '3':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -4
                           || imm_expr->X_add_number >  7)
@@ -4237,11 +4233,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WREPLAY_EXEC_WHILE_LOAD, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
 
                       case '4':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -4253,16 +4249,16 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WREPLAY_LOAD_MODE, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                     }
                   continue;
                 case 'm': /* load/store instr_mod0 */
                   {
-                    char x = *++opargs;
+                    char x = *++oparg;
                     if (x == '1')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 15)
@@ -4334,7 +4330,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '2')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || (imm_expr->X_add_number != 0  &&
                                 imm_expr->X_add_number != 2))
@@ -4346,7 +4342,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '3')
                       {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 7)
@@ -4379,10 +4375,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   INSERT_OPERAND (YLOADSTORE_INSTR_MOD0, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'n': /* dest_reg_addr */
-                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                       || imm_expr->X_op != O_constant
                       || imm_expr->X_add_number < -32768
                       || imm_expr->X_add_number >  65535)
@@ -4395,14 +4391,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   INSERT_OPERAND (YDEST_REG_ADDR, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'o': /* mad/mul/add instr_mod0 */
                   if (insn->insn_class == INSN_CLASS_I_W)
                     {
                       if (! strcasecmp(insn->name, "SFPLUTFP32"))
                         {
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number == 1
@@ -4419,7 +4415,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                               break;
                             }
                         }
-                      else if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      else if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number != 0)
                         {
@@ -4432,7 +4428,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                     {
                       if (! strcasecmp(insn->name, "SFPLUTFP32"))
                         {
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number == 1
@@ -4449,7 +4445,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                               break;
                             }
                         }
-                      else if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      else if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number != 0)
                         {
@@ -4461,7 +4457,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   else
                     {
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number == 2
@@ -4475,10 +4471,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   INSERT_OPERAND (YMULADD_INSTR_MOD0, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'p': /* wormhole load/store addr_mode */
-                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                       || imm_expr->X_op != O_constant
                       || imm_expr->X_add_number < 0
                       || imm_expr->X_add_number > 3)
@@ -4490,10 +4486,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   INSERT_OPERAND (WLOADSTORE_ADDR_MODE, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'q': /* wormhole dest_reg_addr */
-                  if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                       || imm_expr->X_op != O_constant
                       || imm_expr->X_add_number < -8192
                       || imm_expr->X_add_number >  16384)
@@ -4506,13 +4502,13 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                   INSERT_OPERAND (WLOADSTORE_DEST_REG_ADDR, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
-                  s = expr_end;
+                  asarg = expr_end;
                   continue;
                 case 'r': /* wormhole STOCH_RND operands */
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
                       case '1':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -4524,11 +4520,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WSTOCH_RND_MODE, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
 
                       case '2':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < -16
                           || imm_expr->X_add_number >  32)
@@ -4541,15 +4537,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (WSTOCH_RND_IMM8_MATH, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                     }
                   continue;
                 case 's': /* wormhole STOCH_RND operands */
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
                       case '1':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -4561,10 +4557,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (DMA_REG_OP_A, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case '2':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -4576,10 +4572,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (DMA_REG_OP_B, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case '3':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -4591,10 +4587,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (DMA_REG_OP_RES, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case '4':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -4606,10 +4602,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (DMA_REG_OP_B_ISCONST, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case '5':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 31)
@@ -4621,10 +4617,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (DMA_REG_OP_OPSEL, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case '6':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -4635,10 +4631,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (PAYLOAD_SIGSEL_SIZE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '7':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                              || imm_expr->X_add_number > 16383)
@@ -4650,10 +4646,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (PAYLOAD_SIGSEL, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                       case '8':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -4665,10 +4661,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         
                       INSERT_OPERAND (SET_SIG_MODE, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case '9':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 127)
@@ -4680,10 +4676,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (REG_INDEX16B, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case 'a':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  7)
@@ -4695,10 +4691,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (CNT_SET_MASK, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case 'b':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -4710,10 +4706,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (CH1_Y, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case 'c':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  7)
@@ -4725,10 +4721,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (CH1_X, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case 'd':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  7)
@@ -4740,10 +4736,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (CH0_Y, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case 'e':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  7)
@@ -4755,10 +4751,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (CH0_X, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                         break;
                       case 'f':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 63)
@@ -4770,11 +4766,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (BIT_MASK, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
 
                       case 'g':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 16383)
@@ -4785,10 +4781,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (WAIT_RES_14BIT, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case 'h':
-                          if (my_getOpcodeExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getOpcodeExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number > 127)
@@ -4800,10 +4796,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (ADDR_MODE, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                       case 'i':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -4815,10 +4811,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (INDEX_EN, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                       case 'j':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 16383)
@@ -4830,10 +4826,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (DST, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'k':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 1)
@@ -4845,10 +4841,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (MEMHIER_SEL, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                         break;
                         case 'l':
-                              if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  15)
@@ -4860,10 +4856,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (SWAP_OR_INCR_VAL, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 'm':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  511)
@@ -4875,10 +4871,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (WRAP_VAL_OR_SWAP_MASK, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'n':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 4)
@@ -4889,10 +4885,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (SEL32B, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'o':
-                              if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -4904,10 +4900,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (DATA_REG_IDX, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 'p':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -4919,10 +4915,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (ADDR_REG_IDX, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'q':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -4934,10 +4930,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (NO_INCR, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 'r':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 16777215)
@@ -4949,10 +4945,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (MUTEX_IDX, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 's':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -4963,10 +4959,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (CLEAR_DVALID, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 't':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 4194303)
@@ -4978,10 +4974,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (RESET, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 'u':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -4993,10 +4989,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         
                         INSERT_OPERAND (ROTATE_WEIGHTS, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'v':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5007,10 +5003,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (ADDRMODE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'w':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 32767)
@@ -5022,10 +5018,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (DST_15BIT, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'x':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5037,10 +5033,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (DEST_ACCUM_EN, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'y':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5051,10 +5047,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (INSTR_MOD19, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'z':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 15)
@@ -5066,15 +5062,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (EL_ADDRMODE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     }
                   continue;
                 case 't':
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
                         case '0':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number >  16777215)
@@ -5086,10 +5082,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (FLUSH_SPEC, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '1':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 7)
@@ -5100,10 +5096,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (INSTRMOD19, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '2':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5115,10 +5111,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (MAX_POOL_INDEX_EN, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '3':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 8388607)
@@ -5130,10 +5126,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (RESET_SRCB_GATE_CONTROL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '4':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5145,10 +5141,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (RESET_SRCA_GATE_CONTROL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '5':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 15)
@@ -5160,10 +5156,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (RWC_CR, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '6':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 15)
@@ -5175,10 +5171,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (RWC_D, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '7':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 15)
@@ -5190,10 +5186,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           
                         INSERT_OPERAND (RWC_B, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '8':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 15)
@@ -5205,10 +5201,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (RWC_A, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case '9':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5219,10 +5215,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (SIZE_SEL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'a':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 255)
@@ -5233,10 +5229,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (OFFSET_INDEX, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'b':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5247,10 +5243,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (AUTO_INC_SPEC, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'c':
-                              if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number >  15)
@@ -5262,10 +5258,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (TDMA_DATA_REG_IDX, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 'd':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 16383)
@@ -5277,10 +5273,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (REGADDR, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'e':
-                              if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 31)
@@ -5292,10 +5288,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (ROTATEWEIGHTS, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 'f':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5307,10 +5303,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (MOP_TYPE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'g':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 127)
@@ -5321,10 +5317,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (LOOP_COUNT, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end; 
+                        asarg = expr_end; 
                         break;
                         case 'h':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number >  32767)
@@ -5335,10 +5331,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             } 
                           INSERT_OPERAND (ZMASK_LO16, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                         case 'i':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number >  16777215)
@@ -5349,10 +5345,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                           INSERT_OPERAND (ZMASK_HI16, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                         case 'j':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5363,10 +5359,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         }
                         INSERT_OPERAND (DEST_32B_LO, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'k':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number >  63)
@@ -5378,10 +5374,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (SRC, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'l':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 7)
@@ -5392,10 +5388,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (INSTRMODE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'm':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 4095)
@@ -5407,10 +5403,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (DST_MOV, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'n':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number >  7)
@@ -5422,10 +5418,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (SRCA, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                         case 'o':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number >  4095)
@@ -5437,10 +5433,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (SRCB, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'p':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 511)
@@ -5452,10 +5448,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (ADDRMODE_PACR, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'q':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 7)
@@ -5466,10 +5462,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (ZERO_WRITE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'r':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5481,10 +5477,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (OVRD_TREAD_ID, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 's':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 7)
@@ -5495,10 +5491,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (CONCAT, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 't':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 7)
@@ -5509,10 +5505,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (FLUSH, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'u':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5524,10 +5520,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (LAST, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'v':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5539,10 +5535,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (PUSH, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'w':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5553,10 +5549,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         }
                         INSERT_OPERAND (ADDR_SEL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'x':
-                              if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                              if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  1023)
@@ -5568,10 +5564,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                               INSERT_OPERAND (WR_DATA, *ip, imm_expr->X_add_number);
                               imm_expr->X_op = O_absent;
-                              s = expr_end;
+                              asarg = expr_end;
                               break;
                         case 'y':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  15)
@@ -5583,10 +5579,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (PACK_SEL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'z':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 63)
@@ -5598,15 +5594,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (STREAM_ID, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     }
                     continue;
                 case 'u':
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
                     case '0':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5618,10 +5614,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (FLUSH_SET, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case '1':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 255)
@@ -5632,10 +5628,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (GPR_ADDRESS, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case '2':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number > 32767)
@@ -5647,10 +5643,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (CFG_REG, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                     case '3':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5661,10 +5657,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (TARGET_SEL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case '4':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5675,10 +5671,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (BYTE_OFFSET, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case '5':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5689,10 +5685,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (CONTEXTID_2, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case '6':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number >  767)
@@ -5704,10 +5700,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (FLOP_INDEX, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                     case '7':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 63)
@@ -5719,10 +5715,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (REG_INDEX, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case '8':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number >  767)
@@ -5734,10 +5730,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (START_IDX, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                     case '9':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number >  767)
@@ -5749,10 +5745,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                           INSERT_OPERAND (LEN, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                     case 'a':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number >  15)
@@ -5764,10 +5760,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (EXECUTE_WHILE_LOADING, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'b':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5779,10 +5775,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (LOAD_MODE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'c':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 255)
@@ -5793,10 +5789,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (MASK, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'd':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 255)
@@ -5807,10 +5803,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (DATA, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'e':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 255)
@@ -5821,10 +5817,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (CFG_REG_ADDR, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'f':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 3145727)
@@ -5836,10 +5832,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (SEM_SEL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'g':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 63)
@@ -5851,10 +5847,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (MAX_VALUE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'h':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 63)
@@ -5866,10 +5862,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (INIT_VALUE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     case 'i':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 12287)
@@ -5881,10 +5877,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (SEMSEL_SEMINIT, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'j':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 511)
@@ -5896,10 +5892,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (STALL_RES, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'k':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 8191)
@@ -5911,10 +5907,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (SEMSEL_SEMWAIT, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'l':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -5925,10 +5921,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (WAIT_SEM_COND, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'm':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -5940,10 +5936,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (CHANNEL_INDEX, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'n':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 4)
@@ -5954,10 +5950,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (DIMENSIONINDEX, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'o':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 16383)
@@ -5969,10 +5965,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (VALUE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'p':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 2047)
@@ -5983,10 +5979,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         }
                         INSERT_OPERAND (X_END2, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'q':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 1023)
@@ -5998,25 +5994,25 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (X_START, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'r':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number >  63)
-                        {
-                          as_bad (_("bad value for rwc_cr field, "
-                                    "values and 0...63 for unsigned values"));
-                          break;
-                        }
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                            || imm_expr->X_op != O_constant
+                            || imm_expr->X_add_number < 0
+                            || imm_expr->X_add_number >  63)
+                          {
+                            as_bad (_("bad value for rwc_cr field, "
+                                      "values and 0...63 for unsigned values"));
+                            break;
+                          }
 
-                      INSERT_OPERAND (BITMASK, *ip, imm_expr->X_add_number);
-                      imm_expr->X_op = O_absent;
-                      s = expr_end;
-                      break;
+                        INSERT_OPERAND (BITMASK, *ip, imm_expr->X_add_number);
+                        imm_expr->X_op = O_absent;
+                        asarg = expr_end;
+                        break;
                         case 's':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 8388607)
@@ -6028,10 +6024,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (REGMASK, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 't':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 1)
@@ -6043,10 +6039,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (HALO_MASK, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'u':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 16777215)
@@ -6058,10 +6054,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (REG_MASK_2, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'v':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 255)
@@ -6072,10 +6068,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         INSERT_OPERAND (SETC16_REG, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'w':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                          if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
                               || imm_expr->X_add_number < 0
                               || imm_expr->X_add_number > 65535)
@@ -6087,10 +6083,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
         
                           INSERT_OPERAND (SETC16_VALUE, *ip, imm_expr->X_add_number);
                           imm_expr->X_op = O_absent;
-                          s = expr_end;
+                          asarg = expr_end;
                           break;
                         case 'x':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                         || imm_expr->X_op != O_constant
                         || imm_expr->X_add_number < 0
                         || imm_expr->X_add_number > 16777215)
@@ -6102,10 +6098,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         
                         INSERT_OPERAND (SETVALID, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'y':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 4095)
@@ -6117,10 +6113,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         INSERT_OPERAND (RWC_BIAS, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                         case 'z':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 63)
@@ -6132,30 +6128,30 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (SET_INC_CTRL, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
                     }
                     continue;
                 case 'v':
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
-                        case '0':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 4095)
-                          {
-                            as_bad (_("bad value for y_end field, "
-                                    "values and 0...4095 for unsigned values"));
-                            break;
-                          }
+                      case '0':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 4095)
+                        {
+                          as_bad (_("bad value for y_end field, "
+                                  "values and 0...4095 for unsigned values"));
+                          break;
+                        }
 
-                        INSERT_OPERAND (Y_END, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case '1':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      INSERT_OPERAND (Y_END, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case '1':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 15)
@@ -6167,10 +6163,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (Y_START, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
-                        case '2':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      case '2':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 15)
@@ -6182,24 +6178,24 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (X_END, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
-                        case '3':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 3)
-                            {
-                            as_bad (_("bad value for clear_ab_vld field, "
-                                      "value must be 0...3"));
-                            break;
-                            }
-                        INSERT_OPERAND (CLEAR_AB_VLD, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case '4':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      case '3':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 3)
+                          {
+                          as_bad (_("bad value for clear_ab_vld field, "
+                                    "value must be 0...3"));
+                          break;
+                          }
+                      INSERT_OPERAND (CLEAR_AB_VLD, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case '4':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 15)
@@ -6211,10 +6207,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (LREG_IND, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
-                        case '5':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      case '5':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 15)
@@ -6226,200 +6222,200 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (INSTR_MOD0, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
-                        case '6':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 3)
-                            {
-                            as_bad (_("bad value for sfpu_addr_mode field, "
-                                      "value must be 0...3"));
-                            break;
-                            }
-                        INSERT_OPERAND (SFPU_ADDR_MODE, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case '7':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                              || imm_expr->X_op != O_constant
-                              || imm_expr->X_add_number < 0
-                              || imm_expr->X_add_number > 16383)
-                            {
-                              as_bad (_("bad value for dest_reg_addr field, "
-                                        "values and 0...16383 for unsigned values"));
-                              break;
-                            } 
-                          INSERT_OPERAND (DEST_REG_ADDR, *ip, imm_expr->X_add_number);
-                          imm_expr->X_op = O_absent;
-                          s = expr_end;
-                          break;
-                        case '8':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      case '6':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 3145727)
-                        {
-                          as_bad (_("bad value for log2_amount2 field, "
-                                    "values and 0...3145727 for unsigned values"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (LOG2_AMOUNT2, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case '9':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 3)
-                            {
-                            as_bad (_("bad value for shift_mode field, "
-                                      "value must be 0...3"));
-                            break;
-                            }
-                        INSERT_OPERAND (SHIFT_MODE, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'a':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 31)
+                          || imm_expr->X_add_number > 3)
                           {
-                            as_bad (_("bad value for  rot_shift field, "
-                                    "values must be 0...31 range"));
-                            break;
+                          as_bad (_("bad value for sfpu_addr_mode field, "
+                                    "value must be 0...3"));
+                          break;
                           }
-
-                        INSERT_OPERAND (ROT_SHIFT, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'b':
-                              if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      INSERT_OPERAND (SFPU_ADDR_MODE, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case '7':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1023)
+                          || imm_expr->X_add_number > 16383)
                         {
-                          as_bad (_("bad value for shift_row field, "
-                                    "values and 0...1023 for unsigned values"));
+                          as_bad (_("bad value for dest_reg_addr field, "
+                                    "values and 0...16383 for unsigned values"));
                           break;
-                        }
-
-                              INSERT_OPERAND (SHIFT_ROW, *ip, imm_expr->X_add_number);
-                              imm_expr->X_op = O_absent;
-                              s = expr_end;
-                              break;
-                        case 'c':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 32767)
-                        {
-                          as_bad (_("bad value for wait_res field, "
-                                    "values and 0...32767 for unsigned values"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (WAIT_RES, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        } 
+                      INSERT_OPERAND (DEST_REG_ADDR, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case '8':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 3145727)
+                      {
+                        as_bad (_("bad value for log2_amount2 field, "
+                                  "values and 0...3145727 for unsigned values"));
                         break;
-                        case 'd':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      }
+
+                      INSERT_OPERAND (LOG2_AMOUNT2, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case '9':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for sizesel field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (SIZESEL, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'e':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for regsizesel field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (REGSIZESEL, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'f':
-                          if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 127)
-                          {     
-                            as_bad (_("bad value for offsetindex field, "
-                                "value must be 0...127"));
-                            break;
-                          }
-
-                          INSERT_OPERAND (OFFSETINDEX, *ip, imm_expr->X_add_number);
-                          imm_expr->X_op = O_absent;
-                          s = expr_end;
-                          break;
-                        case 'g':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for unpack_block_selection field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (UNPACK_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'h':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 255)
+                          || imm_expr->X_add_number > 3)
                           {
-                            as_bad (_("bad value for addrmode_unpacrop field, "
-                                      "value must be 0...255"));
-                            break;
+                          as_bad (_("bad value for shift_mode field, "
+                                    "value must be 0...3"));
+                          break;
                           }
-                        INSERT_OPERAND (ADDRMODE_UNPACROP, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
+                      INSERT_OPERAND (SHIFT_MODE, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'a':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 31)
+                        {
+                          as_bad (_("bad value for  rot_shift field, "
+                                  "values must be 0...31 range"));
+                          break;
+                        }
+
+                      INSERT_OPERAND (ROT_SHIFT, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'b':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1023)
+                      {
+                        as_bad (_("bad value for shift_row field, "
+                                  "values and 0...1023 for unsigned values"));
                         break;
-                        case 'i':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 4)
-                            {
-                            as_bad (_("bad value for cfgcontextcntinc field, "
-                                      "value must be 0...3"));
-                            break;
-                            }
-                        INSERT_OPERAND (CFGCONTEXTCNTINC, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
+                      }
+
+                      INSERT_OPERAND (SHIFT_ROW, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'c':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 32767)
+                      {
+                        as_bad (_("bad value for wait_res field, "
+                                  "values and 0...32767 for unsigned values"));
                         break;
-                        case 'j':
-                      if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      }
+
+                      INSERT_OPERAND (WAIT_RES, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'd':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for sizesel field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (SIZESEL, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'e':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for regsizesel field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (REGSIZESEL, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'f':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                      || imm_expr->X_op != O_constant
+                      || imm_expr->X_add_number < 0
+                      || imm_expr->X_add_number > 127)
+                      {     
+                        as_bad (_("bad value for offsetindex field, "
+                            "value must be 0...127"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (OFFSETINDEX, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'g':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for unpack_block_selection field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (UNPACK_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'h':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 255)
+                        {
+                          as_bad (_("bad value for addrmode_unpacrop field, "
+                                    "value must be 0...255"));
+                          break;
+                        }
+                      INSERT_OPERAND (ADDRMODE_UNPACROP, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'i':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                          || imm_expr->X_op != O_constant
+                          || imm_expr->X_add_number < 0
+                          || imm_expr->X_add_number > 4)
+                          {
+                          as_bad (_("bad value for cfgcontextcntinc field, "
+                                    "value must be 0...3"));
+                          break;
+                          }
+                      INSERT_OPERAND (CFGCONTEXTCNTINC, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'j':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
                           || imm_expr->X_add_number > 7)
@@ -6431,254 +6427,254 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                       INSERT_OPERAND (CFGCONTEXTID, *ip, imm_expr->X_add_number);
                       imm_expr->X_op = O_absent;
-                      s = expr_end;
+                      asarg = expr_end;
                       break;
-                        case 'k':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 4)
-                            {
-                            as_bad (_("bad value for addrcntcontextid field, "
-                                      "value must be 0...3"));
-                            break;
-                            }
-                        INSERT_OPERAND (ADDRCNTCONTEXTID, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'l':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      case 'k':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for setdatvalid field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (SETDATVALID, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'm':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for rareb_en field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (RAREB_EN, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'n':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for zerowrite2 field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (ZEROWRITE2, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'o':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for autoinccontextid field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (AUTOINCCONTEXTID, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'p':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for rowsearch field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (ROWSEARCH, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'q':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for searchcashflow field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (SEARCHCASHFLOW, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'r':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 8388607)
-                        {
-                          as_bad (_("bad value for reset_noop field, "
-                                "values and 0...8388607 for unsigned values"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (NOOP, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 's':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for wr128b field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (WR128B, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 't':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 32767)
-                        {
-                          as_bad (_("bad value for cfgreg field, "
-                                    "values and 0...32767 for unsigned values"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (CFGREG, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'u':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for mov_block_selection field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (MOV_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'v':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 8388607)
-                        {
-                          as_bad (_("bad value for last_xmovop field, "
-                                "values and 0...8388607 for unsigned values"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (LAST_XMOVOP, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'w':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 31)
+                          || imm_expr->X_add_number > 4)
                           {
-                            as_bad (_("bad value for clearcode field, "
-                                    "values must be 0...31 range"));
-                            break;
+                          as_bad (_("bad value for addrcntcontextid field, "
+                                    "value must be 0...3"));
+                          break;
                           }
-
-                        INSERT_OPERAND (CLEARCODE, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
+                      INSERT_OPERAND (ADDRCNTCONTEXTID, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'l':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for setdatvalid field, "
+                                  "value must be 0 or 1"));
                         break;
-                        case 'x':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                      }
+
+                      INSERT_OPERAND (SETDATVALID, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'm':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for rareb_en field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (RAREB_EN, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'n':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for zerowrite2 field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (ZEROWRITE2, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'o':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for autoinccontextid field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (AUTOINCCONTEXTID, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'p':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for rowsearch field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (ROWSEARCH, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'q':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for searchcashflow field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (SEARCHCASHFLOW, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'r':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 8388607)
+                      {
+                        as_bad (_("bad value for reset_noop field, "
+                              "values and 0...8388607 for unsigned values"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (NOOP, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 's':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for wr128b field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (WR128B, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 't':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 32767)
+                      {
+                        as_bad (_("bad value for cfgreg field, "
+                                  "values and 0...32767 for unsigned values"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (CFGREG, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'u':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for mov_block_selection field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (MOV_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'v':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 8388607)
+                      {
+                        as_bad (_("bad value for last_xmovop field, "
+                              "values and 0...8388607 for unsigned values"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (LAST_XMOVOP, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'w':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                           || imm_expr->X_op != O_constant
                           || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1048575)
-                        { 
-                          as_bad (_("bad value for zeroval field, "
-                                "values and 0...1048575 for unsigned values"));
-                          break;
-                        }
-
-                        INSERT_OPERAND (ZEROVAL, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
-                        break;
-                        case 'y':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
+                          || imm_expr->X_add_number > 31)
                         {
-                          as_bad (_("bad value for writemode field, "
-                                    "value must be 0 or 1"));
+                          as_bad (_("bad value for clearcode field, "
+                                  "values must be 0...31 range"));
                           break;
                         }
 
-                        INSERT_OPERAND (WRITEMODE, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
+                      INSERT_OPERAND (CLEARCODE, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'x':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1048575)
+                      { 
+                        as_bad (_("bad value for zeroval field, "
+                              "values and 0...1048575 for unsigned values"));
                         break;
-                        case 'z':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
-                          || imm_expr->X_op != O_constant
-                          || imm_expr->X_add_number < 0
-                          || imm_expr->X_add_number > 1)
-                        {
-                          as_bad (_("bad value for bankmask field, "
-                                    "value must be 0 or 1"));
-                          break;
-                        }
+                      }
 
-                        INSERT_OPERAND (BANKMASK, *ip, imm_expr->X_add_number);
-                        imm_expr->X_op = O_absent;
-                        s = expr_end;
+                      INSERT_OPERAND (ZEROVAL, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'y':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for writemode field, "
+                                  "value must be 0 or 1"));
                         break;
+                      }
+
+                      INSERT_OPERAND (WRITEMODE, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
+                      case 'z':
+                      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+                        || imm_expr->X_op != O_constant
+                        || imm_expr->X_add_number < 0
+                        || imm_expr->X_add_number > 1)
+                      {
+                        as_bad (_("bad value for bankmask field, "
+                                  "value must be 0 or 1"));
+                        break;
+                      }
+
+                      INSERT_OPERAND (BANKMASK, *ip, imm_expr->X_add_number);
+                      imm_expr->X_op = O_absent;
+                      asarg = expr_end;
+                      break;
                     }
                     continue;
                 case 'w':
-                  switch (*++opargs)
+                  switch (*++oparg)
                     {
                       case '0':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 3)
@@ -6689,10 +6685,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (SRCMASK, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '1':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 511)
@@ -6703,10 +6699,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (CMP_VAL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '2':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 15)
@@ -6717,10 +6713,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (PKEDG_X_START, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '3':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 31)
@@ -6731,10 +6727,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (MOV_INSTR_MOD, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '4':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 31)
@@ -6745,10 +6741,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (MOV_SRC, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '5':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 1023)
@@ -6759,10 +6755,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (MOV_DST, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '6':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 1023)
@@ -6773,10 +6769,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (GRAY_STALL_RES, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '7':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 4095)
@@ -6787,10 +6783,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (GRAY_SEM_SEL, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                       case '8':
-                        if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
                             || imm_expr->X_add_number > 7)
@@ -6801,18 +6797,18 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             }
                         INSERT_OPERAND (POOL_ADDR_MODE, *ip, imm_expr->X_add_number);
                         imm_expr->X_op = O_absent;
-                        s = expr_end;
+                        asarg = expr_end;
                         break;
                     }
                   continue;
                   case 'x': //Blackhole
-                    switch (*++opargs)
+                    switch (*++oparg)
                       {
                         case 'a': 
-                          switch (*++opargs)
+                          switch (*++oparg)
                             {
                               case '0':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 31)
@@ -6823,10 +6819,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_MODE_2, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '2':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -6837,10 +6833,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (LSFPU_ADDR_MODE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '3':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < -4096
                                     || imm_expr->X_add_number > 8192)
@@ -6852,10 +6848,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (LDEST_REG_ADDR, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '4':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -6866,10 +6862,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_MODE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '5':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 16383)
@@ -6880,10 +6876,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (DEST_REG_ADDR, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '6':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -6894,10 +6890,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (INSTRMODE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '7':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -6908,10 +6904,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_MODE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '8':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -6922,10 +6918,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (INSTR_MOD19, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'a':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 2047)
@@ -6936,10 +6932,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_DEST_2, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'b':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -6950,10 +6946,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_CFG_CONTEXT, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'c':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -6964,10 +6960,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ROW_PAD_ZERO, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'd':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -6978,10 +6974,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_DEST_ACCESS_MODE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'e':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -6992,10 +6988,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_MODE_3, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'f':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7006,10 +7002,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_CNT_CONTEXT, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'g':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7020,10 +7016,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ZERO_WRITE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'h':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 15)
@@ -7034,10 +7030,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_READ_INTF_SEL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'i':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7048,10 +7044,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_OVERTHREAD_ID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'j':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -7062,10 +7058,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (CONCAT, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'k':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7076,10 +7072,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_CTXT_CTRL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'l':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7090,10 +7086,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (FLUSH_SET, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'm':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7104,10 +7100,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (LAST, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'n':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7118,10 +7114,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (PUSH, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'o':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7132,10 +7128,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (ADDR_SEL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'p':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1023)
@@ -7146,10 +7142,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_UNUSED, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'q':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7160,10 +7156,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_DISABLE_STALL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'r':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7174,10 +7170,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_SEL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 's':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 63)
@@ -7188,10 +7184,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_STREAM_ID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 't':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1023)
@@ -7202,10 +7198,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDRMODE_3, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'u':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 15)
@@ -7216,10 +7212,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ROT_SHIFT, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'v':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7230,10 +7226,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_DISABLE_MASK_OLD_VALUE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'w':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -7244,10 +7240,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_OPERATION, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'x':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 31)
@@ -7258,10 +7254,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_MASK_WIDTH, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'y':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 31)
@@ -7272,10 +7268,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_RIGHT_CSHIFT_AMT, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'z':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7286,15 +7282,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_SCRATCH_SEL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                             }
                           break;
                         case 'b':
-                          switch (*++opargs)
+                          switch (*++oparg)
                             {
                               case '0':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7305,10 +7301,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_TARGET_SEL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '1':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -7319,10 +7315,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_WAIT_STREAM_SEL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '2':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -7333,10 +7329,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_STREAM_ID_SEL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '3':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1023)
@@ -7347,10 +7343,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_STREAM_REG_ADDR, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '4':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 2047)
@@ -7361,10 +7357,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_CFG_REG_2, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'a':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7375,10 +7371,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (UNPACK_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'b':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 255)
@@ -7389,10 +7385,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (ADDRMODE_UNPACROP, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'c':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7403,10 +7399,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_CFG_CONTEXT_CNT_INC, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'd':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -7417,10 +7413,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (CFGCONTEXTID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'e':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7431,10 +7427,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_CNT_CONTEXT_ID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'f':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7445,10 +7441,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (OVRD_TREAD_ID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'g':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7459,10 +7455,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (SETDATVALID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'h':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7473,10 +7469,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_SRC_BCAST, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'i':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7487,10 +7483,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ZERO_WRITE_2, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'j':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7501,10 +7497,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (AUTOINCCONTEXTID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'k':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7515,10 +7511,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (ROWSEARCH, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'l':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7529,10 +7525,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (SEARCHCASHFLOW, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'm':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7543,10 +7539,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (UNPACK_BLOCK_SELECTION, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'n':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 127)
@@ -7557,10 +7553,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_STREAM_ID_2, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'o':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 15)
@@ -7571,10 +7567,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_MSG_CLR_CNT, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'p':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 15)
@@ -7585,10 +7581,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_SETDVALID, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'q':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7599,10 +7595,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_CLR_TO_FMT_CNTRL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'r':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7613,10 +7609,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_STALL_CLR_CNTRL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 's':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7627,10 +7623,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_BANK_CLR_CNTRL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 't':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7641,10 +7637,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_SRC_CLR_CNTRL, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'u':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 3)
@@ -7655,10 +7651,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_UNPACK_POP, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'v':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 255)
@@ -7669,10 +7665,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_CFG_REG, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'w':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 2047)
@@ -7683,10 +7679,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_LINGER_TIME, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'x':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 511)
@@ -7697,10 +7693,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_RESOURCE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'y':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 15)
@@ -7711,10 +7707,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_OP_CLASS, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case 'z':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 2047)
@@ -7725,14 +7721,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_TARGET_VALUE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
-                            }break;
+                            } break;
                         case 'c':
-                          switch (*++args)
+                          switch (*++oparg)
                             {
                               case '0':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7743,10 +7739,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_32BIT_MODE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '1':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 1)
@@ -7757,10 +7753,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_CLR_ZERO_FLAGS, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '2':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -7771,10 +7767,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_ADDR_MODE_4, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '3':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 16383)
@@ -7785,10 +7781,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_WHERE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                               case '4':
-                                if (my_getSmallExpression (imm_expr, imm_reloc, s, p)
+                                if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < 0
                                     || imm_expr->X_add_number > 7)
@@ -7799,7 +7795,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                   }
                                 INSERT_OPERAND (L_INSTRMODE, *ip, imm_expr->X_add_number);
                                 imm_expr->X_op = O_absent;
-                                s = expr_end;
+                                asarg = expr_end;
                                 break;
                             }
                         }

@@ -1247,14 +1247,19 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
   {NULL, 0, 0, 0, 0}
 };
 
-static struct riscv_supported_ext riscv_supported_sfpu_y_ext[] =
+static struct riscv_supported_ext riscv_supported_sfpu_J_ext[] =
 {
-    {"y", ISA_SPEC_CLASS_NONE, 1, 0, 0}
+    {"J", ISA_SPEC_CLASS_NONE, 1, 0, 0}
 };
 
 static struct riscv_supported_ext riscv_supported_sfpu_w_ext[] =
 {
     {"w", ISA_SPEC_CLASS_NONE, 1, 0, 0}
+};
+
+static struct riscv_supported_ext riscv_supported_sfpu_k_ext[] =
+{
+    {"k", ISA_SPEC_CLASS_NONE, 1, 0, 0}
 };
 
 const struct riscv_supported_ext *riscv_all_supported_ext[] =
@@ -1263,8 +1268,9 @@ const struct riscv_supported_ext *riscv_all_supported_ext[] =
   riscv_supported_std_z_ext,
   riscv_supported_std_s_ext,
   riscv_supported_std_zxm_ext,
-  riscv_supported_sfpu_y_ext,
+  riscv_supported_sfpu_J_ext,
   riscv_supported_sfpu_w_ext,
+  riscv_supported_sfpu_k_ext,
   NULL
 };
 
@@ -1277,6 +1283,7 @@ enum riscv_prefix_ext_class
   RV_ISA_CLASS_X,
   RV_ISA_CLASS_SFPU,
   RV_ISA_CLASS_SFPU_WORMHOLE,
+  RV_ISA_CLASS_SFPU_BLACKHOLE,
   RV_ISA_CLASS_UNKNOWN
 };
 
@@ -1354,9 +1361,11 @@ riscv_recognized_prefixed_ext (const char *ext)
     if (strcmp (ext, "x") != 0)
       return true;
   case RV_ISA_CLASS_SFPU:
-    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_y_ext);
+    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_J_ext);
   case RV_ISA_CLASS_SFPU_WORMHOLE:
     return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_w_ext);
+  case RV_ISA_CLASS_SFPU_BLACKHOLE:
+    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_k_ext);
   default:
     break;
   }
@@ -1531,8 +1540,9 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     case RV_ISA_CLASS_S: table = riscv_supported_std_s_ext; break;
     case RV_ISA_CLASS_X:
       break;
-    case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_y_ext; break;
+    case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_J_ext; break;
     case RV_ISA_CLASS_SFPU_WORMHOLE: table = riscv_supported_sfpu_w_ext; break;
+    case RV_ISA_CLASS_SFPU_BLACKHOLE: table = riscv_supported_sfpu_k_ext; break;
     default:
       table = riscv_supported_std_ext;
     }
