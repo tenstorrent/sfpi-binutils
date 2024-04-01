@@ -518,7 +518,7 @@ libbfd_la_LDFLAGS = $(am__append_1) -release `cat libtool-soversion` \
 @INSTALL_LIBBFD_TRUE@bfdlib_LTLIBRARIES = libbfd.la
 @INSTALL_LIBBFD_TRUE@loaderlib_LTLIBRARIES = libloader.la
 @INSTALL_LIBBFD_FALSE@bfdinclude_HEADERS = $(am__append_2)
-@INSTALL_LIBBFD_TRUE@bfdinclude_HEADERS = $(BFD_H) load_elf.h \
+@INSTALL_LIBBFD_TRUE@bfdinclude_HEADERS = $(BFD_H) read_elf.h reloc_sections.h \
 @INSTALL_LIBBFD_TRUE@	$(INCDIR)/ansidecl.h $(INCDIR)/symcat.h \
 @INSTALL_LIBBFD_TRUE@	$(INCDIR)/diagnostics.h \
 @INSTALL_LIBBFD_TRUE@	$(INCDIR)/bfdlink.h $(am__append_2)
@@ -1120,11 +1120,13 @@ OPTIONAL_BACKENDS_CFILES = \
 
 ELF_LOADER_BACKENDS = \
 	read_elf.lo \
-	load_sections.lo
+	load_sections.lo \
+        reloc_sections.lo
  
 ELF_LOADER_BACKENDS_CFILES = \
 	read_elf.c \
-	load_sections.c
+	load_sections.c \
+        reloc_sections.c
 
 # Reconfigure if config.bfd or configure.host changes.
 # development.sh is used to determine -Werror default.
@@ -1184,7 +1186,7 @@ SOURCE_HFILES = \
 	som.h sysdep.h \
 	version.h vms.h \
 	wasm-module.h \
-	xcofflink.h xsym.h load_elf.h
+	xcofflink.h xsym.h read_elf.h reloc_sections.h
 
 BUILD_HFILES = \
 	bfdver.h elf32-target.h elf64-target.h targmatch.h

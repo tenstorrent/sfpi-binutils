@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <elf/riscv.h>
 #include <elf.h>
 #include <string.h>
-#include "read_elf.h"
 #include <sys/mman.h>
+#include "read_elf.h"
 #include "reloc_sections.h"
 
 #define GLRO(x) _##x
@@ -150,7 +151,7 @@ applyRelocation(unsigned int *rel_addr, int r_type, unsigned int *sym_addr,
   }
 }
 
-void reloc_elf_section(struct elf_data *memory_blobs,
+void reloc_elf_sections(struct elf_data *memory_blobs,
                         int num_sections,
                         struct file_data *load_content,
                         FILE *fp __attribute((unused)))

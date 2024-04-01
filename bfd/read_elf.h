@@ -1,9 +1,9 @@
-#include <stdbool.h>
-
 #ifndef READ_ELF_H
 #define READ_ELF_H
 #define FAILURE -1
 #define SUCCESS 0
+
+#include <stdbool.h>
 
 struct tt_memory {
   unsigned int  *start_address;
@@ -46,4 +46,4 @@ struct load_section_info *loadable_section_info(Elf32_Ehdr *header, void *file_d
 void elf_print_loadable_sections(struct elf_data *memory_blobs, struct load_section_info *sec_load_info, FILE *fp);
 void relocate_elf_sections(struct elf_data *mem_blobs, struct load_section_info *sec_load_info, FILE *fp);
 
-#endif
+#endif // READ_ELF_H
