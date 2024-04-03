@@ -1247,19 +1247,22 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
   {NULL, 0, 0, 0, 0}
 };
 
-static struct riscv_supported_ext riscv_supported_sfpu_J_ext[] =
+static struct riscv_supported_ext riscv_supported_sfpu_y_ext[] =
 {
-    {"J", ISA_SPEC_CLASS_NONE, 1, 0, 0}
+  {"iy", ISA_SPEC_CLASS_SFPU, 1, 0, 0},
+  {NULL, 0, 0, 0, 0}
 };
 
 static struct riscv_supported_ext riscv_supported_sfpu_w_ext[] =
 {
-    {"w", ISA_SPEC_CLASS_NONE, 1, 0, 0}
+  {"iw", ISA_SPEC_CLASS_SFPU_WORMHOLE, 1, 0, 0},
+  {NULL, 0, 0, 0, 0}
 };
 
-static struct riscv_supported_ext riscv_supported_sfpu_k_ext[] =
+static struct riscv_supported_ext riscv_supported_sfpu_u_ext[] =
 {
-    {"k", ISA_SPEC_CLASS_NONE, 1, 0, 0}
+  {"iu", ISA_SPEC_CLASS_SFPU_BLACKHOLE, 1, 0, 0},
+  {NULL, 0, 0, 0, 0}
 };
 
 const struct riscv_supported_ext *riscv_all_supported_ext[] =
@@ -1268,9 +1271,9 @@ const struct riscv_supported_ext *riscv_all_supported_ext[] =
   riscv_supported_std_z_ext,
   riscv_supported_std_s_ext,
   riscv_supported_std_zxm_ext,
-  riscv_supported_sfpu_J_ext,
+  riscv_supported_sfpu_y_ext,
   riscv_supported_sfpu_w_ext,
-  riscv_supported_sfpu_k_ext,
+  riscv_supported_sfpu_u_ext,
   NULL
 };
 
@@ -1305,9 +1308,9 @@ static const struct riscv_parse_prefix_config parse_config[] =
   {RV_ISA_CLASS_Z, "z"},
   {RV_ISA_CLASS_S, "s"},
   {RV_ISA_CLASS_X, "x"},
-  {RV_ISA_CLASS_SFPU, "J"},
-  {RV_ISA_CLASS_SFPU_WORMHOLE, "w"},
-  {RV_ISA_CLASS_SFPU_BLACKHOLE, "k"},
+  {RV_ISA_CLASS_SFPU, "iy"},
+  {RV_ISA_CLASS_SFPU_WORMHOLE, "iw"},
+  {RV_ISA_CLASS_SFPU_BLACKHOLE, "iu"},
   {RV_ISA_CLASS_UNKNOWN, NULL}
 };
 
@@ -1361,11 +1364,11 @@ riscv_recognized_prefixed_ext (const char *ext)
     if (strcmp (ext, "x") != 0)
       return true;
   case RV_ISA_CLASS_SFPU:
-    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_J_ext);
+    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_y_ext);
   case RV_ISA_CLASS_SFPU_WORMHOLE:
     return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_w_ext);
   case RV_ISA_CLASS_SFPU_BLACKHOLE:
-    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_k_ext);
+    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_u_ext);
   default:
     break;
   }
@@ -1373,7 +1376,7 @@ riscv_recognized_prefixed_ext (const char *ext)
 }
 
 /* Canonical order for single letter extensions.  */
-static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvnhyw";
+static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvnhywu";
 
 /* Array is used to compare the orders of standard extensions quickly.  */
 static int riscv_ext_order[26] = {0};
@@ -1540,9 +1543,9 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     case RV_ISA_CLASS_S: table = riscv_supported_std_s_ext; break;
     case RV_ISA_CLASS_X:
       break;
-    case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_J_ext; break;
+    case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_y_ext; break;
     case RV_ISA_CLASS_SFPU_WORMHOLE: table = riscv_supported_sfpu_w_ext; break;
-    case RV_ISA_CLASS_SFPU_BLACKHOLE: table = riscv_supported_sfpu_k_ext; break;
+    case RV_ISA_CLASS_SFPU_BLACKHOLE: table = riscv_supported_sfpu_u_ext; break;
     default:
       table = riscv_supported_std_ext;
     }
@@ -1565,10 +1568,9 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
 bool
 riscv_ext_dont_care_version (const char *subset)
 {
-  if (strcmp (subset, "J") == 0
+  if (strcmp (subset, "y") == 0
       || strcmp (subset, "w") == 0
-      || strcmp (subset, "l") == 0
-      || strcmp (subset, "k") == 0)
+      || strcmp (subset, "x") == 0)
     return true;
   return false;
 }
@@ -1611,8 +1613,9 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
       /* Allow old ISA spec can recognize zicsr and zifencei.  */
       else if (strcmp (subset, "zicsr") != 0
 	       && strcmp (subset, "zifencei") != 0
-               && strcmp (subset, "y") != 0
-               && strcmp (subset, "w") != 0)
+               && strcmp (subset, "iy") != 0
+               && strcmp (subset, "iw") != 0
+               && strcmp (subset, "iu") != 0)
 	rps->error_handler
 	  (_("cannot find default versions of the ISA extension `%s'"),
 	   subset);

@@ -341,6 +341,12 @@ riscv_set_arch (const char *s)
   riscv_set_rvc (false);
   if (riscv_subset_supports (&riscv_rps_as, "c"))
     riscv_set_rvc (true);
+  if (riscv_subset_supports (&riscv_rps_as, "h"))
+    riscv_set_grayskull (true);
+  if (riscv_subset_supports (&riscv_rps_as, "w"))
+    riscv_set_wormhole (true);
+  if (riscv_subset_supports (&riscv_rps_as, "l"))
+    riscv_set_blackhole (true);
 }
 
 /* Indicate -mabi option is explictly set.  */
@@ -2705,6 +2711,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	*asarg++ = '\0';
 	break;
       }
+  insn = (struct riscv_opcode *) str_hash_find (hash, str);
   asargStart = asarg;
   imm12_math_op = 0;
   for ( ; insn && insn->name && strcmp (insn->name, str) == 0; insn++)
