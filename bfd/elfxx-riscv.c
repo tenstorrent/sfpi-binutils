@@ -1249,19 +1249,19 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
 
 static struct riscv_supported_ext riscv_supported_sfpu_y_ext[] =
 {
-  {"iy", ISA_SPEC_CLASS_SFPU, 1, 0, 0},
+  {"y", ISA_SPEC_CLASS_SFPU, 1, 0, 0},
   {NULL, 0, 0, 0, 0}
 };
 
 static struct riscv_supported_ext riscv_supported_sfpu_w_ext[] =
 {
-  {"iw", ISA_SPEC_CLASS_SFPU_WORMHOLE, 1, 0, 0},
+  {"w", ISA_SPEC_CLASS_SFPU_WORMHOLE, 1, 0, 0},
   {NULL, 0, 0, 0, 0}
 };
 
 static struct riscv_supported_ext riscv_supported_sfpu_u_ext[] =
 {
-  {"iu", ISA_SPEC_CLASS_SFPU_BLACKHOLE, 1, 0, 0},
+  {"u", ISA_SPEC_CLASS_SFPU_BLACKHOLE, 1, 0, 0},
   {NULL, 0, 0, 0, 0}
 };
 
@@ -1308,9 +1308,9 @@ static const struct riscv_parse_prefix_config parse_config[] =
   {RV_ISA_CLASS_Z, "z"},
   {RV_ISA_CLASS_S, "s"},
   {RV_ISA_CLASS_X, "x"},
-  {RV_ISA_CLASS_SFPU, "iy"},
-  {RV_ISA_CLASS_SFPU_WORMHOLE, "iw"},
-  {RV_ISA_CLASS_SFPU_BLACKHOLE, "iu"},
+  {RV_ISA_CLASS_SFPU, "y"},
+  {RV_ISA_CLASS_SFPU_WORMHOLE, "w"},
+  {RV_ISA_CLASS_SFPU_BLACKHOLE, "u"},
   {RV_ISA_CLASS_UNKNOWN, NULL}
 };
 
@@ -1363,6 +1363,7 @@ riscv_recognized_prefixed_ext (const char *ext)
     /* Only the single x is unrecognized.  */
     if (strcmp (ext, "x") != 0)
       return true;
+    break;
   case RV_ISA_CLASS_SFPU:
     return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_y_ext);
   case RV_ISA_CLASS_SFPU_WORMHOLE:
@@ -1570,7 +1571,7 @@ riscv_ext_dont_care_version (const char *subset)
 {
   if (strcmp (subset, "y") == 0
       || strcmp (subset, "w") == 0
-      || strcmp (subset, "x") == 0)
+      || strcmp (subset, "u") == 0)
     return true;
   return false;
 }
@@ -2591,6 +2592,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "y";
     case INSN_CLASS_I_W:
       return "w";
+    case INSN_CLASS_I_U:
+      return "u";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

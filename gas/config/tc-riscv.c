@@ -654,7 +654,7 @@ insn_length (const struct riscv_cl_insn *insn)
 {
   return (insn->insn_mo->insn_class == INSN_CLASS_I_W  ||
           insn->insn_mo->insn_class == INSN_CLASS_I_Y  || 
-          insn->insn_mo->insn_class == INSN_CLASS_I_L) ?
+          insn->insn_mo->insn_class == INSN_CLASS_I_U) ?
          4 : riscv_insn_length (insn->insn_opcode);
 }
 
@@ -673,7 +673,7 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
       instruction as a 4 byte instruction */
   if (mo->insn_class == INSN_CLASS_I_W  ||
       mo->insn_class == INSN_CLASS_I_Y  ||
-      mo->insn_class == INSN_CLASS_I_L)
+      mo->insn_class == INSN_CLASS_I_U)
     insn->insn_opcode &= 0xfffffffc;
 }
 
@@ -1816,7 +1816,7 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 
   if (ip->insn_mo->insn_class == INSN_CLASS_I_W  ||
       ip->insn_mo->insn_class == INSN_CLASS_I_Y ||
-      ip->insn_mo->insn_class == INSN_CLASS_I_L)
+      ip->insn_mo->insn_class == INSN_CLASS_I_U)
     ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
@@ -3741,7 +3741,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                     {
                       if (! strcasecmp(insn->name, "SFPCONFIG") &&
                           (insn->insn_class == INSN_CLASS_I_W || 
-                           insn->insn_class == INSN_CLASS_I_L))
+                           insn->insn_class == INSN_CLASS_I_U))
                         {
                           if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
@@ -3844,7 +3844,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L  &&
+                        else if (insn->insn_class == INSN_CLASS_I_U  &&
                             ! strcasecmp(insn->name, "SFPMOV"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
@@ -3859,7 +3859,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L  &&
+                        else if (insn->insn_class == INSN_CLASS_I_U  &&
                                  ! strcasecmp(insn->name, "SFPSETEXP"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
@@ -3880,7 +3880,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L  &&
+                        else if (insn->insn_class == INSN_CLASS_I_U  &&
                                  ! strcasecmp(insn->name, "SFPSHFT2"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
@@ -3975,7 +3975,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
                         if ((! strcasecmp(insn->name, "SFPMULI") ||
                              ! strcasecmp(insn->name, "SFPADDI")) &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                              insn->insn_class == INSN_CLASS_I_U  &&
                               imm_expr->X_add_number != 0)
                           {
                             as_bad (_("bad value for instr_mod0 field, "
@@ -4041,7 +4041,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L &&
+                        else if (insn->insn_class == INSN_CLASS_I_U &&
                             ! strcasecmp(insn->name, "SFPLZ"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
@@ -4305,7 +4305,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             break;
                           }
                         if (! strcasecmp(insn->name, "SFPLOADMACRO")  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                              insn->insn_class == INSN_CLASS_I_U  &&
                               (   imm_expr->X_add_number == 10
                                || imm_expr->X_add_number == 11))
                           {
@@ -4316,7 +4316,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         if ((! strcasecmp(insn->name, "SFPLOAD")  ||
                              ! strcasecmp(insn->name, "SFPSTORE"))  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                              insn->insn_class == INSN_CLASS_I_U  &&
                               imm_expr->X_add_number == 11)
                           {
                             as_bad (_("bad value for instr_mod0 field, "
@@ -4325,7 +4325,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           }
 
                         if (! strcasecmp(insn->name, "SFPLOADI")  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                              insn->insn_class == INSN_CLASS_I_U  &&
                              (  (imm_expr->X_add_number > 4  &&  imm_expr->X_add_number < 8)
                               || imm_expr->X_add_number > 10))
                           {
@@ -4369,7 +4369,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             break;
                           }
                         if (! strcasecmp(insn->name, "SFPLUT")  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                              insn->insn_class == INSN_CLASS_I_U  &&
                               imm_expr->X_add_number != 0  &&
                               imm_expr->X_add_number != 4)
                           {
@@ -4431,7 +4431,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           break;
                         }
                     }
-                  else if (insn->insn_class == INSN_CLASS_I_L)
+                  else if (insn->insn_class == INSN_CLASS_I_U)
                     {
                       if (! strcasecmp(insn->name, "SFPLUTFP32"))
                         {

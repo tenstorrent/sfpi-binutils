@@ -463,7 +463,7 @@ enum riscv_insn_class
   INSN_CLASS_H,
   INSN_CLASS_I_Y,  /* Grayskull */
   INSN_CLASS_I_W,  /* Wormhole */
-  INSN_CLASS_I_L,  /* Black Hole */
+  INSN_CLASS_I_U,  /* Black Hole */
 };
 
 /* This structure holds information for a particular instruction.  */
