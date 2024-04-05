@@ -342,7 +342,7 @@ int elf_load(char filepath[], FILE *fp) {
     return FAILURE;
   }
   elf_print_loadable_sections(load_data, sec_load_info, fp);
-  reloc_elf_section(load_data, sec_load_info->total_number, load_content, fp);
+  reloc_elf_sections(load_data, sec_load_info->total_number, load_content, fp);
   free(file_mem);
   free(mem_blobs->memory_locations);
   free(mem_blobs);

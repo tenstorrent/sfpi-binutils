@@ -49,8 +49,7 @@ To run the code, follow these steps:
 
          gcc -I<prefix_dir>/x86_64-pc-linux-gnu/riscv32-unknown-elf/include \
            elfLoaderExample.c -o elfLoader \
-           -L<prefix_dir>/x86_64-pc-linux-gnu/riscv32-unknown-elf/lib -lelf \
-           -lloader
+           -L<prefix_dir>/x86_64-pc-linux-gnu/riscv32-unknown-elf/lib -lloader
 
       Replace the <prefix_dir> with the directory given during the build of
       the toolchain.

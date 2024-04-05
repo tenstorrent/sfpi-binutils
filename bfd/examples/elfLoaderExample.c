@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
   }
 
   struct stat statbuf;
-  if (fstat(argv[1], &statbuf)) {
+  if (stat(argv[1], &statbuf)) {
     fprintf(stderr, "Error: Cannot stat file %s\n", argv[1]);
     exit(3);
   }
