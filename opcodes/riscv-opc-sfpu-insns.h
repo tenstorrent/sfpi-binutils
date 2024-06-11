@@ -90,6 +90,7 @@
 {"ttnop",      0, INSN_CLASS_I_W,   "",               MATCH_SFPNOP,    MASK_SFPNOP,    sfp_match_opcode, INSN_ALIAS },
 {"ttnop",      0, INSN_CLASS_I_U,   "",               MATCH_SFPNOP,    MASK_SFPNOP,    sfp_match_opcode, INSN_ALIAS },
 {"sfpnop",     0, INSN_CLASS_I_W,   "",               MATCH_SFPWNOP,   MASK_SFPWNOP,   sfp_match_opcode, 0 },
+{"sfpnop",     0, INSN_CLASS_I_U,   "",               MATCH_SFPWNOP,   MASK_SFPWNOP,   sfp_match_opcode, 0 },
 {"ttincrwc",   0, INSN_CLASS_I_Y,   "Jk1,Jk2,Jk3,Jk4",MATCH_SFPINCRWC, MASK_SFPINCRWC, sfp_match_opcode, INSN_ALIAS },
 {"ttincrwc",   0, INSN_CLASS_I_W,   "wk1,wk2,wk3,wk4",MATCH_SFPINCRWC, MASK_SFPINCRWC, sfp_match_opcode, INSN_ALIAS },
 {"ttincrwc",   0, INSN_CLASS_I_U,   "lk1,lk2,lk3,lk4",MATCH_SFPINCRWC, MASK_SFPINCRWC, sfp_match_opcode, INSN_ALIAS },

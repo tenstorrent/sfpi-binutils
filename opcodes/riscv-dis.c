@@ -1545,7 +1545,7 @@ riscv_search_mapping_symbol (bfd_vma memaddr,
 
   /* Start scanning at the start of the function, or wherever
      we finished last time.  */
-  n = info->symtab_pos + 1;
+  n = info->symtab_pos;
   if (from_last_map_symbol && n >= last_map_symbol)
     n = last_map_symbol;
 
