@@ -278,16 +278,26 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 	goto err_ret;
 
       cleanup = BFD_SEND_FMT (abfd, _bfd_check_format, (abfd));
-      
+
+      // FIXME: The handling of rhese variants as new machine types is
+      // wrong. We should be using the _X<name> extension mechanism
+
       // check if input object file machine code is WORMHOLE, GRAYSKULL, BLACKHOLE.
-      if (abfd->tdata.elf_obj_data && abfd->tdata.elf_obj_data->elf_header) {
-        if (riscv_machine_target == -1 &&
+      if (abfd->tdata.elf_obj_data && abfd->tdata.elf_obj_data->elf_header
+	  && abfd->tdata.elf_obj_data->elf_header->e_machine != riscv_machine_target) {
+        if ((riscv_machine_target == -1
+	     || riscv_machine_target == EM_RISCV) && // Allow plain RISCV to decay to TT cpu
             (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_GRAYSKULL ||
              abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_WORMHOLE || 
              abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_BLACKHOLE ||
              abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV )) {
           riscv_machine_target = abfd->tdata.elf_obj_data->elf_header->e_machine;
-        } else if (riscv_machine_target == EM_RISCV_GRAYSKULL) {
+	} else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV
+		   && (riscv_machine_target == EM_RISCV_GRAYSKULL
+		       || riscv_machine_target == EM_RISCV_WORMHOLE
+		       || riscv_machine_target == EM_RISCV_BLACKHOLE))
+	  ; // Allow RISCV to keep
+        else if (riscv_machine_target == EM_RISCV_GRAYSKULL) {
           if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_WORMHOLE) {
             _bfd_error_handler(_("%pB: Incorrect machine target. \nCurrent machine target is grayskull "
                         	"but got wormhole object file"), abfd);
