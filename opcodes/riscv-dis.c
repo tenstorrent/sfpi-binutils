@@ -1293,7 +1293,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
           if (!strncasecmp(op->name, "sfp", 3) ||
                !strncasecmp(op->name, "tt", 2))
             {
-              if (op->insn_class == INSN_CLASS_I_U) {
+              if (op->insn_class == INSN_CLASS_I_L) {
                 if (!riscv_hash_blackhole[SFPU_OP_HASH_IDX (op->match)])
                   riscv_hash_blackhole[SFPU_OP_HASH_IDX (op->match)] = op;
               }

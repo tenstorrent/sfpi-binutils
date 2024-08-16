@@ -1259,9 +1259,9 @@ static struct riscv_supported_ext riscv_supported_sfpu_w_ext[] =
   {NULL, 0, 0, 0, 0}
 };
 
-static struct riscv_supported_ext riscv_supported_sfpu_u_ext[] =
+static struct riscv_supported_ext riscv_supported_sfpu_l_ext[] =
 {
-  {"u", ISA_SPEC_CLASS_SFPU_BLACKHOLE, 1, 0, 0},
+  {"l", ISA_SPEC_CLASS_SFPU_BLACKHOLE, 1, 0, 0},
   {NULL, 0, 0, 0, 0}
 };
 
@@ -1273,7 +1273,7 @@ const struct riscv_supported_ext *riscv_all_supported_ext[] =
   riscv_supported_std_zxm_ext,
   riscv_supported_sfpu_y_ext,
   riscv_supported_sfpu_w_ext,
-  riscv_supported_sfpu_u_ext,
+  riscv_supported_sfpu_l_ext,
   NULL
 };
 
@@ -1310,7 +1310,7 @@ static const struct riscv_parse_prefix_config parse_config[] =
   {RV_ISA_CLASS_X, "x"},
   {RV_ISA_CLASS_SFPU, "y"},
   {RV_ISA_CLASS_SFPU_WORMHOLE, "w"},
-  {RV_ISA_CLASS_SFPU_BLACKHOLE, "u"},
+  {RV_ISA_CLASS_SFPU_BLACKHOLE, "l"},
   {RV_ISA_CLASS_UNKNOWN, NULL}
 };
 
@@ -1369,7 +1369,7 @@ riscv_recognized_prefixed_ext (const char *ext)
   case RV_ISA_CLASS_SFPU_WORMHOLE:
     return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_w_ext);
   case RV_ISA_CLASS_SFPU_BLACKHOLE:
-    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_u_ext);
+    return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_l_ext);
   default:
     break;
   }
@@ -1546,7 +1546,7 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
       break;
     case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_y_ext; break;
     case RV_ISA_CLASS_SFPU_WORMHOLE: table = riscv_supported_sfpu_w_ext; break;
-    case RV_ISA_CLASS_SFPU_BLACKHOLE: table = riscv_supported_sfpu_u_ext; break;
+    case RV_ISA_CLASS_SFPU_BLACKHOLE: table = riscv_supported_sfpu_l_ext; break;
     default:
       table = riscv_supported_std_ext;
     }
@@ -1571,7 +1571,7 @@ riscv_ext_dont_care_version (const char *subset)
 {
   if (strcmp (subset, "y") == 0
       || strcmp (subset, "w") == 0
-      || strcmp (subset, "u") == 0)
+      || strcmp (subset, "l") == 0)
     return true;
   return false;
 }
@@ -1616,7 +1616,7 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
 	       && strcmp (subset, "zifencei") != 0
                && strcmp (subset, "iy") != 0
                && strcmp (subset, "iw") != 0
-               && strcmp (subset, "iu") != 0)
+               && strcmp (subset, "il") != 0)
 	rps->error_handler
 	  (_("cannot find default versions of the ISA extension `%s'"),
 	   subset);
@@ -2463,8 +2463,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "y");
     case INSN_CLASS_I_W:
       return riscv_subset_supports (rps, "w");
-    case INSN_CLASS_I_U:
-      return riscv_subset_supports (rps, "u");
+    case INSN_CLASS_I_L:
+      return riscv_subset_supports (rps, "l");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2594,8 +2594,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "y";
     case INSN_CLASS_I_W:
       return "w";
-    case INSN_CLASS_I_U:
-      return "u";
+    case INSN_CLASS_I_L:
+      return "l";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
