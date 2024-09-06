@@ -1247,6 +1247,11 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
   {NULL, 0, 0, 0, 0}
 };
 
+static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
+{
+  {NULL, 0, 0, 0, 0}
+};
+
 static struct riscv_supported_ext riscv_supported_sfpu_y_ext[] =
 {
   {"y", ISA_SPEC_CLASS_SFPU, 1, 0, 0},
@@ -1271,6 +1276,7 @@ const struct riscv_supported_ext *riscv_all_supported_ext[] =
   riscv_supported_std_z_ext,
   riscv_supported_std_s_ext,
   riscv_supported_std_zxm_ext,
+  riscv_supported_vendor_x_ext,
   riscv_supported_sfpu_y_ext,
   riscv_supported_sfpu_w_ext,
   riscv_supported_sfpu_l_ext,
@@ -1542,8 +1548,7 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     case RV_ISA_CLASS_ZXM: table = riscv_supported_std_zxm_ext; break;
     case RV_ISA_CLASS_Z: table = riscv_supported_std_z_ext; break;
     case RV_ISA_CLASS_S: table = riscv_supported_std_s_ext; break;
-    case RV_ISA_CLASS_X:
-      break;
+    case RV_ISA_CLASS_X: table = riscv_supported_vendor_x_ext; break;
     case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_y_ext; break;
     case RV_ISA_CLASS_SFPU_WORMHOLE: table = riscv_supported_sfpu_w_ext; break;
     case RV_ISA_CLASS_SFPU_BLACKHOLE: table = riscv_supported_sfpu_l_ext; break;
