@@ -1774,9 +1774,6 @@ enum bfd_architecture
   bfd_arch_riscv,
 #define bfd_mach_riscv32       132
 #define bfd_mach_riscv64       164
-#define bfd_mach_riscv32_sfpu  1320
-#define bfd_mach_riscv32_sfpu_wormhole  1321
-#define bfd_mach_riscv32_sfpu_blackhole  1322
   bfd_arch_rl78,
 #define bfd_mach_rl78          0x75
   bfd_arch_rx,        /* Renesas RX.  */
@@ -7928,7 +7925,6 @@ bool bfd_init_section_compress_status
 bool bfd_compress_section
    (bfd *abfd, asection *section, bfd_byte *uncompressed_buffer);
 
-extern int riscv_machine_target;
 #ifdef __cplusplus
 }
 #endif

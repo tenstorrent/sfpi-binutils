@@ -1106,7 +1106,6 @@ guess_is_rela (unsigned int e_machine)
     case EM_PPC64:
     case EM_PPC:
     case EM_TI_PRU:
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
     case EM_RL78:
     case EM_RX:
@@ -1735,7 +1734,6 @@ dump_relocations (Filedata *          filedata,
 	  rtype = elf_mips_reloc_type (type);
 	  break;
 
-	case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
 	case EM_RISCV:
 	  rtype = elf_riscv_reloc_type (type);
 	  break;
@@ -2583,7 +2581,6 @@ get_dynamic_type (Filedata * filedata, unsigned long type)
 	    case EM_ALTERA_NIOS2:
 	      result = get_nios2_dynamic_type (type);
 	      break;
-	    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
 	    case EM_RISCV:
 	      result = get_riscv_dynamic_type (type);
 	      break;
@@ -2973,9 +2970,6 @@ get_machine_name (unsigned e_machine)
     case EM_AMDGPU: 	 	return "AMD GPU";
       /* 230 (all reserved) */
       /* 240 */
-    case EM_RISCV_GRAYSKULL:    return "RISC-V(Grayskull)";
-    case EM_RISCV_WORMHOLE:     return "RISC-V(Wormhole)";
-    case EM_RISCV_BLACKHOLE:    return "RISC-V(Blackhole)";
     case EM_RISCV: 	 	return "RISC-V";
     case EM_LANAI:		return "Lanai 32-bit processor";
     case EM_CEVA:		return "CEVA Processor Architecture Family";
@@ -4128,7 +4122,6 @@ get_machine_flags (Filedata * filedata, unsigned e_flags, unsigned e_machine)
 	    }
 	  break;
 
-	case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
 	case EM_RISCV:
 	  if (e_flags & EF_RISCV_RVC)
 	    strcat (buf, ", RVC");
@@ -4689,7 +4682,6 @@ get_segment_type (Filedata * filedata, unsigned long p_type)
 	    case EM_S390_OLD:
 	      result = get_s390_segment_type (p_type);
 	      break;
-	    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
 	    case EM_RISCV:
 	      result = get_riscv_segment_type (p_type);
 	      break;
@@ -5034,7 +5026,6 @@ get_section_type_name (Filedata * filedata, unsigned int sh_type)
 	    case EM_CYGNUS_V850:
 	      result = get_v850_section_type_name (sh_type);
 	      break;
-	    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
 	    case EM_RISCV:
 	      result = get_riscv_section_type_name (sh_type);
 	      break;
@@ -12904,7 +12895,6 @@ get_symbol_other (Filedata * filedata, unsigned int other)
     case EM_PPC64:
       result = get_ppc64_symbol_other (other);
       break;
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       result = get_riscv_symbol_other (other);
       break;
@@ -14304,7 +14294,6 @@ is_32bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 1; /* R_PPC_ADDR32.  */
     case EM_TI_PRU:
       return reloc_type == 11; /* R_PRU_BFD_RELOC_32.  */
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 1; /* R_RISCV_32.  */
     case EM_RL78:
@@ -14409,7 +14398,6 @@ is_32bit_pcrel_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 26; /* R_PPC_REL32.  */
     case EM_PPC64:
       return reloc_type == 26; /* R_PPC64_REL32.  */
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 57;	/* R_RISCV_32_PCREL.  */
     case EM_S390_OLD:
@@ -14469,7 +14457,6 @@ is_64bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 80; /* R_PARISC_DIR64.  */
     case EM_PPC64:
       return reloc_type == 38; /* R_PPC64_ADDR64.  */
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 2; /* R_RISCV_64.  */
     case EM_SPARC32PLUS:
@@ -14603,7 +14590,6 @@ is_16bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 9; /* R_NIOS_16.  */
     case EM_OR1K:
       return reloc_type == 2; /* R_OR1K_16.  */
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 55; /* R_RISCV_SET16.  */
     case EM_TI_PRU:
@@ -14629,7 +14615,6 @@ is_8bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
 {
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 54; /* R_RISCV_SET8.  */
     case EM_Z80:
@@ -14647,7 +14632,6 @@ is_6bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
 {
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 53; /* R_RISCV_SET6.  */
     default:
@@ -14664,7 +14648,6 @@ is_32bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 35; /* R_RISCV_ADD32.  */
     default:
@@ -14681,7 +14664,6 @@ is_32bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 39; /* R_RISCV_SUB32.  */
     default:
@@ -14698,7 +14680,6 @@ is_64bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 36; /* R_RISCV_ADD64.  */
     default:
@@ -14715,7 +14696,6 @@ is_64bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 40; /* R_RISCV_SUB64.  */
     default:
@@ -14732,7 +14712,6 @@ is_16bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 34; /* R_RISCV_ADD16.  */
     default:
@@ -14749,7 +14728,6 @@ is_16bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 38; /* R_RISCV_SUB16.  */
     default:
@@ -14766,7 +14744,6 @@ is_8bit_inplace_add_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 33; /* R_RISCV_ADD8.  */
     default:
@@ -14783,7 +14760,6 @@ is_8bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
   /* Please keep this table alpha-sorted for ease of visual lookup.  */
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 37; /* R_RISCV_SUB8.  */
     default:
@@ -14799,7 +14775,6 @@ is_6bit_inplace_sub_reloc (Filedata * filedata, unsigned int reloc_type)
 {
   switch (filedata->file_header.e_machine)
     {
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
       return reloc_type == 52; /* R_RISCV_SUB6.  */
     default:
@@ -14838,7 +14813,6 @@ is_none_reloc (Filedata * filedata, unsigned int reloc_type)
     case EM_PARISC:  /* R_PARISC_NONE.  */
     case EM_PPC64:   /* R_PPC64_NONE.  */
     case EM_PPC:     /* R_PPC_NONE.  */
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:   /* R_RISCV_NONE.  */
     case EM_S390:    /* R_390_NONE.  */
     case EM_S390_OLD:
@@ -22012,7 +21986,6 @@ process_arch_specific (Filedata * filedata)
 				display_msp430_attribute,
 				display_msp430_gnu_attribute);
 
-    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
     case EM_RISCV:
      return process_attributes (filedata, "riscv", SHT_RISCV_ATTRIBUTES,
 				display_riscv_attribute,
