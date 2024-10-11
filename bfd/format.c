@@ -281,7 +281,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 
       // FIXME: The handling of rhese variants as new machine types is
       // wrong. We should be using the _X<name> extension mechanism
-
+#if 0
       // check if input object file machine code is WORMHOLE, GRAYSKULL, BLACKHOLE.
       if (abfd->tdata.elf_obj_data && abfd->tdata.elf_obj_data->elf_header
 	  && abfd->tdata.elf_obj_data->elf_header->e_machine != riscv_machine_target) {
@@ -343,7 +343,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 	  }
 	}
       }
-
+#endif
       if (cleanup)
 	goto ok_ret;
 

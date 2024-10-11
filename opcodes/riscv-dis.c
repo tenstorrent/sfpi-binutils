@@ -66,12 +66,14 @@ static const char * const *riscv_fpr_names;
 /* If set, disassemble as most general instruction.  */
 static int no_aliases;
 
+#if 0
 enum sfpu_mach_type {
   SFPU_MACH_GRAYSKULL = 1,
   SFPU_MACH_WORMHOLE = 2,
   SFPU_MACH_BLACKHOLE = 3,
   MACH_RISCV = 4
 } sfpu_mach;
+#endif
 
 static void
 set_default_riscv_dis_options (void)
@@ -389,9 +391,6 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	  break;
 
 	case ',':
-	  print (info->stream, dis_style_text, "%c ", *oparg);
-	  break;
-
 	case '(':
 	case ')':
 	case '[':
@@ -561,10 +560,9 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		 (int) EXTRACT_OPERAND (RNUM, l));
           break;
 
-	case 'w': // wormhole
-	case 'J': // grayskull
-	case 'l': // blackhole
+	case 'J':
 	  {
+	    // Ugh, this is, um, unpleasant.
 	      switch (*++oparg)
 		{
 		case 'a': /* MUL/ADD SRCA L0-L15 */
@@ -590,11 +588,7 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	          print (info->stream, dis_style_text, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_C, l)]);
 		  break;
 		case 'h': /* CC Instructions LREG_DEST L0-L3 */
-		  if (info->mach == bfd_mach_riscv32_sfpu_wormhole  &&
-		      EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
-		    print (info->stream, dis_style_text, "%lu", EXTRACT_OPERAND (YCC_LREG_DEST, l));
-		  else if (info->mach == bfd_mach_riscv32_sfpu_blackhole  &&
-                       EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
+		  if (!riscv_subset_supports(&riscv_rps_dis, "xttgs") && EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
                     print (info->stream, dis_style_text, "%lu", EXTRACT_OPERAND (YCC_LREG_DEST, l));
 		  else
 		    print (info->stream, dis_style_text, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
@@ -1054,6 +1048,9 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
                         print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (GRAY_SEM_SEL, l)); break;
 		      case '8':
                         print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (POOL_ADDR_MODE, l)); break;
+                      default:
+                        print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), x);
+                        break;
 		      }
 		  }
 		  break;
@@ -1137,6 +1134,9 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
                                         print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_RIGHT_CSHIFT_AMT, l)); break;
                                 case 'z':
 					print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_SCRATCH_SEL, l)); break;
+				default:
+				  print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), x);
+				  break;
 				}break;
 			case 'b':x = *++oparg;
                                 switch (x)
@@ -1203,7 +1203,30 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
                                         print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_OP_CLASS, l)); break;
                                 case 'z':
                                         print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_TARGET_VALUE, l)); break;
+				default:
+				  print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), x);
+				  break;
                                 }break;
+			case 'c':x = *++oparg;
+                                switch (x)
+                                {
+				case '0':
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_32BIT_MODE, l)); break;
+                                case '1':
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_CLR_ZERO_FLAGS, l)); break;
+                                case '2':
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_ADDR_MODE, l)); break;
+                                case '3':
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_WHERE, l)); break;
+                                case '4':
+                                        print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (L_INSTRMODE, l)); break;
+				default:
+				  print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), x);
+				  break;
+				}break;
+                      default:
+                        print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), x);
+                        break;
 		      }
 		   }
                   break;
@@ -1236,90 +1259,55 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   const struct riscv_opcode *op;
   static bool init = 0;
   static const struct riscv_opcode *riscv_hash[OP_MASK_SFPU_OP + 1];
-  static const struct riscv_opcode *riscv_hash_grayskull[OP_MASK_SFPU_OP + 1];
-  static const struct riscv_opcode *riscv_hash_wormhole[OP_MASK_SFPU_OP + 1];
-  static const struct riscv_opcode *riscv_hash_blackhole[OP_MASK_SFPU_OP + 1];
+  static const struct riscv_opcode *riscv_hash_tt[OP_MASK_SFPU_OP + 1];
   struct riscv_private_data *pd;
   int insnlen;
-  int is_sfpu = 0;
 #define OP_HASH_IDX(i) ((i) & (riscv_insn_length (i) == 2 ? 0x3 : OP_MASK_OP))
 #define SFPU_OP_HASH_IDX(i) \
         (((i) & 0xffffff00) == (MATCH_SFPNOP & 0xffffff00) ? \
 	  SFP_OPCODE_END - SFP_OPCODE_START + OP_MASK_OP + 1 : \
           (((i) >> OP_SH_SFPU_OP) & OP_MASK_SFPU_OP) - SFP_OPCODE_START + OP_MASK_OP + 1)
 
+  static enum riscv_insn_class tt_class = 0;
+
   /* Build a hash table to shorten the search time.  */
   if (! init)
     {
-      // insert instructions into hash table if sfpu_mach is grayskull target.
-      if (sfpu_mach == SFPU_MACH_GRAYSKULL) {
-        for (op = riscv_opcodes; op->name; op++) {
-          if (!strncasecmp(op->name, "sfp", 3) ||
-                 !strncasecmp(op->name, "tt", 2))
-            {
-              if (op->insn_class == INSN_CLASS_I_Y) {
-                if (!riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)])
-                  riscv_hash_grayskull[SFPU_OP_HASH_IDX (op->match)] = op;
-              }
-            }
-          else 
-  	  {
-            if (!riscv_hash[OP_HASH_IDX (op->match)])
-              riscv_hash[OP_HASH_IDX (op->match)] = op;
-          }
-        }
-      }
-      // insert instructions into hash table if sfpu_mach is wormhole target.
-      if (sfpu_mach == SFPU_MACH_WORMHOLE) {
-        for (op = riscv_opcodes; op->name; op++) {
-          if (!strncasecmp(op->name, "sfp", 3) ||
-               !strncasecmp(op->name, "tt", 2))
-            { 
-              if (op->insn_class == INSN_CLASS_I_W) {
-                if (!riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)])
-                  riscv_hash_wormhole[SFPU_OP_HASH_IDX (op->match)] = op;
-              }
-            }
-          else
-            { 
-              if (!riscv_hash[OP_HASH_IDX (op->match)])
-                riscv_hash[OP_HASH_IDX (op->match)] = op;
-            }
-          }
-        }
-          // insert instructions into hash table if sfpu_mach is blackhole target.
-      if (sfpu_mach == SFPU_MACH_BLACKHOLE) {
-        for (op = riscv_opcodes; op->name; op++) {
-          if (!strncasecmp(op->name, "sfp", 3) ||
-               !strncasecmp(op->name, "tt", 2))
-            {
-              if (op->insn_class == INSN_CLASS_I_L) {
-                if (!riscv_hash_blackhole[SFPU_OP_HASH_IDX (op->match)])
-                  riscv_hash_blackhole[SFPU_OP_HASH_IDX (op->match)] = op;
-              }
-            }
-          else
-            {
-              if (!riscv_hash[OP_HASH_IDX (op->match)])
-                riscv_hash[OP_HASH_IDX (op->match)] = op;
-            }
-          }
-        }
-      // insert instructions into hash table if it is riscv target.
-      if (sfpu_mach == MACH_RISCV) {
-        for (op = riscv_opcodes; op->name; op++) {
-          if (!riscv_hash[OP_HASH_IDX (op->match)])
-            riscv_hash[OP_HASH_IDX (op->match)] = op;
-        }
-      }
+      if (riscv_subset_supports (&riscv_rps_dis, "xttgs"))
+	tt_class = INSN_CLASS_XTTGS;
+      else if (riscv_subset_supports (&riscv_rps_dis, "xttwh"))
+	tt_class = INSN_CLASS_XTTWH;
+      else if  (riscv_subset_supports (&riscv_rps_dis, "xttbh"))
+	tt_class = INSN_CLASS_XTTBH;
+
+      for (op = riscv_opcodes; op->name; op++)
+	{
+	  if (tt_class && tt_class == op->insn_class)
+	    {
+	      if (strncmp(op->name, "sfp", 3) != 0
+		  || strncmp(op->name, "tt", 2) != 0) {
+		if (!riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)])
+		  riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)] = op;
+	      }
+	      else if (!riscv_hash[OP_HASH_IDX (op->match)])
+		riscv_hash[OP_HASH_IDX (op->match)] = op;
+	    }
+	  else if (op->insn_class != INSN_CLASS_XTTGS
+		   && op->insn_class != INSN_CLASS_XTTWH
+		   && op->insn_class != INSN_CLASS_XTTBH)
+	    {
+	      if (!riscv_hash[OP_HASH_IDX (op->match)])
+		riscv_hash[OP_HASH_IDX (op->match)] = op;
+	    }
+	}
       init = 1;
     }
+
   /* Unswizzle the bottom 2 bits so that we get back the original instruction
      for SFPU */
-  if ((word & 0x3) != 0x3) {
+  bool is_sfpu = tt_class && (word & 0x3) != 0x3;
+  if (is_sfpu)
     word = SFPU_OP_UNSWIZZLE(word);
-    is_sfpu = 1;
-  }
 
   if (info->private_data == NULL)
     {
@@ -1353,20 +1341,8 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   info->insn_type = dis_nonbranch;
   info->target = 0;
   info->target2 = 0;
-  // op = is_sfpu ?  riscv_hash[SFPU_OP_HASH_IDX (word)] :
-  //                 riscv_hash[OP_HASH_IDX (word)];
-  if (is_sfpu) {
-      if (sfpu_mach == SFPU_MACH_WORMHOLE)
-        op = riscv_hash_wormhole[SFPU_OP_HASH_IDX (word)];
-      else if (sfpu_mach == SFPU_MACH_GRAYSKULL)
-        op = riscv_hash_grayskull[SFPU_OP_HASH_IDX (word)];
-      else if (sfpu_mach == SFPU_MACH_BLACKHOLE)
-        op = riscv_hash_blackhole[SFPU_OP_HASH_IDX (word)];
-      else
-        op = riscv_hash[SFPU_OP_HASH_IDX (word)];
-  } else {
-    op = riscv_hash[OP_HASH_IDX (word)];
-  }
+  op = is_sfpu ? riscv_hash_tt[SFPU_OP_HASH_IDX (word)]
+    : riscv_hash[OP_HASH_IDX (word)];
 
   if (op != NULL)
     {
@@ -1375,10 +1351,6 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	xlen = 64;
       else if (info->mach == bfd_mach_riscv32)
 	xlen = 32;
-      else if (info->mach == bfd_mach_riscv32_sfpu_wormhole)
-	xlen = 32;
-      else if (info->mach == bfd_mach_riscv32_sfpu_blackhole)
-        xlen = 32;
       else if (info->section != NULL)
 	{
 	  Elf_Internal_Ehdr *ehdr = elf_elfheader (info->section->owner);
@@ -1761,6 +1733,7 @@ riscv_get_disassembler (bfd *abfd)
 						  &default_priv_spec);
 	  default_arch = attr[Tag_RISCV_arch].s;
 	}
+#if 0
       if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_GRAYSKULL)
         sfpu_mach = SFPU_MACH_GRAYSKULL;
       else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV_WORMHOLE)
@@ -1769,6 +1742,7 @@ riscv_get_disassembler (bfd *abfd)
         sfpu_mach = SFPU_MACH_BLACKHOLE;
       else if (abfd->tdata.elf_obj_data->elf_header->e_machine == EM_RISCV)
         sfpu_mach = MACH_RISCV;
+#endif
     }
 
   riscv_release_subset_list (&riscv_subsets);

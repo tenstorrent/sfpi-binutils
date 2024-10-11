@@ -1,3 +1,6 @@
+
+// FIXME: MATCH_TT_$foo and MASK_TT_$FOO
+
 /* SFPU Instructions */
 #define SFP_OPCODE_START 0x70
 #define MATCH_SFPLOAD 0x70000003

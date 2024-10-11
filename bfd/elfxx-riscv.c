@@ -1249,24 +1249,9 @@ static struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
 
 static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
 {
-  {NULL, 0, 0, 0, 0}
-};
-
-static struct riscv_supported_ext riscv_supported_sfpu_y_ext[] =
-{
-  {"y", ISA_SPEC_CLASS_SFPU, 1, 0, 0},
-  {NULL, 0, 0, 0, 0}
-};
-
-static struct riscv_supported_ext riscv_supported_sfpu_w_ext[] =
-{
-  {"w", ISA_SPEC_CLASS_SFPU_WORMHOLE, 1, 0, 0},
-  {NULL, 0, 0, 0, 0}
-};
-
-static struct riscv_supported_ext riscv_supported_sfpu_l_ext[] =
-{
-  {"l", ISA_SPEC_CLASS_SFPU_BLACKHOLE, 1, 0, 0},
+  {"xttgs",       ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
+  {"xttwh",       ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
+  {"xttbh",       ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -1277,9 +1262,6 @@ const struct riscv_supported_ext *riscv_all_supported_ext[] =
   riscv_supported_std_s_ext,
   riscv_supported_std_zxm_ext,
   riscv_supported_vendor_x_ext,
-  riscv_supported_sfpu_y_ext,
-  riscv_supported_sfpu_w_ext,
-  riscv_supported_sfpu_l_ext,
   NULL
 };
 
@@ -1290,9 +1272,17 @@ enum riscv_prefix_ext_class
   RV_ISA_CLASS_S,
   RV_ISA_CLASS_ZXM,
   RV_ISA_CLASS_X,
+#if 0
   RV_ISA_CLASS_SFPU,
   RV_ISA_CLASS_SFPU_WORMHOLE,
   RV_ISA_CLASS_SFPU_BLACKHOLE,
+#endif
+#if 0
+  // Backwards compatibility, deprecate and remove
+  RV_ISA_CLASS_XTTGS,
+  RV_ISA_CLASS_XTTWH,
+  RV_ISA_CLASS_XTTBH,
+#endif
   RV_ISA_CLASS_UNKNOWN
 };
 
@@ -1314,9 +1304,13 @@ static const struct riscv_parse_prefix_config parse_config[] =
   {RV_ISA_CLASS_Z, "z"},
   {RV_ISA_CLASS_S, "s"},
   {RV_ISA_CLASS_X, "x"},
-  {RV_ISA_CLASS_SFPU, "y"},
-  {RV_ISA_CLASS_SFPU_WORMHOLE, "w"},
-  {RV_ISA_CLASS_SFPU_BLACKHOLE, "l"},
+
+#if 0
+  // Backwards compatibility, deprecate and remove
+  {RV_ISA_CLASS_XTTGS, "y"},
+  {RV_ISA_CLASS_XTTWH, "w"},
+  {RV_ISA_CLASS_XTTBH, "l"},
+#endif
   {RV_ISA_CLASS_UNKNOWN, NULL}
 };
 
@@ -1370,12 +1364,14 @@ riscv_recognized_prefixed_ext (const char *ext)
     if (strcmp (ext, "x") != 0)
       return true;
     break;
-  case RV_ISA_CLASS_SFPU:
+#if 0
+  case RV_ISA_CLASS_XTTGS:
     return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_y_ext);
-  case RV_ISA_CLASS_SFPU_WORMHOLE:
+  case RV_ISA_CLASS_XTTWH:
     return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_w_ext);
-  case RV_ISA_CLASS_SFPU_BLACKHOLE:
+  case RV_ISA_CLASS_XTTBH:
     return riscv_known_prefixed_ext (ext, riscv_supported_sfpu_l_ext);
+#endif
   default:
     break;
   }
@@ -1549,9 +1545,13 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     case RV_ISA_CLASS_Z: table = riscv_supported_std_z_ext; break;
     case RV_ISA_CLASS_S: table = riscv_supported_std_s_ext; break;
     case RV_ISA_CLASS_X: table = riscv_supported_vendor_x_ext; break;
-    case RV_ISA_CLASS_SFPU: table = riscv_supported_sfpu_y_ext; break;
-    case RV_ISA_CLASS_SFPU_WORMHOLE: table = riscv_supported_sfpu_w_ext; break;
-    case RV_ISA_CLASS_SFPU_BLACKHOLE: table = riscv_supported_sfpu_l_ext; break;
+
+#if 0
+      // Backward compatibility, deprecate and remove
+    case RV_ISA_CLASS_XTTGS: table = riscv_supported_sfpu_y_ext; break;
+    case RV_ISA_CLASS_XTTWH: table = riscv_supported_sfpu_w_ext; break;
+    case RV_ISA_CLASS_XTTBH: table = riscv_supported_sfpu_l_ext; break;
+#endif
     default:
       table = riscv_supported_std_ext;
     }
@@ -1574,10 +1574,13 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
 bool
 riscv_ext_dont_care_version (const char *subset)
 {
+#if 0
+  /* FIXME: Deprecate & remove. */
   if (strcmp (subset, "y") == 0
       || strcmp (subset, "w") == 0
       || strcmp (subset, "l") == 0)
     return true;
+#endif
   return false;
 }
 
@@ -1619,9 +1622,13 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
       /* Allow old ISA spec can recognize zicsr and zifencei.  */
       else if (strcmp (subset, "zicsr") != 0
 	       && strcmp (subset, "zifencei") != 0
+	       /* FIXME: Deprecate and remove. */
+#if 0
                && strcmp (subset, "iy") != 0
                && strcmp (subset, "iw") != 0
-               && strcmp (subset, "il") != 0)
+               && strcmp (subset, "il") != 0
+#endif
+	       && 1)
 	rps->error_handler
 	  (_("cannot find default versions of the ISA extension `%s'"),
 	   subset);
@@ -2464,12 +2471,14 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "svinval");
     case INSN_CLASS_H:
       return riscv_subset_supports (rps, "h");
-    case INSN_CLASS_I_Y:
-      return riscv_subset_supports (rps, "y");
-    case INSN_CLASS_I_W:
-      return riscv_subset_supports (rps, "w");
-    case INSN_CLASS_I_L:
-      return riscv_subset_supports (rps, "l");
+
+    case INSN_CLASS_XTTGS:
+      return riscv_subset_supports (rps, "xttgs");
+    case INSN_CLASS_XTTWH:
+      return riscv_subset_supports (rps, "xttwh");
+    case INSN_CLASS_XTTBH:
+      return riscv_subset_supports (rps, "xttbh");
+
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2595,12 +2604,14 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "svinval";
     case INSN_CLASS_H:
       return _("h");
-    case INSN_CLASS_I_Y:
-      return "y";
-    case INSN_CLASS_I_W:
-      return "w";
-    case INSN_CLASS_I_L:
-      return "l";
+
+    case INSN_CLASS_XTTGS:
+      return "xttgs";
+    case INSN_CLASS_XTTWH:
+      return "xttwh";
+    case INSN_CLASS_XTTBH:
+      return "xttbh";
+
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

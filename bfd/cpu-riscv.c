@@ -87,9 +87,6 @@ enum
 {
   I_riscv64,
   I_riscv32,
-  I_riscv32_sfpu_blackhole,
-  I_riscv32_sfpu_wormhole,
-  I_riscv32_sfpu
 };
 
 #define NN(index) (&arch_info_struct[(index) + 1])
@@ -99,10 +96,7 @@ enum
 static const bfd_arch_info_type arch_info_struct[] =
 {
   N (64, bfd_mach_riscv64, "riscv:rv64", false, NN (I_riscv64)),
-  N (32, bfd_mach_riscv32, "riscv:rv32", false, NN (I_riscv32)),
-  N (32, bfd_mach_riscv32_sfpu_blackhole, "riscv:rv32-sfpu-blackhole", false, NN (I_riscv32_sfpu_blackhole)),
-  N (32, bfd_mach_riscv32_sfpu_wormhole, "riscv:rv32-sfpu-wormhole", false, NN (I_riscv32_sfpu_wormhole)),
-  N (32, bfd_mach_riscv32_sfpu, "riscv:rv32-sfpu", false, NULL)
+  N (32, bfd_mach_riscv32, "riscv:rv32", false, NULL),
 };
 
 /* The default architecture is riscv:rv64.  */

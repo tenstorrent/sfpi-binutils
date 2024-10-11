@@ -235,9 +235,6 @@ struct riscv_set_options
   int relax; /* Emit relocs the linker is allowed to relax.  */
   int arch_attr; /* Emit architecture and privileged elf attributes.  */
   int csr_check; /* Enable the CSR checking.  */
-  int grayskull; /* Generate SFPU code for Grayskull. */
-  int wormhole;  /* Generate SFPU code for Wormhole.  */
-  int blackhole; /* Generate SFPU code for Blackhole. */
 };
 
 static struct riscv_set_options riscv_opts =
@@ -247,37 +244,7 @@ static struct riscv_set_options riscv_opts =
   1, /* relax */
   DEFAULT_RISCV_ATTR, /* arch_attr */
   0, /* csr_check */
-  0, /* grayskull */
-  0, /* wormhole */
-  0. /* blackhole */
 };
-
-static void
-riscv_set_grayskull (bool grayskull_value)
-{
-  if (grayskull_value)
-    elf_flags |= EF_RISCV_SFPU_GRAYSKULL;
-
-  riscv_opts.grayskull = grayskull_value;
-}
-
-static void
-riscv_set_wormhole (bool wormhole_value)
-{
-  if (wormhole_value)
-    elf_flags |= EF_RISCV_SFPU_WORMHOLE;
-
-  riscv_opts.wormhole = wormhole_value;
-}
-
-static void
-riscv_set_blackhole (bool blackhole_value)
-{
-  if (blackhole_value)
-    elf_flags |= EF_RISCV_SFPU_BLACKHOLE;
-
-  riscv_opts.blackhole = blackhole_value;
-}
 
 /* Enable or disable the rvc flags for riscv_opts.  Turn on the rvc flag
    for elf_flags once we have enabled c extension.  */
@@ -341,12 +308,6 @@ riscv_set_arch (const char *s)
   riscv_set_rvc (false);
   if (riscv_subset_supports (&riscv_rps_as, "c"))
     riscv_set_rvc (true);
-  if (riscv_subset_supports (&riscv_rps_as, "h"))
-    riscv_set_grayskull (true);
-  if (riscv_subset_supports (&riscv_rps_as, "w"))
-    riscv_set_wormhole (true);
-  if (riscv_subset_supports (&riscv_rps_as, "l"))
-    riscv_set_blackhole (true);
 }
 
 /* Indicate -mabi option is explictly set.  */
@@ -652,9 +613,9 @@ riscv_target_format (void)
 static inline unsigned int
 insn_length (const struct riscv_cl_insn *insn)
 {
-  return (insn->insn_mo->insn_class == INSN_CLASS_I_W  ||
-          insn->insn_mo->insn_class == INSN_CLASS_I_Y  || 
-          insn->insn_mo->insn_class == INSN_CLASS_I_L) ?
+  return (insn->insn_mo->insn_class == INSN_CLASS_XTTGS  ||
+          insn->insn_mo->insn_class == INSN_CLASS_XTTWH  || 
+          insn->insn_mo->insn_class == INSN_CLASS_XTTBH) ?
          4 : riscv_insn_length (insn->insn_opcode);
 }
 
@@ -671,9 +632,9 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
 
   /*  Zero out the lower most two bits as they were set to indicate the
       instruction as a 4 byte instruction */
-  if (mo->insn_class == INSN_CLASS_I_W  ||
-      mo->insn_class == INSN_CLASS_I_Y  ||
-      mo->insn_class == INSN_CLASS_I_L)
+  if (mo->insn_class == INSN_CLASS_XTTGS  ||
+      mo->insn_class == INSN_CLASS_XTTWH  ||
+      mo->insn_class == INSN_CLASS_XTTBH)
     insn->insn_opcode &= 0xfffffffc;
 }
 
@@ -1247,9 +1208,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	      goto unknown_validate_operand;
 	    }
 	  break; /* end RVV */
-	case 'w': /* SFPU Wormhole */
-	case 'J': /* SFPU Grayskull */
-	case 'l': /* SFPU Blackhole */
+	case 'J':
 	  switch (*++oparg)
 	    {
 	      case 'a': USE_BITS (OP_MASK_YMULADD_SRCA, OP_SH_YMULADD_SRCA); break;
@@ -1691,24 +1650,8 @@ init_opcode_hash (const struct riscv_opcode *opcodes,
 void
 md_begin (void)
 {
-  //unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
-  unsigned long mach;
-  if (xlen == 64) {
-    mach = bfd_mach_riscv64;
-  } else {
-    if (riscv_opts.wormhole) {
-      mach = bfd_mach_riscv32_sfpu_wormhole;
-      stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_WORMHOLE;
-    } else if (riscv_opts.blackhole) {
-      mach = bfd_mach_riscv32_sfpu_blackhole;
-      stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_BLACKHOLE; 
-    } else if (riscv_opts.grayskull) {
-      mach = bfd_mach_riscv32_sfpu;
-      stdoutput->tdata.elf_obj_data->elf_header->e_machine = EM_RISCV_GRAYSKULL;
-    } else {
-      mach = bfd_mach_riscv32;
-    }
-  }
+  unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
+
   if (! bfd_set_arch_mach (stdoutput, bfd_arch_riscv, mach))
     as_warn (_("could not set architecture and machine"));
 
@@ -1814,9 +1757,9 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
         }
     }
 
-  if (ip->insn_mo->insn_class == INSN_CLASS_I_W  ||
-      ip->insn_mo->insn_class == INSN_CLASS_I_Y ||
-      ip->insn_mo->insn_class == INSN_CLASS_I_L)
+  if (ip->insn_mo->insn_class == INSN_CLASS_XTTGS  ||
+      ip->insn_mo->insn_class == INSN_CLASS_XTTWH ||
+      ip->insn_mo->insn_class == INSN_CLASS_XTTBH)
     ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
@@ -2735,6 +2678,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	{
 	  opargStart = oparg;
 	  asarg += strspn (asarg, " \t");
+	  // ,()[]<>0
+	  // ABCDEF..I.....OPQRSTUV..YZ
+	  // a.cd.....j..m.opqrstu...y.
+	  // J - tenstorrent
 	  switch (*oparg)
 	    {
 	    case '\0': /* End of args.  */
@@ -3623,9 +3570,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      asarg = expr_end;
 	      continue;
 
-            case 'w':  // SFPU Wormhole Instructions
-            case 'J':  // SFPU Grayskull Instructions
-            case 'l':  // SFPU Blackhole Instructions
+            case 'J':
+	      // Ugh, this is, um, unpleasant.
               switch (*++oparg)
                 {
                 case 'a': /* MUL/ADD SRCA L0-L15 */
@@ -3651,26 +3597,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                     char x = *++oparg;
 
                     if (x == '1') {
-                      if (riscv_opts.wormhole || riscv_opts.blackhole)
-                        {
-                          if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
-                              || regno > 7)
-                            {
-                              as_bad (_("bad register for lreg_dest field, "
-                                        "register must be L0...L7"));
-                              break;
-                            }
-                        }
-                      else
-                        {
-                          if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
-                              || regno > 3)
-                            {
-                              as_bad (_("bad register for lreg_dest field, "
-                                        "register must be L0...L3"));
-                              break;
-                            }
-                        }
+		      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
+			  || regno > (insn->insn_class == INSN_CLASS_XTTGS ? 3 : 7))
+			{
+			  as_bad (_("bad register for lreg_dest field, "
+				    "register must be L0...L%d"),
+				  insn->insn_class == INSN_CLASS_XTTGS ? 3 : 7);
+			  break;
+			}
                     } else if (x == '2') {
                       if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
                           || regno > 15)
@@ -3684,7 +3618,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   INSERT_OPERAND (YLOADSTORE_RD, *ip, regno);
                   continue;
                 case 'e': /* MUL/ADD DEST L0-L3 (L0-L7 for Wormhole and Blackhole) */
-                  if (riscv_opts.wormhole || riscv_opts.blackhole)
+                  if (insn->insn_class != INSN_CLASS_XTTGS)
                     {
                       // It is technically legal to store to register 8..15,
                       // however it doesn't make sense since those regs are
@@ -3692,8 +3626,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       // in WH B0 where we throw away the result by storing to
                       // register 9
                       if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
-                          || ((strcasecmp(insn->name, "SFPSHFT2") && regno > 7) ||
-                              (!strcasecmp(insn->name, "SFPSHFT2") && regno > 7 && regno != 9)))
+                          || (regno > 7
+			      && !(strcmp(insn->name, "sfpshft2") == 0 && regno == 9)))
                         {
                           as_bad (_("bad register for lreg_dest field, "
                                     "register must be L0...L7"));
@@ -3737,11 +3671,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   INSERT_OPERAND (YCC_LREG_C, *ip, regno);
                   continue;
                 case 'h': /* CC Instructions LREG_DEST L0-L3 (L0-L7 for Wormhole) */
-                  if (riscv_opts.wormhole || riscv_opts.blackhole)
+                  if (insn->insn_class == INSN_CLASS_XTTWH
+		      || insn->insn_class == INSN_CLASS_XTTBH)
                     {
-                      if (! strcasecmp(insn->name, "SFPCONFIG") &&
-                          (insn->insn_class == INSN_CLASS_I_W || 
-                           insn->insn_class == INSN_CLASS_I_L))
+                      if (0 == strcmp(insn->name, "sfpconfig"))
                         {
                           if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
@@ -3795,8 +3728,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '2')
                       {
-                        if (insn->insn_class == INSN_CLASS_I_W  &&
-                            ! strcasecmp(insn->name, "SFPMOV"))
+                        if (insn->insn_class == INSN_CLASS_XTTWH  &&
+                            0 == strcmp(insn->name, "sfpmov"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -3810,8 +3743,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_W  &&
-                                 ! strcasecmp(insn->name, "SFPSETEXP"))
+                        else if (insn->insn_class == INSN_CLASS_XTTWH  &&
+                                 0 == strcasecmp(insn->name, "sfpsetexp"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -3831,8 +3764,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_W  &&
-                                 ! strcasecmp(insn->name, "SFPSHFT2"))
+                        else if (insn->insn_class == INSN_CLASS_XTTWH  &&
+                                 0 == strcmp(insn->name, "sfpshft2"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -3844,8 +3777,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L  &&
-                            ! strcasecmp(insn->name, "SFPMOV"))
+                        else if (insn->insn_class == INSN_CLASS_XTTBH  &&
+				 0 == strcmp(insn->name, "sfpmov"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -3859,8 +3792,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L  &&
-                                 ! strcasecmp(insn->name, "SFPSETEXP"))
+                        else if (insn->insn_class == INSN_CLASS_XTTBH  &&
+                                 0 == strcmp(insn->name, "sfpsetexp"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -3880,8 +3813,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L  &&
-                                 ! strcasecmp(insn->name, "SFPSHFT2"))
+                        else if (insn->insn_class == INSN_CLASS_XTTBH  &&
+                                 0 == strcmp(insn->name, "sfpshft2"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -3909,7 +3842,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                         if (imm_expr->X_add_number == 1)
                           {
-                            if (! strcasecmp(insn->name, "SFPDIVP2")  &&
+                            if (0 == strcmp(insn->name, "sfpdivp2")  &&
                                 (   imm12_math_op > 2047
                                  || imm12_math_op < -2048))
                               {
@@ -3917,7 +3850,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                           "value must be -2048...2047"));
                                 break;
                               }
-                            if (! strcasecmp(insn->name, "SFPSETEXP")  &&
+                            if (0 == strcmp(insn->name, "sfpsetexp")  &&
                                 (   imm12_math_op > 4095
                                  || imm12_math_op < 0))
                               {
@@ -3925,7 +3858,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                           "value must be 0...4095"));
                                 break;
                               }
-                            if (! strcasecmp(insn->name, "SFPSHFT")  &&
+                            if (0 == strcmp(insn->name, "sfpshft")  &&
                                 (   imm12_math_op > 2047
                                  || imm12_math_op < -2048))
                               {
@@ -3933,7 +3866,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                           "value must be -2048...2047"));
                                 break;
                               }
-                            if (! strcasecmp(insn->name, "SFPSETMAN")  &&
+                            if (0 == strcmp(insn->name, "sfpsetman")  &&
                                 (   imm12_math_op > 4095
                                  || imm12_math_op < 0))
                               {
@@ -3941,7 +3874,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                           "value must be 0...4095"));
                                 break;
                               }
-                            if (! strcasecmp(insn->name, "SFPSETSGN")  &&
+                            if (0 == strcmp(insn->name, "sfpsetsgn")  &&
                                 (   imm12_math_op > 4095
                                  || imm12_math_op < 0))
                               {
@@ -3960,22 +3893,22 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             || imm_expr->X_add_number > 3)
                           {
                             as_bad (_("bad value for instr_mod1 field, "
-                                      "value must be 0...3, but cannot be 2"));
+                                      "value must be 0, 1 or 3"));
                             break;
                           }
 
-                        if ((! strcasecmp(insn->name, "SFPMULI") ||
-                             ! strcasecmp(insn->name, "SFPADDI")) &&
-                              insn->insn_class == INSN_CLASS_I_W  &&
+                        if ((0 == strcmp(insn->name, "sfpmuli") ||
+                             0 == strcmp(insn->name, "sfpaddi")) &&
+                              insn->insn_class == INSN_CLASS_XTTWH  &&
                               imm_expr->X_add_number != 0)
                           {
                             as_bad (_("bad value for instr_mod0 field, "
                                       "value must be 0"));
                             break;
                           }
-                        if ((! strcasecmp(insn->name, "SFPMULI") ||
-                             ! strcasecmp(insn->name, "SFPADDI")) &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                        if ((0 == strcmp(insn->name, "sfpmuli") ||
+                             0 == strcmp(insn->name, "sfpaddi")) &&
+                              insn->insn_class == INSN_CLASS_XTTBH  &&
                               imm_expr->X_add_number != 0)
                           {
                             as_bad (_("bad value for instr_mod0 field, "
@@ -4017,7 +3950,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             || imm_expr->X_add_number == 5
                             || imm_expr->X_add_number == 9)
                           {
-                            if (! strcasecmp(insn->name, "SFPIADD")  &&
+                            if (0 == strcmp(insn->name, "sfpiadd")  &&
                                 (   imm12_math_op > 2047
                                  || imm12_math_op < -2048))
                               {
@@ -4029,8 +3962,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                       }
                     else if (x == '6')
                       {
-                        if (insn->insn_class == INSN_CLASS_I_W  &&
-                            ! strcasecmp(insn->name, "SFPLZ"))
+                        if (insn->insn_class == INSN_CLASS_XTTWH  &&
+                            0 == strcmp(insn->name, "sfplz"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -4041,8 +3974,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-                        else if (insn->insn_class == INSN_CLASS_I_L &&
-                            ! strcasecmp(insn->name, "SFPLZ"))
+                        else if (insn->insn_class == INSN_CLASS_XTTBH &&
+				 0 == strcmp(insn->name, "sfplz"))
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                 || imm_expr->X_op != O_constant
@@ -4053,7 +3986,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 break;
                               }
                           }
-
                         else
                           {
                             if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
@@ -4275,9 +4207,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             break;
                           }
 
-                        if (! strcasecmp(insn->name, "SFPLOADMACRO")  &&
-                              insn->insn_class == INSN_CLASS_I_W  &&
-                              (   imm_expr->X_add_number == 10
+                        if (insn->insn_class == INSN_CLASS_XTTWH  &&
+			    0 == strcmp(insn->name, "sfploadmacro")  &&
+			    (   imm_expr->X_add_number == 10
                                || imm_expr->X_add_number == 11))
                           {
                             as_bad (_("bad value for instr_mod0 field, "
@@ -4285,9 +4217,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             break;
                           }
 
-                        if ((! strcasecmp(insn->name, "SFPLOAD")  ||
-                             ! strcasecmp(insn->name, "SFPSTORE"))  &&
-                              insn->insn_class == INSN_CLASS_I_W  &&
+                        if (insn->insn_class == INSN_CLASS_XTTWH  &&
+			    (0 == strcmp(insn->name, "sfpload")  ||
+                             0 == strcmp(insn->name, "sfpstore"))  &&
                               imm_expr->X_add_number == 11)
                           {
                             as_bad (_("bad value for instr_mod0 field, "
@@ -4295,8 +4227,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             break;
                           }
 
-                        if (! strcasecmp(insn->name, "SFPLOADI")  &&
-                              insn->insn_class == INSN_CLASS_I_W  &&
+                        if (insn->insn_class == INSN_CLASS_XTTWH  &&
+			    0 == strcmp(insn->name, "sfploadi")  &&
                              (  (imm_expr->X_add_number > 4  &&  imm_expr->X_add_number < 8)
                               || imm_expr->X_add_number > 10))
                           {
@@ -4304,8 +4236,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                       "value must be 0...4 or 8...10"));
                             break;
                           }
-                        if (! strcasecmp(insn->name, "SFPLOADMACRO")  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                        if (insn->insn_class == INSN_CLASS_XTTBH  &&
+			    0 == strcmp(insn->name, "sfploadmacro")  &&
                               (   imm_expr->X_add_number == 10
                                || imm_expr->X_add_number == 11))
                           {
@@ -4314,20 +4246,20 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             break;
                           }
 
-                        if ((! strcasecmp(insn->name, "SFPLOAD")  ||
-                             ! strcasecmp(insn->name, "SFPSTORE"))  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
-                              imm_expr->X_add_number == 11)
+                        if (insn->insn_class == INSN_CLASS_XTTBH  &&
+			    (0 == strcmp(insn->name, "sfpload")  ||
+                             0 == strcmp(insn->name, "sfpstore"))  &&
+			    imm_expr->X_add_number == 11)
                           {
                             as_bad (_("bad value for instr_mod0 field, "
                                       "value must be 0...10 or 12...15"));
                             break;
                           }
 
-                        if (! strcasecmp(insn->name, "SFPLOADI")  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
-                             (  (imm_expr->X_add_number > 4  &&  imm_expr->X_add_number < 8)
-                              || imm_expr->X_add_number > 10))
+                        if (insn->insn_class == INSN_CLASS_XTTBH  &&
+			    0 == strcasecmp(insn->name, "sfploadi")  &&
+			    (  (imm_expr->X_add_number > 4  &&  imm_expr->X_add_number < 8)
+			       || imm_expr->X_add_number > 10))
                           {
                             as_bad (_("bad value for instr_mod0 field, "
                                       "value must be 0...4 or 8...10"));
@@ -4359,8 +4291,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                             break;
                           }
 
-                        if (! strcasecmp(insn->name, "SFPLUT")  &&
-                              insn->insn_class == INSN_CLASS_I_W  &&
+                        if (insn->insn_class == INSN_CLASS_XTTWH  &&
+			    0 == strcmp(insn->name, "sfplut")  &&
                               imm_expr->X_add_number != 0  &&
                               imm_expr->X_add_number != 4)
                           {
@@ -4368,8 +4300,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                       "value must be 0 or 4"));
                             break;
                           }
-                        if (! strcasecmp(insn->name, "SFPLUT")  &&
-                              insn->insn_class == INSN_CLASS_I_L  &&
+                        if (insn->insn_class == INSN_CLASS_XTTBH  &&
+			    0 == strcmp(insn->name, "sfplut")  &&
                               imm_expr->X_add_number != 0  &&
                               imm_expr->X_add_number != 4)
                           {
@@ -4401,9 +4333,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   asarg = expr_end;
                   continue;
                 case 'o': /* mad/mul/add instr_mod0 */
-                  if (insn->insn_class == INSN_CLASS_I_W)
+                  if (insn->insn_class == INSN_CLASS_XTTWH)
                     {
-                      if (! strcasecmp(insn->name, "SFPLUTFP32"))
+                      if (0 == strcmp(insn->name, "sfplutfp32"))
                         {
                           if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
@@ -4431,9 +4363,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           break;
                         }
                     }
-                  else if (insn->insn_class == INSN_CLASS_I_L)
+                  else if (insn->insn_class == INSN_CLASS_XTTBH)
                     {
-                      if (! strcasecmp(insn->name, "SFPLUTFP32"))
+                      if (0 == strcasecmp(insn->name, "sfplutfp32"))
                         {
                           if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                               || imm_expr->X_op != O_constant
@@ -4884,7 +4816,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 4)
+                            || imm_expr->X_add_number > 3)
                           {
                             as_bad (_("bad value for sel32b field, "
                                       "value must be 0...3"));
@@ -5949,7 +5881,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                             || imm_expr->X_op != O_constant
                             || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 4)
+                            || imm_expr->X_add_number > 3)
                             {
                             as_bad (_("bad value for dimensionindex field, "
                                       "value must be 0...3"));
@@ -6846,7 +6778,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                                 if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
                                     || imm_expr->X_op != O_constant
                                     || imm_expr->X_add_number < -4096
-                                    || imm_expr->X_add_number > 8192)
+                                    || imm_expr->X_add_number > 8191)
                                   {
                                     as_bad (_("bad value for dest_reg_addr field, "
                                               "values must be -4096...4095 for signed"
@@ -7971,9 +7903,6 @@ enum options
   OPTION_MPRIV_SPEC,
   OPTION_BIG_ENDIAN,
   OPTION_LITTLE_ENDIAN,
-  OPTION_SFPU_GRAYSKULL,
-  OPTION_SFPU_WORMHOLE,
-  OPTION_SFPU_BLACKHOLE,
   OPTION_END_OF_ENUM
 };
 
@@ -7994,9 +7923,6 @@ struct option md_longopts[] =
   {"mpriv-spec", required_argument, NULL, OPTION_MPRIV_SPEC},
   {"mbig-endian", no_argument, NULL, OPTION_BIG_ENDIAN},
   {"mlittle-endian", no_argument, NULL, OPTION_LITTLE_ENDIAN},
-  {"mgrayskull", no_argument, NULL, OPTION_SFPU_GRAYSKULL},
-  {"mwormhole", no_argument, NULL, OPTION_SFPU_WORMHOLE},
-  {"mblackhole", no_argument, NULL, OPTION_SFPU_BLACKHOLE},
 
   {NULL, no_argument, NULL, 0}
 };
@@ -8079,18 +8005,6 @@ md_parse_option (int c, const char *arg)
 
     case OPTION_LITTLE_ENDIAN:
       target_big_endian = 0;
-      break;
-
-    case OPTION_SFPU_GRAYSKULL:
-      riscv_set_grayskull(TRUE);
-      break;
-
-    case OPTION_SFPU_WORMHOLE:
-      riscv_set_wormhole(TRUE);
-      break;
-    
-    case OPTION_SFPU_BLACKHOLE:
-      riscv_set_blackhole(TRUE);
       break;
 
     default:
@@ -8503,18 +8417,6 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 	  free (s);
 	}
     }
-  else if (strcmp (name, "grayskull") == 0)
-    riscv_set_grayskull (TRUE);
-  else if (strcmp (name, "nograyskull") == 0)
-    riscv_set_grayskull (FALSE);
-  else if (strcmp (name, "wormhole") == 0)
-    riscv_set_wormhole (TRUE);
-  else if (strcmp (name, "nowormhole") == 0)
-    riscv_set_wormhole (FALSE);
-  else if (strcmp (name, "blackhole") == 0)
-    riscv_set_blackhole (TRUE);
-  else if (strcmp (name, "noblackhole") == 0)
-    riscv_set_blackhole (FALSE);
   else
     {
       as_warn (_("unrecognized .option directive: %s\n"), name);
@@ -9136,20 +9038,7 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
       if (old_xlen != xlen)
         {
           /* We must re-init bfd again if xlen is changed.  */
-          unsigned long mach;
-            if (xlen == 64) {
-            mach = bfd_mach_riscv64;
-          }
-          else {
-            if (riscv_opts.wormhole)
-              mach = bfd_mach_riscv32_sfpu_wormhole;
-            else if (riscv_opts.blackhole)
-              mach = bfd_mach_riscv32_sfpu_blackhole;
-            else
-              mach = bfd_mach_riscv32;
-          }
-    
-	  //unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32_sfpu_wormhole;
+	  unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
 	  bfd_find_target (riscv_target_format (), stdoutput);
 	  if (! bfd_set_arch_mach (stdoutput, bfd_arch_riscv, mach))
 	    as_warn (_("could not set architecture and machine"));
