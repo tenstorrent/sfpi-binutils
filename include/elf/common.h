@@ -340,7 +340,6 @@
 #define EM_FT32         222     /* FTDI Chip FT32 high performance 32-bit RISC architecture */
 #define EM_MOXIE        223     /* Moxie processor family */
 #define EM_AMDGPU 	224 	/* AMD GPU architecture */
-//#define EM_RISCV_GRAYSKULL 242 	/* RISC-V with SFPU extension - Grayskull */
 #define EM_RISCV 	243 	/* RISC-V */
 #define EM_LANAI	244	/* Lanai 32-bit processor.  */
 #define EM_CEVA		245	/* CEVA Processor Architecture Family */
@@ -361,8 +360,6 @@
 #define EM_U16_U8CORE	260	/* LAPIS nX-U16/U8 */
 #define EM_TACHYUM	261	/* Tachyum */
 #define EM_56800EF	262	/* NXP 56800EF Digital Signal Controller (DSC) */
-//#define EM_RISCV_WORMHOLE 0x5151/* RISC-V with SFPU extension - Wormhole */
-//#define EM_RISCV_BLACKHOLE 0x6151/* RISC-V with SFPU extension - Blackhole */
 
 /* If it is necessary to assign new unofficial EM_* values, please pick large
    random numbers (0x8523, 0xa7f2, etc.) to minimize the chances of collision

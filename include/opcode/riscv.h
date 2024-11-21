@@ -465,12 +465,6 @@ enum riscv_insn_class
   INSN_CLASS_XTTGS,
   INSN_CLASS_XTTWH,
   INSN_CLASS_XTTBH,
-
-#if 0
-  INSN_CLASS_I_Y,  /* Grayskull */
-  INSN_CLASS_I_W,  /* Wormhole */
-  INSN_CLASS_I_L,  /* Black Hole */
-#endif
 };
 
 /* This structure holds information for a particular instruction.  */
@@ -540,10 +534,6 @@ struct riscv_opcode
 #define INSN_4_BYTE		0x00000030
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
-
-// FIXME: ??
-/* Instruction is an SFPU instruction */
-#define INSN_SFPU               0x00000100
 
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */

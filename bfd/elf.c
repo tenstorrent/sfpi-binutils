@@ -6542,19 +6542,7 @@ _bfd_elf_init_file_header (bfd *abfd,
 	 Such need can generally be supplied by replacing the tests for
 	 e_machine with the conditions used to determine it.  */
     default:
-#if 0
-      if (abfd->tdata.elf_obj_data->elf_header->e_machine)
-	i_ehdrp->e_machine = abfd->tdata.elf_obj_data->elf_header->e_machine;
-      else {
-        if (riscv_machine_target != -1 &&
-              (riscv_machine_target == EM_RISCV_GRAYSKULL || riscv_machine_target == EM_RISCV_WORMHOLE 
-	       || riscv_machine_target == EM_RISCV_BLACKHOLE)) {
-	  i_ehdrp->e_machine = riscv_machine_target;
-        } else {
-#endif
-	  i_ehdrp->e_machine = bed->elf_machine_code;
-	  //  }
-	  //}
+      i_ehdrp->e_machine = bed->elf_machine_code;
     }
 
   i_ehdrp->e_version = bed->s->ev_current;

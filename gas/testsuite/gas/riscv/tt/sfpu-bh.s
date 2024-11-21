@@ -166,7 +166,7 @@
 	sfpconfig 0,0,0
 	sfpconfig 8,65535,8
 	sfpconfig 11,0,12
-	sfpconfig 15,65535,14	
+	sfpconfig 15,65535,14
 
 	#sfpswap	"lh,lg,li1"
 	sfpswap L0,L15,0
@@ -439,7 +439,7 @@
 
 	#ttsemwait	"luj,luk,lul"
 	ttsemwait 0,0,0
-	ttsemwait 511,8191,3 
+	ttsemwait 511,8191,3
 
 	#ttsetadc	"lsa,lum,lun,luo"
 	ttsetadc 0,0,0,0
@@ -494,7 +494,6 @@
 	ttsetrwc 3,15,15,15,15,63
 
 	#ttsfploadmacro	"lv4,lv5,ls2,ls1"
-	# FIXME: sfploadmacro???
 	ttsfploadmacro 0,0,0,0
 	ttsfploadmacro 15,15,63,63
 

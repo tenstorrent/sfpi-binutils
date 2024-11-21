@@ -164,7 +164,7 @@
 	sfpconfig 0,0,0
 	sfpconfig 8,65535,8
 	sfpconfig 11,0,12
-	sfpconfig 15,65535,14	
+	sfpconfig 15,65535,14
 
 	# sfpswap	"wh,wg,wi8"
 	sfpswap L0,L15,0
@@ -419,7 +419,7 @@
 
 	# ttsemwait	"wuj,wuk,wul"
 	ttsemwait 0,0,0
-	ttsemwait 511,8191,3 
+	ttsemwait 511,8191,3
 
 	# ttsetadc	"wsa,wum,wun,wuo"
 	ttsetadc 0,0,0,0

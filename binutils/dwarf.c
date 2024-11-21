@@ -8707,7 +8707,6 @@ init_dwarf_regnames_by_elf_machine_code (unsigned int e_machine)
       break;
 
     case EM_RISCV:
-      //    case EM_RISCV_GRAYSKULL: case EM_RISCV_WORMHOLE: case EM_RISCV_BLACKHOLE:
       init_dwarf_regnames_riscv ();
       break;
 

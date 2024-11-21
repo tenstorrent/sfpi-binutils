@@ -329,7 +329,7 @@
 
 	# ttsemwait	"Jw6,Jw7,Jul"
 	ttsemwait 0,0,0
-	ttsemwait 511,4095,3 
+	ttsemwait 511,4095,3
 
 	# ttsetadc	"Jsa,Jum,Jun,Juo"
 	ttsetadc 0,0,0,0
