@@ -22,7 +22,6 @@
 
 #include "elf/common.h"
 #include "elf/internal.h"
-#define IN_ASSEMBLER
 #include "opcode/riscv.h"
 #include "cpu-riscv.h"
 

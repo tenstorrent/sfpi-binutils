@@ -20,7 +20,6 @@
 
 #ifndef GAS
 #define GAS 1
-#define IN_ASSEMBLER
 /* I think this stuff is largely out of date.  xoxorich.
 
    CAPITALISED names are #defined.

@@ -23,7 +23,6 @@
 #include "sysdep.h"
 #include "disassemble.h"
 #include "libiberty.h"
-#define IN_DISASSEMBLER
 #include "opcode/riscv.h"
 #include "opintl.h"
 #include "elf-bfd.h"
@@ -1466,7 +1465,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   static const struct riscv_opcode *riscv_hash_tt[OP_MASK_SFPU_OP + 1];
   struct riscv_private_data *pd;
   int insnlen;
-#define OP_HASH_IDX(i) ((i) & (riscv_insn_length (i) == 2 ? 0x3 : OP_MASK_OP))
+#define OP_HASH_IDX(i) ((i) & ((tt_class ? 4 : riscv_insn_length (i)) == 2 ? 0x3 : OP_MASK_OP))
 #define SFPU_OP_HASH_IDX(i) \
         (((i) & 0xffffff00) == (MATCH_SFPNOP & 0xffffff00) ? \
 	  SFP_OPCODE_END - SFP_OPCODE_START + OP_MASK_OP + 1 : \
@@ -1530,7 +1529,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   else
     pd = info->private_data;
 
-  insnlen = riscv_insn_length (word);
+  insnlen = tt_class ? 4 : riscv_insn_length (word);
 
   /* RISC-V instructions are always little-endian.  */
   info->endian_code = BFD_ENDIAN_LITTLE;
@@ -1901,7 +1900,12 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
 	  return status;
 	}
       insn = (insn_t) bfd_getl16 (packet);
-      dump_size = riscv_insn_length (insn);
+      static int is_tt = -1;
+      if (is_tt < 0)
+	is_tt = riscv_subset_supports (&riscv_rps_dis, "xttgs")
+	  || riscv_subset_supports (&riscv_rps_dis, "xttwh")
+	  || riscv_subset_supports (&riscv_rps_dis, "xttbh");
+      dump_size = is_tt ? 4 : riscv_insn_length (insn);
       riscv_disassembler = riscv_disassemble_insn;
     }
 

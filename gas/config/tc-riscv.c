@@ -30,7 +30,6 @@
 #include "dw2gencfi.h"
 
 #include "bfd/elfxx-riscv.h"
-#define IN_ASSEMBLER
 #include "elf/riscv.h"
 #include "opcode/riscv.h"
 
@@ -1118,7 +1117,10 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
   insn_t required_bits;
 
   if (length == 0)
-    insn_width = 8 * riscv_insn_length (opc->match);
+    insn_width = 8 * (opc->insn_class == INSN_CLASS_XTTGS
+		      || opc->insn_class == INSN_CLASS_XTTWH
+		      || opc->insn_class == INSN_CLASS_XTTBH
+		      ? 4 : riscv_insn_length (opc->match));
   else
     insn_width = 8 * length;
 

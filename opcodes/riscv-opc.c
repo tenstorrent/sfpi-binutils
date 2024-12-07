@@ -21,7 +21,6 @@
    see <http://www.gnu.org/licenses/>.  */
 
 #include "sysdep.h"
-#define IN_ASSEMBLER
 #include "opcode/riscv.h"
 #include <stdio.h>
 

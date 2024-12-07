@@ -27,10 +27,8 @@
 
 typedef uint64_t insn_t;
 
-#ifndef IN_DONT_CARE
 static inline unsigned int riscv_insn_length (insn_t insn)
 {
-#ifdef IN_ASSEMBLER
   if ((insn & 0x3) != 0x3) /* RVC instructions.  */
     return 2;
   if ((insn & 0x1f) != 0x1f) /* 32-bit instructions.  */
@@ -41,61 +39,7 @@ static inline unsigned int riscv_insn_length (insn_t insn)
     return 8;
   /* Longer instructions not supported at the moment.  */
   return 2;
-#elif defined IN_DISASSEMBLER
-  static int sfpu_mode = 0;
-
-  /* TODO:
-   * We are hard-coding this to 4 because we know for now that on the SFPU, we
-   * will never have anything other than a 4-byte instruction.  In case, this
-   * changes in future, then we need to fix it here.
-   */
-  return 4;
-
-  if (insn > 0xffff  &&
-      (   (((insn >> 24) & 0xff) >= SFP_OPCODE_START  &&
-           ((insn >> 24) & 0xff) < SFP_OPCODE_END)
-       || ((insn >> 24) & 0xff) == 0x2)) /* SFPU */
-    {
-      sfpu_mode = 1;
-      return 4;
-    }
-  if ((insn & 0x3) == 0x1  ||  (insn & 0x3) == 0x2)
-    {
-      sfpu_mode = 1;
-      return 4;
-    }
-  if (sfpu_mode && insn == 0x0)
-    {
-      return 4;
-    }
-  if ((insn & 0x3) != 0x3) /* RVC.  */
-    {
-      sfpu_mode = 0;
-      return 2;
-    }
-  if ((insn & 0x1f) != 0x1f) /* Base ISA and extensions in 32-bit space.  */
-    {
-      sfpu_mode = 0;
-      return 4;
-    }
-  if ((insn & 0x3f) == 0x1f) /* 48-bit extensions.  */
-    {
-      sfpu_mode = 0;
-      return 6;
-    }
-  if ((insn & 0x7f) == 0x3f) /* 64-bit extensions.  */
-    {
-      sfpu_mode = 0;
-      return 8;
-    }
-  /* Longer instructions not supported at the moment.  */
-  sfpu_mode = 0;
-  return 2;
-#else
-  #error "Must define one of IN_ASSEMBLER or IN_DISASSEMBLER"
-#endif
 }
-#endif
 
 static const char * const riscv_rm[8] =
 {
