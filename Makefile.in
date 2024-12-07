@@ -3533,7 +3533,7 @@ configure-bfd:
 	  $$s/$$module_srcdir/configure \
 	  --srcdir=$${topdir}/$$module_srcdir \
 	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
-	  --target=${target_alias} --enable-install-libbfd \
+	  --target=${target_alias}  \
 	  || exit 1
 @endif bfd
 
