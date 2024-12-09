@@ -2688,6 +2688,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
       error.missing_ext = NULL;
       create_insn (ip, insn);
       argnum = 1;
+
+      imm_expr->X_op = O_absent;
+      *imm_reloc = BFD_RELOC_UNUSED;
+      p = percent_op_itype;
+
       for (oparg = insn->args;; ++oparg)
 	{
 	  opargStart = oparg;
