@@ -1680,7 +1680,6 @@ md_begin (void)
   hash_reg_names (RCLASS_VECR, riscv_vecr_names_numeric, NVECR);
   hash_reg_names (RCLASS_VECM, riscv_vecm_names_numeric, NVECM);
   hash_reg_names (RCLASS_SFPUR, riscv_sfpur_names_numeric, NSFPUR);
-  // hash_reg_names (RCLASS_SFPUR, riscv_sfpur_names_abi, NFPR);
   /* Add "fp" as an alias for "s0".  */
   hash_reg_name (RCLASS_GPR, "fp", 8);
 

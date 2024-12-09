@@ -86,7 +86,7 @@ riscv_scan (const struct bfd_arch_info *info, const char *string)
 enum
 {
   I_riscv64,
-  I_riscv32,
+  I_riscv32
 };
 
 #define NN(index) (&arch_info_struct[(index) + 1])
@@ -96,7 +96,7 @@ enum
 static const bfd_arch_info_type arch_info_struct[] =
 {
   N (64, bfd_mach_riscv64, "riscv:rv64", false, NN (I_riscv64)),
-  N (32, bfd_mach_riscv32, "riscv:rv32", false, NULL),
+  N (32, bfd_mach_riscv32, "riscv:rv32", false, NULL)
 };
 
 /* The default architecture is riscv:rv64.  */

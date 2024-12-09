@@ -1343,7 +1343,6 @@ riscv_recognized_prefixed_ext (const char *ext)
     /* Only the single x is unrecognized.  */
     if (strcmp (ext, "x") != 0)
       return true;
-    break;
   default:
     break;
   }
@@ -1837,6 +1836,8 @@ riscv_parse_prefixed_ext (riscv_parse_subset_t *rps,
 
   return p;
 }
+
+/* Add the implicit extensions.  */
 
 static void
 riscv_parse_add_implicit_subsets (riscv_parse_subset_t *rps)
