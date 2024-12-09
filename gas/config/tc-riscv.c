@@ -343,7 +343,7 @@ riscv_set_abi_by_arch (void)
     {
       gas_assert (abi_xlen != 0 && xlen != 0 && float_abi != FLOAT_ABI_DEFAULT);
       if (abi_xlen > xlen)
-        as_bad ("can't have %d-bit ABI on %d-bit ISA", abi_xlen, xlen);
+	as_bad ("can't have %d-bit ABI on %d-bit ISA", abi_xlen, xlen);
       else if (abi_xlen < xlen)
 	as_bad ("%d-bit ABI not yet supported on %d-bit ISA", abi_xlen, xlen);
 
@@ -415,11 +415,11 @@ static bool explicit_priv_attr = false;
 static char *expr_end;
 
 /* Macros for encoding relaxation state for RVC branches and far jumps.  */
-#define RELAX_BRANCH_ENCODE(uncond, rvc, length)        \
-  ((relax_substateT)                                         \
-   (0xc0000000                                                \
-    | ((uncond) ? 1 : 0)                                \
-    | ((rvc) ? 2 : 0)                                        \
+#define RELAX_BRANCH_ENCODE(uncond, rvc, length)	\
+  ((relax_substateT) 					\
+   (0xc0000000						\
+    | ((uncond) ? 1 : 0)				\
+    | ((rvc) ? 2 : 0)					\
     | ((length) << 2)))
 #define RELAX_BRANCH_P(i) (((i) & 0xf0000000) == 0xc0000000)
 #define RELAX_BRANCH_LENGTH(i) (((i) >> 2) & 0xF)
@@ -427,13 +427,13 @@ static char *expr_end;
 #define RELAX_BRANCH_UNCOND(i) (((i) & 1) != 0)
 
 /* Is the given value a sign-extended 32-bit value?  */
-#define IS_SEXT_32BIT_NUM(x)                                                \
-  (((x) &~ (offsetT) 0x7fffffff) == 0                                        \
+#define IS_SEXT_32BIT_NUM(x)						\
+  (((x) &~ (offsetT) 0x7fffffff) == 0					\
    || (((x) &~ (offsetT) 0x7fffffff) == ~ (offsetT) 0x7fffffff))
 
 /* Is the given value a zero-extended 32-bit value?  Or a negated one?  */
-#define IS_ZEXT_32BIT_NUM(x)                                                \
-  (((x) &~ (offsetT) 0xffffffff) == 0                                        \
+#define IS_ZEXT_32BIT_NUM(x)						\
+  (((x) &~ (offsetT) 0xffffffff) == 0					\
    || (((x) &~ (offsetT) 0xffffffff) == ~ (offsetT) 0xffffffff))
 
 /* Change INSN's opcode so that the operand given by FIELD has value VALUE.
@@ -678,7 +678,7 @@ add_relaxed_insn (struct riscv_cl_insn *insn, int max_chars, int var,
   frag_grow (max_chars);
   move_insn (insn, frag_now, frag_more (0) - frag_now->fr_literal);
   frag_var (rs_machine_dependent, max_chars, var,
-            subtype, symbol, offset, NULL);
+	    subtype, symbol, offset, NULL);
 }
 
 /* Compute the length of a branch sequence, and adjust the stored length
@@ -709,11 +709,11 @@ relaxed_branch_length (fragS *fragp, asection *sec, int update)
       val -= fragp->fr_address + fragp->fr_fix;
 
       if (rvc && (bfd_vma)(val + rvc_range/2) < rvc_range)
-        length = 2;
+	length = 2;
       else if ((bfd_vma)(val + RISCV_BRANCH_REACH/2) < RISCV_BRANCH_REACH)
-        length = 4;
+	length = 4;
       else if (!jump && rvc)
-        length = 6;
+	length = 6;
     }
 
   if (update)
@@ -915,7 +915,7 @@ riscv_init_csr_hash (const char *name,
 
 static unsigned int
 riscv_csr_address (const char *csr_name,
-                   struct riscv_csr_extra *entry)
+		   struct riscv_csr_extra *entry)
 {
   struct riscv_csr_extra *saved_entry = entry;
   enum riscv_csr_class csr_class = entry->csr_class;
@@ -996,8 +996,8 @@ riscv_csr_address (const char *csr_name,
   while (entry != NULL)
     {
       if (!need_check_version
-          || (default_priv_spec >= entry->define_version
-              && default_priv_spec < entry->abort_version))
+	  || (default_priv_spec >= entry->define_version
+	      && default_priv_spec < entry->abort_version))
        {
          /* Find the CSR according to the specific version.  */
          return entry->address;
@@ -1728,7 +1728,7 @@ riscv_apply_const_reloc (bfd_reloc_code_real_type reloc_type, bfd_vma value)
 
 static void
 append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
-             bfd_reloc_code_real_type reloc_type)
+	     bfd_reloc_code_real_type reloc_type)
 {
   dwarf2_emit_insn (0);
 
@@ -1738,24 +1738,24 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 
       gas_assert (address_expr);
       if (reloc_type == BFD_RELOC_12_PCREL
-          || reloc_type == BFD_RELOC_RISCV_JMP)
-        {
-          int j = reloc_type == BFD_RELOC_RISCV_JMP;
-          int best_case = riscv_insn_length (ip->insn_opcode);
-          unsigned worst_case = relaxed_branch_length (NULL, NULL, 0);
+	  || reloc_type == BFD_RELOC_RISCV_JMP)
+	{
+	  int j = reloc_type == BFD_RELOC_RISCV_JMP;
+	  int best_case = riscv_insn_length (ip->insn_opcode);
+	  unsigned worst_case = relaxed_branch_length (NULL, NULL, 0);
 
-          if (now_seg == absolute_section)
-            {
-              as_bad (_("relaxable branches not supported in absolute section"));
-              return;
-            }
+	  if (now_seg == absolute_section)
+	    {
+	      as_bad (_("relaxable branches not supported in absolute section"));
+	      return;
+	    }
 
-          add_relaxed_insn (ip, worst_case, best_case,
-                            RELAX_BRANCH_ENCODE (j, best_case == 2, worst_case),
-                            address_expr->X_add_symbol,
-                            address_expr->X_add_number);
-          return;
-        }
+	  add_relaxed_insn (ip, worst_case, best_case,
+			    RELAX_BRANCH_ENCODE (j, best_case == 2, worst_case),
+			    address_expr->X_add_symbol,
+			    address_expr->X_add_number);
+	  return;
+	}
       else
 	{
 	  howto = bfd_reloc_type_lookup (stdoutput, reloc_type);
@@ -1767,8 +1767,8 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 				  bfd_get_reloc_size (howto),
 				  address_expr, false, reloc_type);
 
-          ip->fixp->fx_tcbit = riscv_opts.relax;
-        }
+	  ip->fixp->fx_tcbit = riscv_opts.relax;
+	}
     }
 
   if (ip->insn_mo->insn_class == INSN_CLASS_XTTGS  ||
@@ -1925,7 +1925,7 @@ normalize_constant_expr (expressionS *ex)
   if ((ex->X_op == O_constant || ex->X_op == O_symbol)
       && IS_ZEXT_32BIT_NUM (ex->X_add_number))
     ex->X_add_number = (((ex->X_add_number & 0xffffffff) ^ 0x80000000)
-                        - 0x80000000);
+			- 0x80000000);
 }
 
 /* Fail if an expression EX is not a constant.  IP is the instruction using EX.
@@ -1939,7 +1939,7 @@ check_absolute_expr (struct riscv_cl_insn *ip, expressionS *ex,
     as_bad (_("unsupported large constant"));
   else if (maybe_csr && ex->X_op == O_symbol)
     as_bad (_("unknown CSR `%s'"),
-            S_GET_NAME (ex->X_add_symbol));
+	    S_GET_NAME (ex->X_add_symbol));
   else if (ex->X_op != O_constant)
     as_bad (_("instruction %s requires absolute expression"),
 	    ip->insn_mo->name);
@@ -1950,16 +1950,16 @@ static symbolS *
 make_internal_label (void)
 {
   return (symbolS *) local_symbol_make (FAKE_LABEL_NAME, now_seg, frag_now,
-                                        frag_now_fix ());
+					frag_now_fix ());
 }
 
 /* Load an entry from the GOT.  */
 
 static void
 pcrel_access (int destreg, int tempreg, expressionS *ep,
-              const char *lo_insn, const char *lo_pattern,
-              bfd_reloc_code_real_type hi_reloc,
-              bfd_reloc_code_real_type lo_reloc)
+	      const char *lo_insn, const char *lo_pattern,
+	      bfd_reloc_code_real_type hi_reloc,
+	      bfd_reloc_code_real_type lo_reloc)
 {
   expressionS ep2;
   ep2.X_op = O_symbol;
@@ -1972,16 +1972,16 @@ pcrel_access (int destreg, int tempreg, expressionS *ep,
 
 static void
 pcrel_load (int destreg, int tempreg, expressionS *ep, const char *lo_insn,
-            bfd_reloc_code_real_type hi_reloc,
-            bfd_reloc_code_real_type lo_reloc)
+	    bfd_reloc_code_real_type hi_reloc,
+	    bfd_reloc_code_real_type lo_reloc)
 {
   pcrel_access (destreg, tempreg, ep, lo_insn, "d,s,j", hi_reloc, lo_reloc);
 }
 
 static void
 pcrel_store (int srcreg, int tempreg, expressionS *ep, const char *lo_insn,
-             bfd_reloc_code_real_type hi_reloc,
-             bfd_reloc_code_real_type lo_reloc)
+	     bfd_reloc_code_real_type hi_reloc,
+	     bfd_reloc_code_real_type lo_reloc)
 {
   pcrel_access (srcreg, tempreg, ep, lo_insn, "t,s,q", hi_reloc, lo_reloc);
 }
@@ -1990,7 +1990,7 @@ pcrel_store (int srcreg, int tempreg, expressionS *ep, const char *lo_insn,
 
 static void
 riscv_call (int destreg, int tempreg, expressionS *ep,
-            bfd_reloc_code_real_type reloc)
+	    bfd_reloc_code_real_type reloc)
 {
   /* Ensure the jalr is emitted to the same frag as the auipc.  */
   frag_grow (8);
@@ -2022,15 +2022,15 @@ load_const (int reg, expressionS *ep)
     {
       /* Reduce to a signed 32-bit constant using SLLI and ADDI.  */
       while (((upper.X_add_number >> shift) & 1) == 0)
-        shift++;
+	shift++;
 
       upper.X_add_number = (int64_t) upper.X_add_number >> shift;
       load_const (reg, &upper);
 
       md_assemblef ("slli x%d, x%d, 0x%x", reg, reg, shift);
       if (lower.X_add_number != 0)
-        md_assemblef ("addi x%d, x%d, %" BFD_VMA_FMT "d", reg, reg,
-                      lower.X_add_number);
+	md_assemblef ("addi x%d, x%d, %" BFD_VMA_FMT "d", reg, reg,
+		      lower.X_add_number);
     }
   else
     {
@@ -2038,17 +2038,17 @@ load_const (int reg, expressionS *ep)
       int hi_reg = 0;
 
       if (upper.X_add_number != 0)
-        {
-          /* Discard low part and zero-extend upper immediate.  */
-          upper_imm = ((uint32_t)upper.X_add_number >> shift);
+	{
+	  /* Discard low part and zero-extend upper immediate.  */
+	  upper_imm = ((uint32_t)upper.X_add_number >> shift);
 
-          md_assemblef ("lui x%d, 0x%" BFD_VMA_FMT "x", reg, upper_imm);
-          hi_reg = reg;
-        }
+	  md_assemblef ("lui x%d, 0x%" BFD_VMA_FMT "x", reg, upper_imm);
+	  hi_reg = reg;
+	}
 
       if (lower.X_add_number != 0 || hi_reg == 0)
-        md_assemblef ("%s x%d, x%d, %" BFD_VMA_FMT "d", ADD32_INSN, reg, hi_reg,
-                      lower.X_add_number);
+	md_assemblef ("%s x%d, x%d, %" BFD_VMA_FMT "d", ADD32_INSN, reg, hi_reg,
+		      lower.X_add_number);
     }
 }
 
@@ -2179,7 +2179,7 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
     case M_LLA:
       /* Load the address of a symbol into a register.  */
       if (!IS_SEXT_32BIT_NUM (imm_expr->X_add_number))
-        as_bad (_("offset too large"));
+	as_bad (_("offset too large"));
 
       if (imm_expr->X_op == O_constant)
 	load_const (rd, imm_expr);
@@ -2193,87 +2193,87 @@ macro (struct riscv_cl_insn *ip, expressionS *imm_expr,
 
     case M_LA_TLS_GD:
       pcrel_load (rd, rd, imm_expr, "addi",
-                  BFD_RELOC_RISCV_TLS_GD_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_TLS_GD_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LA_TLS_IE:
       pcrel_load (rd, rd, imm_expr, LOAD_ADDRESS_INSN,
-                  BFD_RELOC_RISCV_TLS_GOT_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_TLS_GOT_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LB:
       pcrel_load (rd, rd, imm_expr, "lb",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LBU:
       pcrel_load (rd, rd, imm_expr, "lbu",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LH:
       pcrel_load (rd, rd, imm_expr, "lh",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LHU:
       pcrel_load (rd, rd, imm_expr, "lhu",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LW:
       pcrel_load (rd, rd, imm_expr, "lw",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LWU:
       pcrel_load (rd, rd, imm_expr, "lwu",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_LD:
       pcrel_load (rd, rd, imm_expr, "ld",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_FLW:
       pcrel_load (rd, rs1, imm_expr, "flw",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_FLD:
       pcrel_load (rd, rs1, imm_expr, "fld",
-                  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
+		  BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_I);
       break;
 
     case M_SB:
       pcrel_store (rs2, rs1, imm_expr, "sb",
-                   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
+		   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
       break;
 
     case M_SH:
       pcrel_store (rs2, rs1, imm_expr, "sh",
-                   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
+		   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
       break;
 
     case M_SW:
       pcrel_store (rs2, rs1, imm_expr, "sw",
-                   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
+		   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
       break;
 
     case M_SD:
       pcrel_store (rs2, rs1, imm_expr, "sd",
-                   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
+		   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
       break;
 
     case M_FSW:
       pcrel_store (rs2, rs1, imm_expr, "fsw",
-                   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
+		   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
       break;
 
     case M_FSD:
       pcrel_store (rs2, rs1, imm_expr, "fsd",
-                   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
+		   BFD_RELOC_RISCV_PCREL_HI20, BFD_RELOC_RISCV_PCREL_LO12_S);
       break;
 
     case M_CALL:
@@ -2360,7 +2360,7 @@ static const struct percent_op_match percent_op_null[] =
 
 static bool
 parse_relocation (char **str, bfd_reloc_code_real_type *reloc,
-                  const struct percent_op_match *percent_op)
+		  const struct percent_op_match *percent_op)
 {
   for ( ; percent_op->str; percent_op++)
     if (strncasecmp (*str, percent_op->str, strlen (percent_op->str)) == 0)
@@ -2407,7 +2407,7 @@ my_getExpression (expressionS *ep, char *str)
 
 static size_t
 my_getSmallExpression (expressionS *ep, bfd_reloc_code_real_type *reloc,
-                       char *str, const struct percent_op_match *percent_op)
+		       char *str, const struct percent_op_match *percent_op)
 {
   size_t reloc_index;
   unsigned crux_depth, str_depth, regno;
@@ -2438,14 +2438,14 @@ my_getSmallExpression (expressionS *ep, bfd_reloc_code_real_type *reloc,
       crux_depth = str_depth;
 
       /* Skip over whitespace and brackets, keeping count of the number
-         of brackets.  */
+	 of brackets.  */
       while (*str == ' ' || *str == '\t' || *str == '(')
-        if (*str++ == '(')
-          str_depth++;
+	if (*str++ == '(')
+	  str_depth++;
     }
   while (*str == '%'
-         && reloc_index < 1
-         && parse_relocation (&str, reloc, percent_op));
+	 && reloc_index < 1
+	 && parse_relocation (&str, reloc, percent_op));
 
   my_getExpression (ep, crux);
   str = expr_end;
@@ -2467,7 +2467,7 @@ my_getSmallExpression (expressionS *ep, bfd_reloc_code_real_type *reloc,
 
 static size_t
 my_getOpcodeExpression (expressionS *ep, bfd_reloc_code_real_type *reloc,
-                        char *str, const struct percent_op_match *percent_op)
+			char *str, const struct percent_op_match *percent_op)
 {
   const struct opcode_name_t *o = opcode_name_lookup (&str);
 
@@ -2578,10 +2578,10 @@ riscv_csr_insn_type (insn_t insn)
       || ((insn ^ MATCH_CSRRWI) & MASK_CSRRWI) == 0)
     return INSN_CSRRW;
   else if (((insn ^ MATCH_CSRRS) & MASK_CSRRS) == 0
-           || ((insn ^ MATCH_CSRRSI) & MASK_CSRRSI) == 0)
+	   || ((insn ^ MATCH_CSRRSI) & MASK_CSRRSI) == 0)
     return INSN_CSRRS;
   else if (((insn ^ MATCH_CSRRC) & MASK_CSRRC) == 0
-           || ((insn ^ MATCH_CSRRCI) & MASK_CSRRCI) == 0)
+	   || ((insn ^ MATCH_CSRRCI) & MASK_CSRRCI) == 0)
     return INSN_CSRRC;
   else
     return INSN_NOT_CSR;
@@ -2637,6 +2637,7 @@ riscv_is_priv_insn (insn_t insn)
 /* This routine assembles an instruction into its binary format.  As a
    side effect, it sets the global variable imm_reloc to the type of
    relocation to do if one of the operands is an address expression.  */
+
 static struct riscv_ip_error
 riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	  bfd_reloc_code_real_type *imm_reloc, htab_t hash)
@@ -2668,7 +2669,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	*asarg++ = '\0';
 	break;
       }
+
   insn = (struct riscv_opcode *) str_hash_find (hash, str);
+
   asargStart = asarg;
   imm12_math_op = 0;
   for ( ; insn && insn->name && strcmp (insn->name, str) == 0; insn++)
@@ -7950,6 +7953,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
   return error;
 }
+
 /* Similar to riscv_ip, but assembles an instruction according to the
    hardcode values of .insn directive.  */
 
@@ -8186,11 +8190,11 @@ riscv_after_parse_args (void)
   if (xlen == 0)
     {
       if (strcmp (default_arch, "riscv32") == 0)
-        xlen = 32;
+	xlen = 32;
       else if (strcmp (default_arch, "riscv64") == 0)
-        xlen = 64;
+	xlen = 64;
       else
-        as_bad ("unknown default architecture `%s'", default_arch);
+	as_bad ("unknown default architecture `%s'", default_arch);
     }
 
   /* Set default specs.  */
@@ -8234,7 +8238,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_RISCV_LO12_I:
     case BFD_RELOC_RISCV_LO12_S:
       bfd_putl32 (riscv_apply_const_reloc (fixP->fx_r_type, *valP)
-                  | bfd_getl32 (buf), buf);
+		  | bfd_getl32 (buf), buf);
       if (fixP->fx_addsy == NULL)
 	fixP->fx_done = true;
       relaxable = true;
@@ -8265,10 +8269,10 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_RISCV_TLS_DTPREL32:
     case BFD_RELOC_RISCV_TLS_DTPREL64:
       if (fixP->fx_addsy != NULL)
-        S_SET_THREAD_LOCAL (fixP->fx_addsy);
+	S_SET_THREAD_LOCAL (fixP->fx_addsy);
       else
-        as_bad_where (fixP->fx_file, fixP->fx_line,
-                      _("TLS relocation against a constant"));
+	as_bad_where (fixP->fx_file, fixP->fx_line,
+		      _("TLS relocation against a constant"));
       break;
 
     case BFD_RELOC_32:
@@ -8279,15 +8283,15 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	 Therefore, we cannot insert a relocation whose addend symbol is
 	 in .eh_frame.  Othrewise, the value may be adjusted twice.  */
       if (fixP->fx_addsy && fixP->fx_subsy
-          && (sub_segment = S_GET_SEGMENT (fixP->fx_subsy))
-          && strcmp (sub_segment->name, ".eh_frame") == 0
-          && S_GET_VALUE (fixP->fx_subsy)
-             == fixP->fx_frag->fr_address + fixP->fx_where)
-        {
-          fixP->fx_r_type = BFD_RELOC_RISCV_32_PCREL;
-          fixP->fx_subsy = NULL;
-          break;
-        }
+	  && (sub_segment = S_GET_SEGMENT (fixP->fx_subsy))
+	  && strcmp (sub_segment->name, ".eh_frame") == 0
+	  && S_GET_VALUE (fixP->fx_subsy)
+	     == fixP->fx_frag->fr_address + fixP->fx_where)
+	{
+	  fixP->fx_r_type = BFD_RELOC_RISCV_32_PCREL;
+	  fixP->fx_subsy = NULL;
+	  break;
+	}
       /* Fall through.  */
     case BFD_RELOC_64:
     case BFD_RELOC_16:
@@ -8378,14 +8382,14 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 
     case BFD_RELOC_RVA:
       /* If we are deleting this reloc entry, we must fill in the
-         value now.  This can happen if we have a .word which is not
-         resolved when it appears but is later defined.  */
+	 value now.  This can happen if we have a .word which is not
+	 resolved when it appears but is later defined.  */
       if (fixP->fx_addsy == NULL)
-        {
-          gas_assert (fixP->fx_size <= sizeof (valueT));
-          md_number_to_chars ((char *) buf, *valP, fixP->fx_size);
-          fixP->fx_done = 1;
-        }
+	{
+	  gas_assert (fixP->fx_size <= sizeof (valueT));
+	  md_number_to_chars ((char *) buf, *valP, fixP->fx_size);
+	  fixP->fx_done = 1;
+	}
       break;
 
     case BFD_RELOC_RISCV_JMP:
@@ -8477,29 +8481,29 @@ riscv_pre_output_hook (void)
   for (s = stdoutput->sections; s; s = s->next)
     for (frch = seg_info (s)->frchainP; frch; frch = frch->frch_next)
       {
-        fragS *frag;
+	fragS *frag;
 
-        for (frag = frch->frch_root; frag; frag = frag->fr_next)
-          {
-            if (frag->fr_type == rs_cfa)
-              {
-                expressionS exp;
-                expressionS *symval;
+	for (frag = frch->frch_root; frag; frag = frag->fr_next)
+	  {
+	    if (frag->fr_type == rs_cfa)
+	      {
+		expressionS exp;
+		expressionS *symval;
 
-                symval = symbol_get_value_expression (frag->fr_symbol);
-                exp.X_op = O_subtract;
-                exp.X_add_symbol = symval->X_add_symbol;
-                exp.X_add_number = 0;
-                exp.X_op_symbol = symval->X_op_symbol;
+		symval = symbol_get_value_expression (frag->fr_symbol);
+		exp.X_op = O_subtract;
+		exp.X_add_symbol = symval->X_add_symbol;
+		exp.X_add_number = 0;
+		exp.X_op_symbol = symval->X_op_symbol;
 
-                /* We must set the segment before creating a frag after all
-                   frag chains have been chained together.  */
-                subseg_set (s, frch->frch_subseg);
+		/* We must set the segment before creating a frag after all
+		   frag chains have been chained together.  */
+		subseg_set (s, frch->frch_subseg);
 
-                fix_new_exp (frag, (int) frag->fr_offset, 1, &exp, 0,
-                             BFD_RELOC_RISCV_CFA);
-              }
-          }
+		fix_new_exp (frag, (int) frag->fr_offset, 1, &exp, 0,
+			     BFD_RELOC_RISCV_CFA);
+	      }
+	  }
       }
 
   /* Restore the original segment info.  */
@@ -8569,7 +8573,7 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 
       s = riscv_opts_stack;
       if (s == NULL)
-        as_bad (_(".option pop with no .option push"));
+	as_bad (_(".option pop with no .option push"));
       else
 	{
 	  riscv_subset_list_t *release_subsets = riscv_subsets;
@@ -8791,16 +8795,16 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
   if (reloc->howto == NULL)
     {
       if ((fixp->fx_r_type == BFD_RELOC_16 || fixp->fx_r_type == BFD_RELOC_8)
-          && fixp->fx_addsy != NULL && fixp->fx_subsy != NULL)
-        {
-          /* We don't have R_RISCV_8/16, but for this special case,
-             we can use R_RISCV_ADD8/16 with R_RISCV_SUB8/16.  */
-          return reloc;
-        }
+	  && fixp->fx_addsy != NULL && fixp->fx_subsy != NULL)
+	{
+	  /* We don't have R_RISCV_8/16, but for this special case,
+	     we can use R_RISCV_ADD8/16 with R_RISCV_SUB8/16.  */
+	  return reloc;
+	}
 
       as_bad_where (fixp->fx_file, fixp->fx_line,
-                    _("cannot represent %s relocation in object file"),
-                    bfd_get_reloc_code_name (fixp->fx_r_type));
+		    _("cannot represent %s relocation in object file"),
+		    bfd_get_reloc_code_name (fixp->fx_r_type));
       return NULL;
     }
 
@@ -8906,7 +8910,7 @@ md_convert_frag_branch (fragS *fragp)
 
     case 4:
       reloc = RELAX_BRANCH_UNCOND (fragp->fr_subtype)
-              ? BFD_RELOC_RISCV_JMP : BFD_RELOC_12_PCREL;
+	      ? BFD_RELOC_RISCV_JMP : BFD_RELOC_12_PCREL;
       fixp = fix_new_exp (fragp, buf - (bfd_byte *)fragp->fr_literal,
 			  4, &exp, false, reloc);
       buf += 4;
@@ -8921,7 +8925,7 @@ md_convert_frag_branch (fragS *fragp)
   fixp->fx_line = fragp->fr_line;
 
   gas_assert (buf == (bfd_byte *)fragp->fr_literal
-              + fragp->fr_fix + fragp->fr_var);
+	      + fragp->fr_fix + fragp->fr_var);
 
   fragp->fr_fix += fragp->fr_var;
 }
@@ -8931,7 +8935,7 @@ md_convert_frag_branch (fragS *fragp)
 
 void
 md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT asec ATTRIBUTE_UNUSED,
-                 fragS *fragp)
+		 fragS *fragp)
 {
   gas_assert (RELAX_BRANCH_P (fragp->fr_subtype));
   md_convert_frag_branch (fragp);
@@ -9194,16 +9198,17 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
       old_xlen = xlen;
       attr = elf_known_obj_attributes_proc (stdoutput);
       if (!start_assemble)
-        riscv_set_arch (attr[Tag_RISCV_arch].s);
+	riscv_set_arch (attr[Tag_RISCV_arch].s);
       else
 	as_fatal (_("architecture elf attributes must set before "
 		    "any instructions"));
 
       if (old_xlen != xlen)
-        {
-          /* We must re-init bfd again if xlen is changed.  */
+	{
+	  /* We must re-init bfd again if xlen is changed.  */
 	  unsigned long mach = xlen == 64 ? bfd_mach_riscv64 : bfd_mach_riscv32;
 	  bfd_find_target (riscv_target_format (), stdoutput);
+
 	  if (! bfd_set_arch_mach (stdoutput, bfd_arch_riscv, mach))
 	    as_warn (_("could not set architecture and machine"));
 	}
