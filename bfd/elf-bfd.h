@@ -1538,7 +1538,6 @@ struct elf_backend_data
   /* Alternate EM_xxxx machine codes for this backend.  */
   int elf_machine_alt1;
   int elf_machine_alt2;
-  int elf_machine_alt3;
 
   const struct elf_size_info *s;
 

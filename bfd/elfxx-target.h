@@ -715,10 +715,6 @@
 #define ELF_MACHINE_ALT2 0
 #endif
 
-#ifndef ELF_MACHINE_ALT3
-#define ELF_MACHINE_ALT3 0
-#endif
-
 #ifndef elf_backend_size_info
 #define elf_backend_size_info _bfd_elfNN_size_info
 #endif
@@ -914,7 +910,6 @@ static const struct elf_backend_data elfNN_bed =
   elf_backend_relplt_name,
   ELF_MACHINE_ALT1,
   ELF_MACHINE_ALT2,
-  ELF_MACHINE_ALT3,
   &elf_backend_size_info,
   elf_backend_special_sections,
   elf_backend_got_header_size,

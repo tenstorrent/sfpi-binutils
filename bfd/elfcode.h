@@ -596,8 +596,6 @@ elf_object_p (bfd *abfd)
 	  || i_ehdrp->e_machine != ebd->elf_machine_alt1)
       && (ebd->elf_machine_alt2 == 0
 	  || i_ehdrp->e_machine != ebd->elf_machine_alt2)
-      && (ebd->elf_machine_alt3 == 0
-          || i_ehdrp->e_machine != ebd->elf_machine_alt3)
       && ebd->elf_machine_code != EM_NONE)
     goto got_wrong_format_error;
 
