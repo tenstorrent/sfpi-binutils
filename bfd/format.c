@@ -46,12 +46,10 @@ SUBSECTION
 #include "sysdep.h"
 #include "bfd.h"
 #include "libbfd.h"
-#include "elf-bfd.h"
-#include "assert.h"
+
 /* IMPORT from targets.c.  */
 extern const size_t _bfd_target_vector_entries;
 
-int riscv_machine_target = -1;
 /*
 FUNCTION
 	bfd_check_format

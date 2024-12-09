@@ -51,9 +51,6 @@
 #define itbl_init()
 #endif
 
-extern const bfd_target riscv_elf32_vec;
-extern struct riscv_set_options riscv_opts;
-
 #ifdef USING_CGEN
 /* Perform any cgen specific initialisation for gas.  */
 extern void gas_cgen_begin (void);
