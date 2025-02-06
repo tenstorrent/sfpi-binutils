@@ -245,6 +245,14 @@ could also be written as @samp{.insn 0x4, 0xc58533} or @samp{.insn 0xc58533}.
 When the @var{insn_length} is set, then assembler will check if the
 @var{value} is a valid @var{insn_length} bytes instruction.
 
+@cindex INSN directives
+@item .ttinsn @var{value}
+A raw unswizzled Tenstorrent SFPU or TT instruction. The value
+provided will be swizzled before storing, and thus disassemble
+correctly. For example @samp{.ttinsn 0x700cc000} will assemble an
+@samp{sfpload} instruction. (No validation on the encoding is
+performed.)
+
 @cindex @code{.attribute} directive, RISC-V
 @item .attribute @var{tag}, @var{value}
 Set the object attribute @var{tag} to @var{value}.

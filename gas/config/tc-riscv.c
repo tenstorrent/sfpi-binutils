@@ -7990,6 +7990,7 @@ riscv_ip_hardcode (char *str,
   insn = XNEW (struct riscv_opcode);
   insn->match = values[num - 1];
   create_insn (ip, insn);
+
   unsigned int bytes = riscv_insn_length (insn->match);
   if ((bytes < sizeof(values[0]) && values[num - 1] >> (8 * bytes) != 0)
       || (num == 2 && values[0] != bytes))
@@ -9063,6 +9064,28 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
+/* .insn but using tt's unswizzled number space.  */
+static void
+s_riscv_tt_insn (int x ATTRIBUTE_UNUSED)
+{
+  expressionS exp;
+
+  expression (&exp);
+  if (exp.X_op != O_constant)
+    {
+      as_bad ("value must be constant");
+      return;
+    }
+  demand_empty_rest_of_line ();
+  insn_t value = SFPU_OP_SWIZZLE((insn_t)exp.X_add_number);
+
+  riscv_mapping_state (MAP_INSN, 0);
+  int bytes = 4;
+  frag_grow (bytes);
+  for (char *p = frag_more (bytes); bytes--; value >>= 8)
+    *p++ = value;
+}
+
 /* Update architecture and privileged elf attributes.  If we don't set
    them, then try to output the default ones.  */
 
@@ -9295,6 +9318,7 @@ static const pseudo_typeS riscv_pseudo_table[] =
   {"attribute", s_riscv_attribute, 0},
   {"variant_cc", s_variant_cc, 0},
   {"float16", float_cons, 'h'},
+  {"ttinsn", s_riscv_tt_insn, 4},
 
   { NULL, NULL, 0 },
 };
