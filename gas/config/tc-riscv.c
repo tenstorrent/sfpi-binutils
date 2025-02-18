@@ -4411,10 +4411,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                         }
                       else if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
 			       || imm_expr->X_op != O_constant
-			       || imm_expr->X_add_number != 0)
+			       || imm_expr->X_add_number < 0
+			       || imm_expr->X_add_number > 3)
                         {
                           as_bad (_("bad value for instr_mod0 field, "
-                                    "value must be 0"));
+                                    "value must be 0..3"));
                           break;
                         }
                     }
