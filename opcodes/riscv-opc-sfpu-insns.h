@@ -119,7 +119,9 @@
 {"sfpstochrnd",0, INSN_CLASS_XTTBH,   "Je,Jb,Jc,Ji1,Jr1,Jr2", MATCH_SFPSTOCH_RND,  MASK_SFPSTOCH_RND,  sfp_match_opcode, 0 },
 {"sfparecip",  0, INSN_CLASS_XTTBH,   "Jh,Jg,Ji1",      MATCH_SFPARECIP,  MASK_SFPARECIP,  sfp_match_opcode, 0 },
 {"sfpgt",      0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1",   MATCH_SFPGT,      MASK_SFPGT,  sfp_match_opcode, 0 },
-{"sfpmul24",   0, INSN_CLASS_XTTBH,   "Je,Ja,Jb,Jc,Ji1", MATCH_SFPMUL24,   MASK_SFPMUL24,  sfp_match_opcode, 0 },
+/* Erratum, sfpmul24 pays attention to the op_c operand, so provide a
+   zero there.  */
+{"sfpmul24",   0, INSN_CLASS_XTTBH,   "Je,Ja,Jb,Ji1",   MATCH_SFPMUL24 | 0x900,   MASK_SFPMUL24,  sfp_match_opcode, 0 },
 {"sfple",      0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1",   MATCH_SFPLE,      MASK_SFPLE,  sfp_match_opcode, 0 },
 
 

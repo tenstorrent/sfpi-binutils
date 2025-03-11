@@ -196,9 +196,14 @@
 	sfpgt L0,L0,0,0
 	sfpgt L7,L15,4095,1
 
-	#sfpmul24	"Je,Ja,Jb,Jc,Ji1"
-	sfpmul24 L0,L0,L0,L0,0
-	sfpmul24 L7,L15,L15,L15,1
+	#sfpmul24	"Je,Ja,Jb,Ji1"
+	sfpmul24 L0,L0,L0,0
+	sfpmul24 L0,L0,L0,1
+	sfpmul24 L0,L0,L0,4
+	sfpmul24 L0,L0,L0,5
+	sfpmul24 L7,L0,L0,0
+	sfpmul24 L0,L15,L0,0
+	sfpmul24 L0,L0,L15,0
 
 	#sfple	"Jh,Jg,Jf,Ji1"
 	sfple L0,L0,0,0
