@@ -111,8 +111,11 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+4dfffffe[ 	]+sfploadmacro[ 	]+L7,8191,15,7
 [ 	]+[0-9a-f]+:[ 	]+38000002[ 	]+sfpstochrnd[ 	]+L0,L0,L0,0,0,0
 [ 	]+[0-9a-f]+:[ 	]+38fffdc6[ 	]+sfpstochrnd[ 	]+L7,L15,L15,1,1,31
-[ 	]+[0-9a-f]+:[ 	]+64000002[ 	]+sfparecip[ 	]+L0,L0,0x000,0
-[ 	]+[0-9a-f]+:[ 	]+67fffdc6[ 	]+sfparecip[ 	]+L7,L15,0xFFF,1
+[ 	]+[0-9a-f]+:[ 	]+64000002[ 	]+sfparecip[ 	]+L0,L0,0
+[ 	]+[0-9a-f]+:[ 	]+64000006[ 	]+sfparecip[ 	]+L0,L0,1
+[ 	]+[0-9a-f]+:[ 	]+6400000a[ 	]+sfparecip[ 	]+L0,L0,2
+[ 	]+[0-9a-f]+:[ 	]+640001c2[ 	]+sfparecip[ 	]+L7,L0,0
+[ 	]+[0-9a-f]+:[ 	]+64003c02[ 	]+sfparecip[ 	]+L0,L15,0
 [ 	]+[0-9a-f]+:[ 	]+5c000002[ 	]+sfpgt[ 	]+L0,L0,0x000,0
 [ 	]+[0-9a-f]+:[ 	]+5ffffdc6[ 	]+sfpgt[ 	]+L7,L15,0xFFF,1
 [ 	]+[0-9a-f]+:[ 	]+60000002[ 	]+sfpmul24[ 	]+L0,L0,L0,L0,0

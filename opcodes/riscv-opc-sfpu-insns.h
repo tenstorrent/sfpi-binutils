@@ -117,10 +117,10 @@
 {"sfploadmacro",0,INSN_CLASS_XTTBH,   "Jd1,Jxa3,Jm1,Jxa2",MATCH_SFPLDMACRO,MASK_SFPLDMACRO,sfp_match_opcode, 0 },
 {"sfpstochrnd",0, INSN_CLASS_XTTWH,   "Je,Jb,Jc,Ji1,Jr1,Jr2", MATCH_SFPSTOCH_RND,  MASK_SFPSTOCH_RND,  sfp_match_opcode, 0 },
 {"sfpstochrnd",0, INSN_CLASS_XTTBH,   "Je,Jb,Jc,Ji1,Jr1,Jr2", MATCH_SFPSTOCH_RND,  MASK_SFPSTOCH_RND,  sfp_match_opcode, 0 },
-{"sfparecip",  0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1",   MATCH_SFPARECIP,  MASK_SFPARECIP,  sfp_match_opcode, INSN_ALIAS },
-{"sfpgt",      0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1",   MATCH_SFPGT,      MASK_SFPGT,  sfp_match_opcode, INSN_ALIAS },
-{"sfpmul24",   0, INSN_CLASS_XTTBH,   "Je,Ja,Jb,Jc,Ji1", MATCH_SFPMUL24,   MASK_SFPMUL24,  sfp_match_opcode, INSN_ALIAS },
-{"sfple",      0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1",   MATCH_SFPLE,      MASK_SFPLE,  sfp_match_opcode, INSN_ALIAS },
+{"sfparecip",  0, INSN_CLASS_XTTBH,   "Jh,Jg,Ji1",      MATCH_SFPARECIP,  MASK_SFPARECIP,  sfp_match_opcode, 0 },
+{"sfpgt",      0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1",   MATCH_SFPGT,      MASK_SFPGT,  sfp_match_opcode, 0 },
+{"sfpmul24",   0, INSN_CLASS_XTTBH,   "Je,Ja,Jb,Jc,Ji1", MATCH_SFPMUL24,   MASK_SFPMUL24,  sfp_match_opcode, 0 },
+{"sfple",      0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1",   MATCH_SFPLE,      MASK_SFPLE,  sfp_match_opcode, 0 },
 
 
 /* DMA Reg Instructions */
