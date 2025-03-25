@@ -152,7 +152,12 @@
 
 	#sfpcast	"Je,Jc,Ji2"
 	sfpcast L0,L0,0
-	sfpcast L7,L15,1
+	sfpcast L7,L0,0
+	sfpcast L0,L15,0
+	sfpcast L0,L0,0
+	sfpcast L0,L0,1
+	sfpcast L0,L0,2
+	sfpcast L0,L0,3
 
 	#sfpshft2	"Je,Jc,Jf,Ji2"
 	sfpshft2 L0,L0,0,0
