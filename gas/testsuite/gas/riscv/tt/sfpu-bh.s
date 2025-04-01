@@ -29,10 +29,13 @@
 	sfpaddi L7,65535,0
 
 	#sfpdivp2	"Jh,Jg,Jf,Ji2"
-	sfpdivp2 L0,L0,-16384,0
-	sfpdivp2 L7,L15,16383,0
-	sfpdivp2 L0,L0,-2048,1
-	sfpdivp2 L7,L15,2047,1
+	sfpdivp2 L0,L0,0,0
+	sfpdivp2 L7,L0,0,0
+	sfpdivp2 L0,L15,0,0
+	sfpdivp2 L0,L0,0,1
+	sfpdivp2 L0,L0,-1,0
+	sfpdivp2 L0,L0,-0x800,0
+	sfpdivp2 L0,L0,+0x7ff,0
 
 	#sfpexexp	"Jh,Jg,Ji4"
 	sfpexexp L0,L0,0
@@ -46,19 +49,30 @@
 
 	#sfpiadd	"Jh,Jg,Jf,Ji5"
 	sfpiadd L0,L0,0,0
-	sfpiadd L1,L2,4095,2
-	sfpiadd L2,L4,-2048,4
-	sfpiadd L3,L6,2047,6
-	sfpiadd L4,L9,-2048,8
-	sfpiadd L5,L11,2047,10
-	sfpiadd L6,L13,-2048,12
-	sfpiadd L7,L15,2047,14
+	sfpiadd L7,L0,0,0
+	sfpiadd L0,L15,0,0
+	sfpiadd L0,L0,0,1
+	sfpiadd L0,L0,0,2
+	sfpiadd L0,L0,0,4
+	sfpiadd L0,L0,0,5
+	sfpiadd L0,L0,0,6
+	sfpiadd L0,L0,0,8
+	sfpiadd L0,L0,0,9
+	sfpiadd L0,L0,0,10
+	sfpiadd L0,L0,0,12
+	sfpiadd L0,L0,0,13
+	sfpiadd L0,L0,0,14
+	sfpiadd L0,L0,-0x800,1
+	sfpiadd L0,L0,0x7ff,1
 
 	#sfpshft	"Jh,Jg,Jf,Ji2"
 	sfpshft L0,L0,0,0
-	sfpshft L3,L7,4095,0
-	sfpshft L4,L8,-2048,1
-	sfpshft L7,L15,2047,1
+	sfpshft L7,L0,0,0
+	sfpshft L0,L15,0,0
+	sfpshft L0,L0,0,1
+	sfpshft L0,L0,-1,1
+	sfpshft L0,L0,-0x800,1
+	sfpshft L0,L0,+0x7ff,1
 
 	#sfpabs	"Jh,Jg,Ji2"
 	sfpabs L0,L0,0
@@ -79,21 +93,25 @@
 
 	#sfpsetexp	"Jh,Jg,Jf,Ji2"
 	sfpsetexp L0,L0,0,0
-	sfpsetexp L3,L7,4095,0
-	sfpsetexp L4,L8,0,1
-	sfpsetexp L7,L15,4095,1
+	sfpsetexp L7,L0,0,0
+	sfpsetexp L0,L15,0,0
+	sfpsetexp L0,L0,0,1
+	sfpsetexp L0,L0,0,2
+	sfpsetexp L0,L0,4095,1
 
 	#sfpsetman	"Jh,Jg,Jf,Ji2"
 	sfpsetman L0,L0,0,0
-	sfpsetman L3,L7,4095,0
-	sfpsetman L4,L8,0,1
-	sfpsetman L7,L15,4095,1
+	sfpsetman L7,L0,0,0
+	sfpsetman L0,L15,0,0
+	sfpsetman L0,L0,0,1
+	sfpsetman L0,L0,4095,1
 
 	#sfpsetsgn	"Jh,Jg,Jf,Ji2"
 	sfpsetsgn L0,L0,0,0
-	sfpsetsgn L3,L7,4095,0
-	sfpsetsgn L4,L8,0,1
-	sfpsetsgn L7,L15,4095,1
+	sfpsetsgn L7,L0,0,0
+	sfpsetsgn L0,L15,0,0
+	sfpsetsgn L0,L0,0,1
+	sfpsetsgn L0,L0,4095,1
 
 	#sfpmad	"Je,Ja,Jb,Jc,Jo"
 	sfpmad L0,L0,L15,L0,0
@@ -108,10 +126,13 @@
 	sfpmul L7,L15,L0,L15,0
 
 	#sfpencc	"Jf,Ji6"
-	sfpencc 4095,0
+	sfpencc 0,0
+	sfpencc 0,1
+	sfpencc 0,2
 	sfpencc 4095,2
-	sfpencc 4095,8
-	sfpencc 4095,10
+	sfpencc 0,8
+	sfpencc 0,9
+	sfpencc 0,10
 
 	#sfpcompc	""
 	sfpcompc
@@ -125,13 +146,18 @@
 	sfppopc 15
 
 	#sfpsetcc	"Jg,Jf,Ji1"
-	sfpsetcc L0,4095,0
-	sfpsetcc L15,4095,15
+	sfpsetcc L0,0,0
+	sfpsetcc L7,0,0
+	sfpsetcc L0,0,15
+	sfpsetcc L0,4095,1
 
 	#sfpmov	"Jh,Jg,Ji2"
 	sfpmov L0,L0,0
-	sfpmov L7,L15,2
-	sfpmov L7,L15,8
+	sfpmov L7,L0,0
+	sfpmov L0,L15,0
+	sfpmov L0,L0,1
+	sfpmov L0,L0,2
+	sfpmov L0,L0,8
 
 	#ttnop	""
 	ttnop
@@ -161,7 +187,14 @@
 
 	#sfpshft2	"Je,Jc,Jf,Ji2"
 	sfpshft2 L0,L0,0,0
-	sfpshft2 L7,L15,6,1
+	sfpshft2 L7,L0,0,0
+	sfpshft2 L0,L15,0,0
+	sfpshft2 L0,L0,0,1
+	sfpshft2 L0,L0,0,2
+	sfpshft2 L0,L0,0,3
+	sfpshft2 L0,L0,0,4
+	sfpshft2 L0,L0,0,5
+	sfpshft2 L0,L0,0,6
 
 	#sfpconfig	"Jh,Jj,Ji7"
 	sfpconfig 0,0,0
@@ -199,7 +232,13 @@
 
 	#sfpgt	"Jh,Jg,Jf,Ji1"
 	sfpgt L0,L0,0,0
-	sfpgt L7,L15,4095,1
+	sfpgt L7,L0,0,0
+	sfpgt L0,L15,0,0
+	sfpgt L0,L0,0,1
+	sfpgt L0,L0,0,2
+	sfpgt L0,L0,0,4
+	sfpgt L0,L0,0,8
+	sfpgt L0,L0,0,15
 
 	#sfpmul24	"Je,Ja,Jb,Ji1"
 	sfpmul24 L0,L0,L0,0
@@ -212,7 +251,13 @@
 
 	#sfple	"Jh,Jg,Jf,Ji1"
 	sfple L0,L0,0,0
-	sfple L7,L15,4095,1
+	sfple L7,L0,0,0
+	sfple L0,L15,0,0
+	sfple L0,L0,0,1
+	sfple L0,L0,0,2
+	sfple L0,L0,0,4
+	sfple L0,L0,0,8
+	sfple L0,L0,0,15
 
 	#ttadddmareg	"Js4,Js3,Js2,Js1"
 	ttadddmareg 0,0,0,0
