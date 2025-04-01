@@ -33,7 +33,7 @@
 {"sfpiadd",    0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji5555-2222", MATCH_SFPIADD,   MASK_SFPIADD,   sfp_match_opcode, INSN_ALIAS },
 {"sfpshft",    0, INSN_CLASS_XTTGS,   "Jh,Jg,Jf,Ji1-2", MATCH_SFPSHFT,   MASK_SFPSHFT,   sfp_match_opcode, INSN_ALIAS },
 {"sfpshft",    0, INSN_CLASS_XTTWH,   "Jh,Jg,Jf,Ji1-2", MATCH_SFPSHFT,   MASK_SFPSHFT,   sfp_match_opcode, INSN_ALIAS },
-{"sfpshft",    0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Ji1-2", MATCH_SFPSHFT,   MASK_SFPSHFT,   sfp_match_opcode, INSN_ALIAS },
+{"sfpshft",    0, INSN_CLASS_XTTBH,   "Jh,Jg,Jf,Jid-a2", MATCH_SFPSHFT,   MASK_SFPSHFT,   sfp_match_opcode, INSN_ALIAS },
 {"sfpabs",     0, INSN_CLASS_XTTGS,   "Jh,Jg,Ji3",      MATCH_SFPABS,    MASK_SFPABS,    sfp_match_opcode, INSN_ALIAS },
 {"sfpabs",     0, INSN_CLASS_XTTWH,   "Jh,Jg,Ji3",      MATCH_SFPABS,    MASK_SFPABS,    sfp_match_opcode, INSN_ALIAS },
 {"sfpabs",     0, INSN_CLASS_XTTBH,   "Jh,Jg,Ji3",      MATCH_SFPABS,    MASK_SFPABS,    sfp_match_opcode, INSN_ALIAS },
