@@ -70,6 +70,10 @@
 	sfpshft L7,L0,0,0
 	sfpshft L0,L15,0,0
 	sfpshft L0,L0,0,1
+	sfpshft L0,L0,0,2
+	sfpshft L0,L0,0,3
+	sfpshft L0,L0,0,5
+	sfpshft L0,L0,0,7
 	sfpshft L0,L0,-1,1
 	sfpshft L0,L0,-0x800,1
 	sfpshft L0,L0,+0x7ff,1
