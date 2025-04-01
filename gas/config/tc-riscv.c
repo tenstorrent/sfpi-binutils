@@ -1222,8 +1222,26 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	      case 'f': USE_BITS (OP_MASK_YCC_IMM12_MATH, OP_SH_YCC_IMM12_MATH); break;
 	      case 'g': USE_BITS (OP_MASK_YCC_LREG_C, OP_SH_YCC_LREG_C); break;
 	      case 'h': USE_BITS (OP_MASK_YCC_LREG_DEST, OP_SH_YCC_LREG_DEST); break;
-	      /* 'i' can have a numeric extension for various purposes.  Hence increment p */
-	      case 'i': USE_BITS (OP_MASK_YCC_INSTR_MOD1, OP_SH_YCC_INSTR_MOD1); oparg++; break;
+	      case 'i':
+		{
+		  /* 'i' has encoded operands: HEX([+-]HEX)? */
+		  unsigned long mask_nc = 0;
+		  unsigned long mask_cst = 0;
+		  char *eptr;
+
+		  mask_nc = strtoul(oparg + 1, &eptr, 16);
+		  if (*eptr == '-' || *eptr == '+')
+		    mask_cst = strtoul(eptr + 1, &eptr, 16);
+		  if (!((mask_nc | mask_cst) & 0xffff)
+		      || ((mask_nc | mask_cst) & ~0xffffUL)
+		      || (mask_nc & mask_cst))
+		    goto unknown_validate_operand;
+		  /* Update oparg here so the failure diagnostic
+		     points at the 'i'.  */
+		  oparg = eptr - 1;
+		  USE_BITS (OP_MASK_YCC_INSTR_MOD1, OP_SH_YCC_INSTR_MOD1);
+		  break;
+		}
 	      case 'j': USE_BITS (OP_MASK_YMULI_IMM16_MATH, OP_SH_YMULI_IMM16_MATH); break;
 	      case 'k':
 		switch (*++oparg)
@@ -3736,329 +3754,63 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   continue;
                 case 'i': /* CC Instructions instr_mod1 */
                   {
-                    char x = *++oparg;
-                    if (x == '1')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 15)
-                          {
-                            as_bad (_("bad value for instr_mod1 field, "
-                                      "value must be 0...15"));
-                            break;
-                          }
-                      }
-                    else if (x == '2')
-                      {
-                        if (insn->insn_class == INSN_CLASS_XTTWH
-			    && 0 == strcmp (insn->name, "sfpmov"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || (imm_expr->X_add_number != 0
-				    && imm_expr->X_add_number != 1
-				    && imm_expr->X_add_number != 2
-				    && imm_expr->X_add_number != 8))
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...2 or 8"));
-                                break;
-                              }
-                          }
-                        else if (insn->insn_class == INSN_CLASS_XTTWH
-				 && 0 == strcmp(insn->name, "sfpsetexp"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || imm_expr->X_add_number < 0
-                                || imm_expr->X_add_number > 2)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...2"));
-                                break;
-                              }
+		    // operand encoded as: HEX([+-]HEX)?
+		    unsigned long mask_nc = strtoul(oparg + 1, (char **)&oparg, 16);
+		    bool is_signed = *oparg == '-';
+		    unsigned long mask_cst = (is_signed || *oparg == '+'
+					      ? strtoul(oparg + 1, (char **)&oparg, 16)
+					      : 0);
+		    oparg--;
 
-                            if (imm_expr->X_add_number == 1
-				&& (imm12_math_op > 4095 || imm12_math_op < 0))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be 0...4095"));
-                                break;
-                              }
-                          }
-                        else if (insn->insn_class == INSN_CLASS_XTTWH
-				 && 0 == strcmp (insn->name, "sfpshft2"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || imm_expr->X_add_number < 0
-                                || imm_expr->X_add_number > 6)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...6"));
-                                break;
-                              }
-                          }
-                        else if (insn->insn_class == INSN_CLASS_XTTBH
-				 && 0 == strcmp (insn->name, "sfpmov"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || (imm_expr->X_add_number != 0
-				    && imm_expr->X_add_number != 1
-				    && imm_expr->X_add_number != 2
-				    && imm_expr->X_add_number != 8))
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...2 or 8"));
-                                break;
-                              }
-                          }
-                        else if (insn->insn_class == INSN_CLASS_XTTBH  &&
-                                 0 == strcmp (insn->name, "sfpsetexp"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || imm_expr->X_add_number < 0
-                                || imm_expr->X_add_number > 2)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...2"));
-                                break;
-                              }
+		    if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+			|| imm_expr->X_op != O_constant)
+		      {
+			as_bad (_("instr_mod1 field must be a constant"));
+			break;
+		      }
 
-                            if (imm_expr->X_add_number == 1
-				&& (imm12_math_op > 4095 || imm12_math_op < 0))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be 0...4095"));
-                                break;
-                              }
-                          }
-                        else if (insn->insn_class == INSN_CLASS_XTTBH
-				 && 0 == strcmp (insn->name, "sfpshft2"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || imm_expr->X_add_number < 0
-                                || imm_expr->X_add_number > 6)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...6"));
-                                break;
-                              }
-                          }
-                        else if (insn->insn_class == INSN_CLASS_XTTBH
-				 && 0 == strcmp (insn->name, "sfpcast"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || imm_expr->X_add_number < 0
-                                || imm_expr->X_add_number > 3)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...3"));
-                                break;
-                              }
-                          }
-                        else
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || imm_expr->X_add_number < 0
-                                || imm_expr->X_add_number > 1)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...1"));
-                                break;
-                              }
-                          }
+		    if (imm_expr->X_add_number < 0
+			|| imm_expr->X_add_number > 15)
+		      {
+			as_bad (_("instr_mod1 field must be in range [0,15]"));
+			break;
+		      }
 
-                        if (imm_expr->X_add_number == 1)
-                          {
-                            if (0 == strcmp (insn->name, "sfpdivp2")
-				&& (imm12_math_op > 2047 || imm12_math_op < -2048))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be -2048...2047"));
-                                break;
-                              }
-                            if (0 == strcmp (insn->name, "sfpsetexp")
-				&& (imm12_math_op > 4095 || imm12_math_op < 0))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be 0...4095"));
-                                break;
-                              }
-                            if (0 == strcmp (insn->name, "sfpshft")
-				&& (imm12_math_op > 2047 || imm12_math_op < -2048))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be -2048...2047"));
-                                break;
-                              }
-                            if (0 == strcmp (insn->name, "sfpsetman")
-				&& (imm12_math_op > 4095 || imm12_math_op < 0))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be 0...4095"));
-                                break;
-                              }
-                            if (0 == strcmp (insn->name, "sfpsetsgn")
-				&& (imm12_math_op > 4095 || imm12_math_op < 0))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be 0...4095"));
-                                break;
-                              }
-                          }
-                      }
-                    else if (x == '3')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number == 2
-                            || imm_expr->X_add_number > 3)
-                          {
-                            as_bad (_("bad value for instr_mod1 field, "
-                                      "value must be 0, 1 or 3"));
-                            break;
-                          }
-
-                        if ((0 == strcmp (insn->name, "sfpmuli")
-			     || 0 == strcmp (insn->name, "sfpaddi"))
-			    && insn->insn_class == INSN_CLASS_XTTWH
-			    && imm_expr->X_add_number != 0)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0"));
-                            break;
-                          }
-                        if ((0 == strcmp (insn->name, "sfpmuli")
-			     || 0 == strcmp (insn->name, "sfpaddi"))
-			    && insn->insn_class == INSN_CLASS_XTTBH
-			    && imm_expr->X_add_number != 0)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0"));
-                            break;
-                          }
-
-                      }
-                    else if (x == '4')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || (imm_expr->X_add_number > 3
-				&& imm_expr->X_add_number < 8)
-                            || imm_expr->X_add_number > 11)
-                          {
-                            as_bad (_("bad value for instr_mod1 field, "
-                                      "value must be 0...3 or 8...11"));
-                            break;
-                          }
-                      }
-                    else if (x == '5')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number == 3
-                            || imm_expr->X_add_number == 7
-                            || imm_expr->X_add_number == 11
-                            || imm_expr->X_add_number > 14)
-                          {
-                            as_bad (_("bad value for instr_mod1 field, "
-                                      "value must be 0...14, but cannot be 3, 7 or 11"));
-                            break;
-                          }
-
-                        if (imm_expr->X_add_number == 1
-                            || imm_expr->X_add_number == 5
-                            || imm_expr->X_add_number == 9)
-                          {
-                            if (0 == strcmp (insn->name, "sfpiadd")
-				&& (imm12_math_op > 2047 || imm12_math_op < -2048))
-                              {
-                                as_bad (_("bad value for imm12_math field, "
-                                          "value must be -2048...2047"));
-                                break;
-                              }
-                          }
-                      }
-                    else if (x == '6')
-                      {
-                        if (insn->insn_class == INSN_CLASS_XTTWH
-			    && 0 == strcmp (insn->name, "sfplz"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || (imm_expr->X_add_number & 0x1) != 0)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0,2,4,6,8,10,12,14"));
-                                break;
-                              }
-                          }
-                        else if (insn->insn_class == INSN_CLASS_XTTBH
-				 && 0 == strcmp (insn->name, "sfplz"))
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || (imm_expr->X_add_number & 0x1) != 0)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0,2,4,6,8,10,12,14"));
-                                break;
-                              }
-                          }
-                        else
-                          {
-                            if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                                || imm_expr->X_op != O_constant
-                                || imm_expr->X_add_number < 0
-                                || (imm_expr->X_add_number > 2
-				    && imm_expr->X_add_number < 8)
-                                || imm_expr->X_add_number > 10)
-                              {
-                                as_bad (_("bad value for instr_mod1 field, "
-                                          "value must be 0...2 or 8...10"));
-                                break;
-                              }
-                          }
-                      }
-                    else if (x == '7')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number == 9
-                            || imm_expr->X_add_number == 11
-                            || imm_expr->X_add_number == 13
-                            || imm_expr->X_add_number > 14)
-                          {
-                            as_bad (_("bad value for instr_mod1 field, "
-                                      "value must be 0...14, but cannot be 9, 11 or 13"));
-                            break;
-                          }
-                      }
-                    else if (x == '8')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 8)
-                          {
-                            as_bad (_("bad value for instr_mod1 field, "
-                                      "value must be 0...8"));
-                            break;
-                          }
-                      }
+		    if ((1u << imm_expr->X_add_number) & mask_nc)
+		      {
+			if (imm12_math_op != 0)
+			  {
+			    as_bad (_("imm12_math field must be 0"));
+			    break;
+			  }
+		      }
+		    else if ((1u << imm_expr->X_add_number) & mask_cst)
+		      {
+			if (is_signed)
+			  {
+			    if (imm12_math_op < -(1 << 11)
+				|| imm12_math_op >= +(1 << 11))
+			      {
+				as_bad (_("imm12_math field must be in range [-2048,2047]"));
+				break;
+			      }
+			  }
+			else
+			  {
+			    if (imm12_math_op < 0
+				|| imm12_math_op >= +(1 << 12))
+			      {
+				as_bad (_("imm12_math field must be in range [0,4095]"));
+				break;
+			      }
+			  }
+		      }
+		    else
+		      {
+			as_bad (_("unsupported value for instr_mod1 field"));
+			break;
+		      }
                   }
-
                   INSERT_OPERAND (YCC_INSTR_MOD1, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
                   asarg = expr_end;

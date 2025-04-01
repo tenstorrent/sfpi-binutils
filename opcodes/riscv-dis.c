@@ -584,41 +584,15 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  print (info->stream, dis_style_text, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
 		break;
 	      case 'i': /* CC Instructions instr_mod1 */
-		switch (*++oparg)
-		  {
-		  case '1':
-		    print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (YCC_INSTR_MOD1, l)); break;
-		  case '2':
-		    switch (EXTRACT_OPERAND (SFPU_OP, l))
-		      {
-		      case 0x76:  /* SFPDIVP2 */
-		      case 0x7A:  /* SFPSHFT */
-			print (info->stream, dis_style_text, "%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
-			break;
-		      case 0x82:  /* SFPSETEXP */
-		      case 0x83:  /* SFPSETMAN */
-			print (info->stream, dis_style_text, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
-			break;
-		      default:
-			print (info->stream, dis_style_text, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
-			break;
-		      }
-		    break;
-		  case '5':
-		    switch (EXTRACT_OPERAND (SFPU_OP, l))
-		      {
-		      case 0x79:
-			print (info->stream, dis_style_text, "%d", ((short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
-			break;
-		      default:
-			print (info->stream, dis_style_text, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
-			break;
-		      }
-		    break;
-		  default:
-		    print (info->stream, dis_style_text, "%u", ((unsigned short)EXTRACT_OPERAND (YCC_INSTR_MOD1, l)));
-		    break;
-		  }
+		// Skip encoding.
+		do
+		  ++oparg;
+		while ((*oparg >= '0' && *oparg <= '9')
+		       || (*oparg >= 'a' && *oparg <= 'f')
+		       || *oparg == '-' || *oparg == '+');
+		oparg--;
+
+		print (info->stream, dis_style_text, "%u", (unsigned)EXTRACT_OPERAND (YCC_INSTR_MOD1, l));
 		break;
 	      case 'j': /* imm16_math */
 		print (info->stream, dis_style_text, "%d", ((short)EXTRACT_OPERAND (YMULI_IMM16_MATH, l)));
