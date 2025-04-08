@@ -1262,8 +1262,21 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		  case '4': USE_BITS (OP_MASK_WREPLAY_LOAD_MODE, OP_SH_WREPLAY_LOAD_MODE); break;
 		  }
 		break;
-	      /* 'm' can have a numeric extension for various purposes.  Hence increment p */
-	      case 'm': USE_BITS (OP_MASK_YLOADSTORE_INSTR_MOD0, OP_SH_YLOADSTORE_INSTR_MOD0); oparg++; break;
+	      case 'm':
+		{
+		  unsigned long mask = 0;
+		  char *eptr;
+
+		  mask = strtoul(oparg + 1, &eptr, 16);
+		  if (!(mask & 0xffff)
+		      || (mask & ~0xffffUL))
+		    goto unknown_validate_operand;
+		  /* Update oparg here so the failure diagnostic
+		     points at the 'i'.  */
+		  oparg = eptr - 1;
+		  USE_BITS (OP_MASK_YLOADSTORE_INSTR_MOD0, OP_SH_YLOADSTORE_INSTR_MOD0);
+		  break;
+		}
 	      case 'n': USE_BITS (OP_MASK_YDEST_REG_ADDR, OP_SH_YDEST_REG_ADDR); break;
 	      case 'o': USE_BITS (OP_MASK_YMULADD_INSTR_MOD0, OP_SH_YMULADD_INSTR_MOD0); break;
 	      case 'p': USE_BITS (OP_MASK_WLOADSTORE_ADDR_MODE, OP_SH_WLOADSTORE_ADDR_MODE); break;
@@ -3977,128 +3990,32 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                     }
                   continue;
 
-                case 'm': /* load/store instr_mod0 */
+                case 'm': /* load/store etc instr_mod0 */
                   {
-                    char x = *++oparg;
-                    if (x == '1')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 15)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...15"));
-                            break;
-                          }
+		    // operand encoded as: HEX
+		    unsigned long mask = strtoul(oparg + 1, (char **)&oparg, 16);
+		    oparg--;
+		    
+		    if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+			|| imm_expr->X_op != O_constant)
+		      {
+			as_bad (_("instr_mod0 field must be a constant"));
+			break;
+		      }
 
-                        if (insn->insn_class == INSN_CLASS_XTTWH
-			    && 0 == strcmp (insn->name, "sfploadmacro")
-			    && (imm_expr->X_add_number == 10
-				|| imm_expr->X_add_number == 11))
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...9 or 12...15"));
-                            break;
-                          }
+		    if (imm_expr->X_add_number < 0
+			|| imm_expr->X_add_number > 15)
+		      {
+			as_bad (_("instr_mod0 field must be in range [0,15]"));
+			break;
+		      }
 
-                        if (insn->insn_class == INSN_CLASS_XTTWH
-			    && (0 == strcmp (insn->name, "sfpload")
-				|| 0 == strcmp (insn->name, "sfpstore"))
-			    && imm_expr->X_add_number == 11)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...10 or 12...15"));
-                            break;
-                          }
-
-                        if (insn->insn_class == INSN_CLASS_XTTWH
-			    && 0 == strcmp (insn->name, "sfploadi")
-			    && ((imm_expr->X_add_number > 4
-				 && imm_expr->X_add_number < 8)
-				|| imm_expr->X_add_number > 10))
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...4 or 8...10"));
-                            break;
-                          }
-                        if (insn->insn_class == INSN_CLASS_XTTBH
-			    && 0 == strcmp (insn->name, "sfploadmacro")
-			    && (imm_expr->X_add_number == 10
-				|| imm_expr->X_add_number == 11))
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...9 or 12...15"));
-                            break;
-                          }
-
-                        if (insn->insn_class == INSN_CLASS_XTTBH
-			    && (0 == strcmp (insn->name, "sfpload")
-				|| 0 == strcmp (insn->name, "sfpstore"))
-			    && imm_expr->X_add_number == 11)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...10 or 12...15"));
-                            break;
-                          }
-
-                        if (insn->insn_class == INSN_CLASS_XTTBH
-			    && 0 == strcmp(insn->name, "sfploadi")
-			    && ((imm_expr->X_add_number > 4
-				 && imm_expr->X_add_number < 8)
-				|| imm_expr->X_add_number > 10))
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...4 or 8...10"));
-                            break;
-                          }
-
-                      }
-                    else if (x == '2')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || (imm_expr->X_add_number != 0
-				&& imm_expr->X_add_number != 2))
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0 or 2"));
-                            break;
-                          }
-                      }
-                    else if (x == '3')
-                      {
-                        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-                            || imm_expr->X_op != O_constant
-                            || imm_expr->X_add_number < 0
-                            || imm_expr->X_add_number > 7)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0...7"));
-                            break;
-                          }
-
-                        if (insn->insn_class == INSN_CLASS_XTTWH
-			    && 0 == strcmp (insn->name, "sfplut")
-			    && imm_expr->X_add_number != 0
-			    && imm_expr->X_add_number != 4)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0 or 4"));
-                            break;
-                          }
-                        if (insn->insn_class == INSN_CLASS_XTTBH
-			    && 0 == strcmp (insn->name, "sfplut")
-			    && imm_expr->X_add_number != 0
-			    && imm_expr->X_add_number != 4)
-                          {
-                            as_bad (_("bad value for instr_mod0 field, "
-                                      "value must be 0 or 4"));
-                            break;
-                          }
-                      }
+		    if (!((1u << imm_expr->X_add_number) & mask))
+		      {
+			as_bad (_("unsupported value for instr_mod0 field"));
+			break;
+		      }
                   }
-
                   INSERT_OPERAND (YLOADSTORE_INSTR_MOD0, *ip, imm_expr->X_add_number);
                   imm_expr->X_op = O_absent;
                   asarg = expr_end;
