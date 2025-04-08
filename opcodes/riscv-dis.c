@@ -633,8 +633,13 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		}
 		break;
 	      case 'm': /* load/store instr_mod0 */
+		// Skip encoding.
+		do
+		  ++oparg;
+		while ((*oparg >= '0' && *oparg <= '9')
+		       || (*oparg >= 'a' && *oparg <= 'f'));
+		oparg--;
 		print (info->stream, dis_style_text, "%ld", EXTRACT_OPERAND (YLOADSTORE_INSTR_MOD0, l));
-		++oparg;
 		break;
 	      case 'n': /* dest_reg_addr */
 		print (info->stream, dis_style_text, "%d", ((short)EXTRACT_OPERAND (YDEST_REG_ADDR, l)));
