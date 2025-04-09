@@ -2,7 +2,11 @@
 
 	# sfpload	"Jd1,Jxa3,Jm1,Jxa2"
 	sfpload L0,0,0,0
-	sfpload L7,8191,15,7
+	sfpload L7,0,0,0
+	sfpload L0,-4096,0,0
+	sfpload L0,8191,0,0
+	sfpload L0,0,15,0
+	sfpload L0,0,0,7
 
 	# sfploadi	"Jd1,Jn,Jm1"
 	sfploadi L0,-32768,0
@@ -11,10 +15,12 @@
 	sfploadi L7,32767,10
 
 	#sfpstore	"Jxa3,Jd2,Jm1,Jxa2"
+	sfpstore 0,L0,0,0
 	sfpstore -4096,L0,0,0
-	sfpstore 8191,L15,10,3
-	sfpstore -4096,L0,12,4
-	sfpstore 8191,L15,15,7
+	sfpstore 8191,L0,0,0
+	sfpstore 0,L15,0,0
+	sfpstore 0,L0,15,0
+	sfpstore 0,L0,0,7
 
 	#sfplut	"Jd1,Jm3"
 	sfplut L0,0
