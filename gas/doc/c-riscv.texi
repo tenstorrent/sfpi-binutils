@@ -712,9 +712,8 @@ extensions supported and provides the location of their
 publicly-released documentation:
 
 @table @r
-@item XTTgs
 @item XTTwh
 @item XTTbh
-Tenstorrent GraySkull, WormHole and BlackHole extensions respectively.
+Tenstorrent WormHole and BlackHole extensions respectively.
 
 @end table

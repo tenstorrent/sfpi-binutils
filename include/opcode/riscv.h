@@ -406,7 +406,6 @@ enum riscv_insn_class
   INSN_CLASS_ZICBOZ,
   INSN_CLASS_H,
 
-  INSN_CLASS_XTTGS,
   INSN_CLASS_XTTWH,
   INSN_CLASS_XTTBH,
 };
