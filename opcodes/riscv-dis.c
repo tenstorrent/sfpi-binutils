@@ -578,7 +578,7 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		print (info->stream, dis_style_text, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_C, l)]);
 		break;
 	      case 'h': /* CC Instructions LREG_DEST L0-L3 */
-		if (!riscv_subset_supports(&riscv_rps_dis, "xttgs") && EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
+		if (EXTRACT_OPERAND (SFPU_OP, l) == 0x91 /* SFPCONFIG */)
 		  print (info->stream, dis_style_text, "%lu", EXTRACT_OPERAND (YCC_LREG_DEST, l));
 		else
 		  print (info->stream, dis_style_text, "%s", riscv_sfpur_names_abi[EXTRACT_OPERAND (YCC_LREG_DEST, l)]);
@@ -1455,9 +1455,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   /* Build a hash table to shorten the search time.  */
   if (! init)
     {
-      if (riscv_subset_supports (&riscv_rps_dis, "xttgs"))
-	tt_class = INSN_CLASS_XTTGS;
-      else if (riscv_subset_supports (&riscv_rps_dis, "xttwh"))
+      if (riscv_subset_supports (&riscv_rps_dis, "xttwh"))
 	tt_class = INSN_CLASS_XTTWH;
       else if  (riscv_subset_supports (&riscv_rps_dis, "xttbh"))
 	tt_class = INSN_CLASS_XTTBH;
@@ -1474,8 +1472,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	      else if (!riscv_hash[OP_HASH_IDX (op->match)])
 		riscv_hash[OP_HASH_IDX (op->match)] = op;
 	    }
-	  else if (op->insn_class != INSN_CLASS_XTTGS
-		   && op->insn_class != INSN_CLASS_XTTWH
+	  else if (op->insn_class != INSN_CLASS_XTTWH
 		   && op->insn_class != INSN_CLASS_XTTBH)
 	    {
 	      if (!riscv_hash[OP_HASH_IDX (op->match)])
@@ -1881,8 +1878,7 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
       insn = (insn_t) bfd_getl16 (packet);
       static int is_tt = -1;
       if (is_tt < 0)
-	is_tt = riscv_subset_supports (&riscv_rps_dis, "xttgs")
-	  || riscv_subset_supports (&riscv_rps_dis, "xttwh")
+	is_tt = riscv_subset_supports (&riscv_rps_dis, "xttwh")
 	  || riscv_subset_supports (&riscv_rps_dis, "xttbh");
       dump_size = is_tt ? 4 : riscv_insn_length (insn);
       riscv_disassembler = riscv_disassemble_insn;

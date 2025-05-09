@@ -612,8 +612,7 @@ riscv_target_format (void)
 static inline unsigned int
 insn_length (const struct riscv_cl_insn *insn)
 {
-  return (insn->insn_mo->insn_class == INSN_CLASS_XTTGS
-	  || insn->insn_mo->insn_class == INSN_CLASS_XTTWH
+  return (insn->insn_mo->insn_class == INSN_CLASS_XTTWH
 	  || insn->insn_mo->insn_class == INSN_CLASS_XTTBH
 	  ? 4 : riscv_insn_length (insn->insn_opcode));
 }
@@ -631,8 +630,7 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
 
   /*  Zero out the lower most two bits as they were set to indicate the
       instruction as a 4 byte instruction */
-  if (mo->insn_class == INSN_CLASS_XTTGS
-      || mo->insn_class == INSN_CLASS_XTTWH
+  if (mo->insn_class == INSN_CLASS_XTTWH
       || mo->insn_class == INSN_CLASS_XTTBH)
     insn->insn_opcode &= 0xfffffffc;
 }
@@ -1117,8 +1115,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
   insn_t required_bits;
 
   if (length == 0)
-    insn_width = 8 * (opc->insn_class == INSN_CLASS_XTTGS
-		      || opc->insn_class == INSN_CLASS_XTTWH
+    insn_width = 8 * (opc->insn_class == INSN_CLASS_XTTWH
 		      || opc->insn_class == INSN_CLASS_XTTBH
 		      ? 4 : riscv_insn_length (opc->match));
   else
@@ -1801,8 +1798,7 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	}
     }
 
-  if (ip->insn_mo->insn_class == INSN_CLASS_XTTGS  ||
-      ip->insn_mo->insn_class == INSN_CLASS_XTTWH ||
+  if (ip->insn_mo->insn_class == INSN_CLASS_XTTWH ||
       ip->insn_mo->insn_class == INSN_CLASS_XTTBH)
     ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
@@ -3650,11 +3646,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
                     if (x == '1') {
 		      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
-			  || regno > (insn->insn_class == INSN_CLASS_XTTGS ? 3 : 7))
+			  || regno > 7)
 			{
 			  as_bad (_("bad register for lreg_dest field, "
-				    "register must be L0...L%d"),
-				  insn->insn_class == INSN_CLASS_XTTGS ? 3 : 7);
+				    "register must be L0...L7"));
 			  break;
 			}
                     } else if (x == '2') {
@@ -3669,35 +3664,21 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   }
                   INSERT_OPERAND (YLOADSTORE_RD, *ip, regno);
                   continue;
-                case 'e': /* MUL/ADD DEST L0-L3 (L0-L7 for Wormhole and Blackhole) */
-                  if (insn->insn_class != INSN_CLASS_XTTGS)
-                    {
-                      // It is technically legal to store to register
-                      // 8..15, however it doesn't make sense since
-                      // those regs are read only.  We use that for a
-                      // workaround for a HW bug in WH B0 where we
-                      // throw away the result by storing to register
-                      // 9
-                      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
-                          || (regno > 7
-			      && !(strcmp (insn->name, "sfpshft2") == 0
-				   && regno == 9)))
-                        {
-                          as_bad (_("bad register for lreg_dest field, "
-                                    "register must be L0...L7"));
-                          break;
-                        }
-                    }
-                  else
-                    {
-                      if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
-                          || regno > 3)
-                        {
-                          as_bad (_("bad register for lreg_dest field, "
-                                    "register must be L0...L3"));
-                          break;
-                        }
-                    }
+                case 'e': /* MUL/ADD DEST L0-L7.  */
+		  // It is technically legal to store to register
+		  // 8..15, however it doesn't make sense since those
+		  // regs are read only.  We use that for a workaround
+		  // for a HW bug in WH B0 where we throw away the
+		  // result by storing to register 9
+		  if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
+		      || (regno > 7
+			  && !(strcmp (insn->name, "sfpshft2") == 0
+			       && regno == 9)))
+		    {
+		      as_bad (_("bad register for lreg_dest field, "
+				"register must be L0...L7"));
+		      break;
+		    }
                   INSERT_OPERAND (YMULADD_DEST, *ip, regno);
                   continue;
                 case 'f': /* imm12_math */
