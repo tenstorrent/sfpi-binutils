@@ -1,6 +1,6 @@
 /* Target-dependent interface for Matsushita MN10300 for GDB, the GNU debugger.
 
-   Copyright (C) 1996-2022 Free Software Foundation, Inc.
+   Copyright (C) 1996-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef MN10300_TDEP_H
-#define MN10300_TDEP_H
+#ifndef GDB_MN10300_TDEP_H
+#define GDB_MN10300_TDEP_H
 
 #include "gdbarch.h"
 
@@ -76,7 +76,7 @@ enum frame_kind {
 };
 
 /* mn10300 private data.  */
-struct mn10300_gdbarch_tdep : gdbarch_tdep
+struct mn10300_gdbarch_tdep : gdbarch_tdep_base
 {
   int am33_mode;
 };
@@ -84,8 +84,8 @@ struct mn10300_gdbarch_tdep : gdbarch_tdep
 static inline int
 get_am33_mode (gdbarch *arch)
 {
-  mn10300_gdbarch_tdep *tdep = (mn10300_gdbarch_tdep *) gdbarch_tdep (arch);
+  mn10300_gdbarch_tdep *tdep = gdbarch_tdep<mn10300_gdbarch_tdep> (arch);
   return tdep->am33_mode;
 }
 
-#endif /* MN10300_TDEP_H */
+#endif /* GDB_MN10300_TDEP_H */

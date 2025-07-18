@@ -1,6 +1,6 @@
 /* Process record and replay target code for GNU/Linux.
 
-   Copyright (C) 2008-2022 Free Software Foundation, Inc.
+   Copyright (C) 2008-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
+#include "extract-store-integer.h"
 #include "target.h"
 #include "gdbtypes.h"
 #include "regcache.h"
@@ -84,7 +84,7 @@
 #define RECORD_Q_XGETQUOTA	(('3' << 8) + 3)
 
 #define OUTPUT_REG(val, num)      phex_nz ((val), \
-    TYPE_LENGTH (gdbarch_register_type (regcache->arch (), (num))))
+    gdbarch_register_type (regcache->arch (), (num))->length ())
 
 /* Record a memory area of length LEN pointed to by register
    REGNUM.  */
@@ -353,6 +353,12 @@ record_linux_system_call (enum gdb_syscall syscall,
     case gdb_sys_pipe:
     case gdb_sys_pipe2:
       if (record_mem_at_reg (regcache, tdep->arg1, tdep->size_int * 2))
+	return -1;
+      break;
+
+    case gdb_sys_getrandom:
+      regcache_raw_read_unsigned (regcache, tdep->arg2, &tmpulongest);
+      if (record_mem_at_reg (regcache, tdep->arg1, tmpulongest))
 	return -1;
       break;
 
@@ -1811,6 +1817,12 @@ Do you want to stop the program?"),
 
     case gdb_sys_clock_gettime:
       if (record_mem_at_reg (regcache, tdep->arg2, tdep->size_timespec))
+	return -1;
+      break;
+
+    case gdb_sys_clock_gettime64:
+      /* Size of struct __timespec64 is 16.  */
+      if (record_mem_at_reg (regcache, tdep->arg2, 16))
 	return -1;
       break;
 

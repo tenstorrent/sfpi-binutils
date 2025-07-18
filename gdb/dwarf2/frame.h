@@ -1,6 +1,6 @@
 /* Frame unwinder for frames with DWARF Call Frame Information.
 
-   Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
 
    Contributed by Mark Kettenis.
 
@@ -19,11 +19,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef DWARF2_FRAME_H
-#define DWARF2_FRAME_H 1
+#ifndef GDB_DWARF2_FRAME_H
+#define GDB_DWARF2_FRAME_H
 
 struct gdbarch;
-struct frame_info;
+class frame_info_ptr;
 struct dwarf2_per_cu_data;
 struct agent_expr;
 struct axs_value;
@@ -66,6 +66,9 @@ enum dwarf2_frame_reg_rule
 
 /* Register state.  */
 
+typedef struct value *(*fn_prev_register) (const frame_info_ptr &this_frame,
+					   void **this_cache, int regnum);
+
 struct dwarf2_frame_state_reg
 {
   /* Each register save state can be described in terms of a CFA slot,
@@ -78,8 +81,7 @@ struct dwarf2_frame_state_reg
       const gdb_byte *start;
       ULONGEST len;
     } exp;
-    struct value *(*fn) (struct frame_info *this_frame, void **this_cache,
-			 int regnum);
+    fn_prev_register fn;
   } loc;
   enum dwarf2_frame_reg_rule how;
 };
@@ -196,27 +198,20 @@ struct dwarf2_frame_state
   bool armcc_cfa_offsets_reversed = false;
 };
 
-/* When this is true the DWARF frame unwinders can be used if they are
-   registered with the gdbarch.  Not all architectures can or do use the
-   DWARF unwinders.  Setting this to true on a target that does not
-   otherwise support the DWARF unwinders has no effect.  */
-extern bool dwarf2_frame_unwinders_enabled_p;
-
 /* Set the architecture-specific register state initialization
    function for GDBARCH to INIT_REG.  */
 
-extern void dwarf2_frame_set_init_reg (struct gdbarch *gdbarch,
-				       void (*init_reg) (struct gdbarch *, int,
-					     struct dwarf2_frame_state_reg *,
-					     struct frame_info *));
+extern void dwarf2_frame_set_init_reg (
+  gdbarch *gdbarch, void (*init_reg) (struct gdbarch *, int,
+				      dwarf2_frame_state_reg *,
+				      const frame_info_ptr &));
 
 /* Set the architecture-specific signal trampoline recognition
    function for GDBARCH to SIGNAL_FRAME_P.  */
 
-extern void
-  dwarf2_frame_set_signal_frame_p (struct gdbarch *gdbarch,
-				   int (*signal_frame_p) (struct gdbarch *,
-							  struct frame_info *));
+extern void dwarf2_frame_set_signal_frame_p
+  (gdbarch *gdbarch, int (*signal_frame_p) (struct gdbarch *,
+			  const frame_info_ptr &));
 
 /* Set the architecture-specific adjustment of .eh_frame and .debug_frame
    register numbers.  */
@@ -234,11 +229,11 @@ void dwarf2_append_unwinders (struct gdbarch *gdbarch);
    NULL if it can't be handled by the DWARF CFI frame unwinder.  */
 
 extern const struct frame_base *
-  dwarf2_frame_base_sniffer (struct frame_info *this_frame);
+  dwarf2_frame_base_sniffer (const frame_info_ptr &this_frame);
 
 /* Compute the DWARF CFA for a frame.  */
 
-CORE_ADDR dwarf2_frame_cfa (struct frame_info *this_frame);
+CORE_ADDR dwarf2_frame_cfa (const frame_info_ptr &this_frame);
 
 /* Find the CFA information for PC.
 
@@ -262,4 +257,35 @@ extern int dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 				  const gdb_byte **cfa_start_out,
 				  const gdb_byte **cfa_end_out);
 
-#endif /* dwarf2-frame.h */
+
+/* Allocate a new instance of the function unique data.
+
+   The main purpose of this custom function data object is to allow caching the
+   value of expensive lookups in the prev_register implementation.
+
+   THIS_FRAME is the frame that the custom data object should be associated
+   with.
+   THIS_CACHE is the dwarf2 cache object to store the pointer on.
+   COOKIE is the key for the prev_function implementation.
+   SIZE is the size of the custom data object to allocate.  */
+
+extern void *dwarf2_frame_allocate_fn_data (const frame_info_ptr &this_frame,
+					    void **this_cache,
+					    fn_prev_register cookie,
+					    unsigned long size);
+
+/* Retrieve the function unique data for this frame or NULL if none exists.
+
+   The main purpose of this custom function data object is to allow caching the
+   value of expensive lookups in the prev_register implementation.
+
+   THIS_FRAME is the frame that the custom data object should be associated
+   with.
+   THIS_CACHE is the dwarf2 cache object to store the pointer on.
+   COOKIE is the key for the prev_function implementation.  */
+
+extern void *dwarf2_frame_get_fn_data (const frame_info_ptr &this_frame,
+				       void **this_cache,
+				       fn_prev_register cookie);
+
+#endif /* GDB_DWARF2_FRAME_H */

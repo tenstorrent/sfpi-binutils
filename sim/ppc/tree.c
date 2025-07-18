@@ -306,7 +306,6 @@ split_find_device(device *current,
     }
     else if (strncmp(spec->path, "./", strlen("./")) == 0) {
       /* cd ./... */
-      current = current;
       spec->path += strlen("./");
     }
     else if (strncmp(spec->path, "../", strlen("../")) == 0) {
@@ -317,7 +316,6 @@ split_find_device(device *current,
     }
     else if (strcmp(spec->path, ".") == 0) {
       /* cd . */
-      current = current;
       spec->path += strlen(".");
     }
     else if (strcmp(spec->path, "..") == 0) {
@@ -832,7 +830,7 @@ tree_parse(device *current,
 				my_port,
 				dest,
 				dest_port,
-				permenant_object);
+				permanent_object);
       }
       break;
     default:
@@ -1219,7 +1217,7 @@ tree_find_device(device *root,
   /* parse the path */
   split_device_specifier(root, path_to_device, &spec);
   if (spec.value != NULL)
-    return NULL; /* something wierd */
+    return NULL; /* something weird */
 
   /* now find it */
   node = split_find_device(root, &spec);

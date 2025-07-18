@@ -1,5 +1,5 @@
 /* Memory ops header for CGEN-based simulators.
-   Copyright (C) 1996-2022 Free Software Foundation, Inc.
+   Copyright (C) 1996-2024 Free Software Foundation, Inc.
    Contributed by Cygnus Solutions.
 
 This file is part of the GNU Simulators.
@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifndef CGEN_MEM_H
 #define CGEN_MEM_H
+
+#include "symcat.h"
 
 /* TODO: This should get moved into sim-inline.h.  */
 #ifdef MEMOPS_DEFINE_INLINE
@@ -167,7 +169,7 @@ XCONCAT2 (SETMEM,mode) (SIM_CPU *cpu, IADDR pc, ADDR a, mode val) \
   XCONCAT2 (sim_core_write_unaligned_,size) (cpu, pc, write_map, a, val); \
 }
 #else
-#define DECLARE_SETMEM(mode, size) DECLARE_SETMEM_EXTERN (mode, size
+#define DECLARE_SETMEM(mode, size) DECLARE_SETMEM_EXTERN (mode, size)
 #endif
 
 DECLARE_SETMEM (SF, 4) /* TAGS: SETMEMSF */
@@ -181,13 +183,13 @@ DECLARE_SETMEM (DF, 8) /* TAGS: SETMEMDF */
    only used when interfacing with the outside world (e.g. gdb).  */
 
 #define DECLARE_GETT_EXTERN(mode, size) \
-extern mode XCONCAT2 (GETT,mode) (unsigned char *);
+extern mode XCONCAT2 (GETT,mode) (const unsigned char *);
 
 #if defined (MEMOPS_DEFINE_INLINE)
 #define DECLARE_GETT(mode, size) \
 DECLARE_GETT_EXTERN (mode, size) \
 mode \
-XCONCAT2 (GETT,mode) (unsigned char *p) \
+XCONCAT2 (GETT,mode) (const unsigned char *p) \
 { \
   mode tmp; \
   memcpy (&tmp, p, sizeof (mode)); \

@@ -1,5 +1,5 @@
 /* S390 native-dependent code for GDB, the GNU debugger.
-   Copyright (C) 2001-2022 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
 
    Contributed by D.J. Barrow (djbarrow@de.ibm.com,barrow_dj@yahoo.com)
    for IBM Deutschland Entwicklung GmbH, IBM Corporation.
@@ -19,7 +19,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
+#include "gdbsupport/gdb_vecs.h"
+#include "extract-store-integer.h"
 #include "regcache.h"
 #include "inferior.h"
 #include "target.h"
@@ -28,7 +29,7 @@
 #include "gregset.h"
 #include "regset.h"
 #include "nat/linux-ptrace.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "gdbarch.h"
 
 #include "s390-tdep.h"
@@ -132,8 +133,8 @@ public:
 
   /* Detect target architecture.  */
   const struct target_desc *read_description () override;
-  int auxv_parse (gdb_byte **readptr,
-		  gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
+  int auxv_parse (const gdb_byte **readptr,
+		  const gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
     override;
 
   /* Override linux_nat_target low methods.  */
@@ -673,6 +674,13 @@ s390_linux_nat_target::stopped_by_watchpoint ()
   if (state->watch_areas.empty ())
     return false;
 
+  siginfo_t siginfo;
+  if (!linux_nat_get_siginfo (inferior_ptid, &siginfo))
+    return false;
+  if (siginfo.si_signo != SIGTRAP
+      || (siginfo.si_code & 0xffff) != TRAP_HWBKPT)
+    return false;
+
   parea.len = sizeof (per_lowcore);
   parea.process_addr = (addr_t) & per_lowcore;
   parea.kernel_addr = offsetof (struct user_regs_struct, per_info.lowcore);
@@ -681,14 +689,6 @@ s390_linux_nat_target::stopped_by_watchpoint ()
 
   bool result = (per_lowcore.perc_storage_alteration == 1
 		 && per_lowcore.perc_store_real_address == 0);
-
-  if (result)
-    {
-      /* Do not report this watchpoint again.  */
-      memset (&per_lowcore, 0, sizeof (per_lowcore));
-      if (ptrace (PTRACE_POKEUSR_AREA, s390_inferior_tid (), &parea, 0) < 0)
-	perror_with_name (_("Couldn't clear watchpoint status"));
-    }
 
   return result;
 }
@@ -950,10 +950,12 @@ s390_target_wordsize (void)
   /* Check for 64-bit inferior process.  This is the case when the host is
      64-bit, and in addition bit 32 of the PSW mask is set.  */
 #ifdef __s390x__
+  int tid = s390_inferior_tid ();
+  gdb_assert (tid != 0);
   long pswm;
 
   errno = 0;
-  pswm = (long) ptrace (PTRACE_PEEKUSER, s390_inferior_tid (), PT_PSWMASK, 0);
+  pswm = (long) ptrace (PTRACE_PEEKUSER, tid, PT_PSWMASK, 0);
   if (errno == 0 && (pswm & 0x100000000ul) != 0)
     wordsize = 8;
 #endif
@@ -962,13 +964,14 @@ s390_target_wordsize (void)
 }
 
 int
-s390_linux_nat_target::auxv_parse (gdb_byte **readptr,
-				   gdb_byte *endptr, CORE_ADDR *typep,
+s390_linux_nat_target::auxv_parse (const gdb_byte **readptr,
+				   const gdb_byte *endptr, CORE_ADDR *typep,
 				   CORE_ADDR *valp)
 {
+  gdb_assert (inferior_ptid != null_ptid);
   int sizeof_auxv_field = s390_target_wordsize ();
-  enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
-  gdb_byte *ptr = *readptr;
+  bfd_endian byte_order = gdbarch_byte_order (current_inferior ()->arch ());
+  const gdb_byte *ptr = *readptr;
 
   if (endptr == ptr)
     return 0;
@@ -988,6 +991,9 @@ s390_linux_nat_target::auxv_parse (gdb_byte **readptr,
 const struct target_desc *
 s390_linux_nat_target::read_description ()
 {
+  if (inferior_ptid == null_ptid)
+    return this->beneath ()->read_description ();
+
   int tid = inferior_ptid.pid ();
 
   have_regset_last_break
@@ -1002,7 +1008,7 @@ s390_linux_nat_target::read_description ()
      that mode, report s390 architecture with 64-bit GPRs.  */
 #ifdef __s390x__
   {
-    CORE_ADDR hwcap = linux_get_hwcap (current_inferior ()->top_target ());
+    CORE_ADDR hwcap = linux_get_hwcap ();
 
     have_regset_tdb = (hwcap & HWCAP_S390_TE)
       && check_regset (tid, NT_S390_TDB, s390_sizeof_tdbregset);

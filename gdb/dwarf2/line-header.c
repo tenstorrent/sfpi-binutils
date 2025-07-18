@@ -1,6 +1,6 @@
 /* DWARF 2 debugging format support for GDB.
 
-   Copyright (C) 1994-2022 Free Software Foundation, Inc.
+   Copyright (C) 1994-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "dwarf2/comp-unit-head.h"
 #include "dwarf2/leb.h"
 #include "dwarf2/line-header.h"
@@ -48,47 +47,36 @@ line_header::add_file_name (const char *name,
 			    unsigned int mod_time,
 			    unsigned int length)
 {
+  file_name_index index
+    = version >= 5 ? file_names_size (): file_names_size () + 1;
+
   if (dwarf_line_debug >= 2)
-    {
-      size_t new_size;
-      if (version >= 5)
-	new_size = file_names_size ();
-      else
-	new_size = file_names_size () + 1;
-      gdb_printf (gdb_stdlog, "Adding file %zu: %s\n",
-		  new_size, name);
-    }
-  m_file_names.emplace_back (name, d_index, mod_time, length);
+    gdb_printf (gdb_stdlog, "Adding file %d: %s\n", index, name);
+
+  m_file_names.emplace_back (name, index, d_index, mod_time, length);
 }
 
 std::string
-line_header::file_file_name (int file) const
+line_header::file_file_name (const file_entry &fe) const
 {
-  /* Is the file number a valid index into the line header's file name
-     table?  Remember that file numbers start with one, not zero.  */
-  if (is_valid_file_index (file))
-    {
-      const file_entry *fe = file_name_at (file);
+  gdb_assert (is_valid_file_index (fe.index));
 
-      if (!IS_ABSOLUTE_PATH (fe->name))
-	{
-	  const char *dir = fe->include_dir (this);
-	  if (dir != NULL)
-	    return path_join (dir, fe->name);
-	}
+  std::string ret = fe.name;
 
-      return fe->name;
-    }
-  else
-    {
-      /* The compiler produced a bogus file number.  We can at least
-	 record the macro definitions made in the file, even if we
-	 won't be able to find the file by name.  */
-      complaint (_("bad file number in macro information (%d)"),
-		 file);
+  if (IS_ABSOLUTE_PATH (ret))
+    return ret;
 
-      return string_printf ("<bad macro file number %d>", file);
-    }
+  const char *dir = fe.include_dir (this);
+  if (dir != nullptr)
+    ret = path_join (dir, ret.c_str ());
+
+  if (IS_ABSOLUTE_PATH (ret))
+    return ret;
+
+  if (m_comp_dir != nullptr)
+    ret = path_join (m_comp_dir, ret.c_str ());
+
+  return ret;
 }
 
 static void
@@ -171,8 +159,8 @@ read_formatted_entries (dwarf2_per_objfile *per_objfile, bfd *abfd,
 	  ULONGEST form  = read_unsigned_leb128 (abfd, format, &bytes_read);
 	  format += bytes_read;
 
-	  gdb::optional<const char *> string;
-	  gdb::optional<unsigned int> uint;
+	  std::optional<const char *> string;
+	  std::optional<unsigned int> uint;
 
 	  switch (form)
 	    {
@@ -226,6 +214,10 @@ read_formatted_entries (dwarf2_per_objfile *per_objfile, bfd *abfd,
 	      break;
 	    }
 
+	  /* Normalize nullptr string.  */
+	  if (string.has_value () && *string == nullptr)
+	    string.emplace ("");
+
 	  switch (content_type)
 	    {
 	    case DW_LNCT_path:
@@ -264,7 +256,8 @@ line_header_up
 dwarf_decode_line_header  (sect_offset sect_off, bool is_dwz,
 			   dwarf2_per_objfile *per_objfile,
 			   struct dwarf2_section_info *section,
-			   const struct comp_unit_head *cu_header)
+			   const struct comp_unit_head *cu_header,
+			   const char *comp_dir)
 {
   const gdb_byte *line_ptr;
   unsigned int bytes_read, offset_size;
@@ -281,7 +274,7 @@ dwarf_decode_line_header  (sect_offset sect_off, bool is_dwz,
       return 0;
     }
 
-  line_header_up lh (new line_header ());
+  line_header_up lh (new line_header (comp_dir));
 
   lh->sect_off = sect_off;
   lh->offset_in_dwz = is_dwz;

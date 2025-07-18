@@ -1,6 +1,6 @@
 /* Motorola m68k native support for GNU/Linux.
 
-   Copyright (C) 1996-2022 Free Software Foundation, Inc.
+   Copyright (C) 1996-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "frame.h"
 #include "inferior.h"
 #include "language.h"
@@ -301,7 +300,7 @@ static void store_regs (const struct regcache *regcache, int tid, int regno)
 #endif
 
 
-/* Transfering floating-point registers between GDB, inferiors and cores.  */
+/* Transferring floating-point registers between GDB, inferiors and cores.  */
 
 /* What is the address of fpN within the floating-point register set F?  */
 #define FPREG_ADDR(f, n) (&(f)->fpregs[(n) * 3])
@@ -351,7 +350,7 @@ fill_fpregset (const struct regcache *regcache,
 #ifdef HAVE_PTRACE_GETREGS
 
 /* Fetch all floating-point registers from process/thread TID and store
-   thier values in GDB's register array.  */
+   their values in GDB's register array.  */
 
 static void
 fetch_fpregs (struct regcache *regcache, int tid)
@@ -445,8 +444,7 @@ m68k_linux_nat_target::fetch_registers (struct regcache *regcache, int regno)
       return;
     }
 
-  internal_error (__FILE__, __LINE__,
-		  _("Got request for bad register number %d."), regno);
+  internal_error (_("Got request for bad register number %d."), regno);
 }
 
 /* Store register REGNO back into the child process.  If REGNO is -1,
@@ -489,8 +487,7 @@ m68k_linux_nat_target::store_registers (struct regcache *regcache, int regno)
       return;
     }
 
-  internal_error (__FILE__, __LINE__,
-		  _("Got request to store bad register number %d."), regno);
+  internal_error (_("Got request to store bad register number %d."), regno);
 }
 
 

@@ -1,5 +1,5 @@
 /* GDB variable objects API.
-   Copyright (C) 1999-2022 Free Software Foundation, Inc.
+   Copyright (C) 1999-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef VAROBJ_H
-#define VAROBJ_H 1
+#ifndef GDB_VAROBJ_H
+#define GDB_VAROBJ_H
 
 #include "symtab.h"
 #include "gdbtypes.h"
@@ -314,7 +314,10 @@ extern void all_root_varobjs (gdb::function_view<void (struct varobj *var)>);
 extern std::vector<varobj_update_result>
   varobj_update (struct varobj **varp, bool is_explicit);
 
-extern void varobj_invalidate (void);
+/* Try to recreate any global or floating varobj.  This is called after
+   changing symbol files.  */
+
+extern void varobj_re_set (void);
 
 extern bool varobj_editable_p (const struct varobj *var);
 
@@ -352,4 +355,4 @@ extern void varobj_restrict_range (const std::vector<varobj *> &children,
 
 extern bool varobj_default_is_path_expr_parent (const struct varobj *var);
 
-#endif /* VAROBJ_H */
+#endif /* GDB_VAROBJ_H */

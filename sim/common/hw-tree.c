@@ -1,6 +1,6 @@
 /* The common simulator framework for GDB, the GNU Debugger.
 
-   Copyright 2002-2022 Free Software Foundation, Inc.
+   Copyright 2002-2024 Free Software Foundation, Inc.
 
    Contributed by Andrew Cagney and Red Hat.
 
@@ -335,7 +335,6 @@ split_find_device (struct hw *current,
       else if (strncmp (spec->path, "./", strlen ("./")) == 0)
 	{
 	  /* cd ./... */
-	  current = current;
 	  spec->path += strlen ("./");
 	}
       else if (strncmp (spec->path, "../", strlen ("../")) == 0)
@@ -348,7 +347,6 @@ split_find_device (struct hw *current,
       else if (strcmp (spec->path, ".") == 0)
 	{
 	  /* cd . */
-	  current = current;
 	  spec->path += strlen (".");
 	}
       else if (strcmp (spec->path, "..") == 0)
@@ -851,7 +849,7 @@ hw_tree_vparse (struct hw *current,
 			    my_port,
 			    dest,
 			    dest_port,
-			    permenant_object);
+			    permanent_object);
 	    break;
 	  }
 	default:
@@ -1266,7 +1264,7 @@ hw_tree_find_device (struct hw *root,
   /* parse the path */
   split_device_specifier (root, path_to_device, &spec);
   if (spec.value != NULL)
-    return NULL; /* something wierd */
+    return NULL; /* something weird */
 
   /* now find it */
   node = split_find_device (root, &spec);
