@@ -3786,6 +3786,9 @@
 #define MASK_SFVFNRCLIPXUFQF 0xfe00707f
 #define MATCH_SFVFNRCLIPXFQF 0x8e00505b
 #define MASK_SFVFNRCLIPXFQF 0xfe00707f
+
+#include "riscv-opc-sfpu.h"
+
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01
@@ -4255,6 +4258,7 @@
 #define CSR_VTYPE 0xc21
 #define CSR_VLENB 0xc22
 #endif /* RISCV_ENCODING_H */
+#include "riscv-sfpu-opc.h"
 #ifdef DECLARE_INSN
 DECLARE_INSN(slli_rv32, MATCH_SLLI_RV32, MASK_SLLI_RV32)
 DECLARE_INSN(srli_rv32, MATCH_SRLI_RV32, MASK_SRLI_RV32)
@@ -4923,6 +4927,7 @@ DECLARE_INSN(ssamoswap_w, MATCH_SSAMOSWAP_W, MASK_SSAMOSWAP_W)
 DECLARE_INSN(ssamoswap_d, MATCH_SSAMOSWAP_D, MASK_SSAMOSWAP_D)
 /* Zicfilp instructions.  */
 DECLARE_INSN(lpad, MATCH_LPAD, MASK_LPAD)
+#include "riscv-opc-sfpu-insns.h"
 #endif /* DECLARE_INSN */
 #ifdef DECLARE_CSR
 /* Unprivileged Counter/Timers CSRs.  */

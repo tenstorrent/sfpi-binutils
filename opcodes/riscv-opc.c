@@ -381,6 +381,12 @@ match_cm_jalt (const struct riscv_opcode *op, insn_t insn)
     && EXTRACT_ZCMT_INDEX (insn) < 256;
 }
 
+const char riscv_sfpur_names_numeric[NSFPUR][NRC] =
+{
+  "L0",   "L1",   "L2",   "L3",   "L4",   "L5",   "L6",   "L7",
+  "L8",   "L9",   "L10",  "L11",  "L12",  "L13",  "L14",  "L15"
+};
+
 /* The order of overloaded instructions matters.  Label arguments and
    register arguments look the same. Instructions that can have either
    for arguments must apear in the correct order in this table for the
@@ -405,6 +411,13 @@ match_rs2_x1x5_opcode (const struct riscv_opcode *op,
 {
   int rs2 = (insn & MASK_RS2) >> OP_SH_RS2;
   return match_opcode (op, insn) && (rs2 == 1 || rs2 == 5);
+}
+
+static int
+sfp_match_opcode (const struct riscv_opcode *op __attribute__((unused)),
+                  insn_t insn __attribute__((unused)))
+{
+  return 1;
 }
 
 static int
@@ -3509,6 +3522,8 @@ const struct riscv_opcode riscv_opcodes[] =
 /* SiFive FP32-to-int8 ranged clip instructions (Xsfvfnrclipxfqf).  */
 {"sf.vfnrclip.xu.f.qf", 0, INSN_CLASS_XSFVFNRCLIPXFQF, "Vd,Vt,S", MATCH_SFVFNRCLIPXUFQF, MASK_SFVFNRCLIPXUFQF, match_opcode, 0},
 {"sf.vfnrclip.x.f.qf",  0, INSN_CLASS_XSFVFNRCLIPXFQF, "Vd,Vt,S", MATCH_SFVFNRCLIPXFQF, MASK_SFVFNRCLIPXFQF, match_opcode, 0},
+
+#include "riscv-opc-sfpu-insns.h"
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

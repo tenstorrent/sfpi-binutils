@@ -383,6 +383,8 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define OP_MASK_XSO1            0x1
 #define OP_SH_XSO1              26
 
+#include "opcode/riscv-sfpu.h"
+
 /* ABI names for selected x-registers.  */
 
 #define X_RA 1
@@ -404,6 +406,7 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 
 #define NGPR 32
 #define NFPR 32
+#define NSFPUR 16
 
 /* These fake label defines are use by both the assembler, and
    libopcodes.  The assembler uses this when it needs to generate a fake
@@ -441,6 +444,11 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 /* Validate that signed n-bit immediate is within bounds.  */
 #define VALIDATE_S_IMM(v, n) \
   (v < (long) (1UL << (n-1)) && v >= -(offsetT) (1UL << (n-1)))
+
+/* Put top 2 bits, which are currently never 'b11 to bottom, indicating to Risc
+   that they are not risc instructions. */
+#define SFPU_OP_SWIZZLE(x)   ( (((x) >> 30) & 0x3) | (((x) & 0x3FFFFFFF) << 2) )
+#define SFPU_OP_UNSWIZZLE(x) ( (((x) & 0x3) << 30) | (((x) & 0xfffffffc) >> 2) )
 
 /* The maximal number of subset can be required.  */
 #define MAX_SUBSET_NUM 4
@@ -555,6 +563,8 @@ enum riscv_insn_class
   INSN_CLASS_XTHEADSYNC,
   INSN_CLASS_XTHEADVECTOR,
   INSN_CLASS_XTHEADZVAMO,
+  INSN_CLASS_XTTWH,
+  INSN_CLASS_XTTBH,
   INSN_CLASS_XVENTANACONDOPS,
   INSN_CLASS_XSFVCP,
   INSN_CLASS_XSFCEASE,
@@ -681,6 +691,7 @@ extern const char * const riscv_th_vlen[4];
 extern const char * const riscv_th_vediv[4];
 extern const char * const riscv_fli_symval[32];
 extern const float riscv_fli_numval[32];
+extern const char riscv_sfpur_names_numeric[NSFPUR][NRC];
 
 extern const struct riscv_opcode riscv_opcodes[];
 extern const struct riscv_opcode riscv_insn_types[];
