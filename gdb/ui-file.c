@@ -1,6 +1,6 @@
 /* UI_FILE - a generic STDIO like output stream.
 
-   Copyright (C) 1999-2022 Free Software Foundation, Inc.
+   Copyright (C) 1999-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,7 +19,6 @@
 
 /* Implement the ``struct ui_file'' object.  */
 
-#include "defs.h"
 #include "ui-file.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "gdbsupport/gdb_select.h"
@@ -384,9 +383,9 @@ stderr_file::stderr_file (FILE *stream)
 
 
 
-tee_file::tee_file (ui_file *one, ui_file_up &&two)
+tee_file::tee_file (ui_file *one, ui_file *two)
   : m_one (one),
-    m_two (std::move (two))
+    m_two (two)
 {}
 
 tee_file::~tee_file ()

@@ -1,5 +1,5 @@
 /* Tracepoint code for remote server for GDB.
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -16,7 +16,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "server.h"
 #include "tracepoint.h"
 #include "gdbthread.h"
 #include "gdbsupport/rsp-low.h"
@@ -126,7 +125,6 @@ trace_vdebug (const char *fmt, ...)
   IPA_SYM_EXPORTED_NAME (get_trace_state_variable_value_ptr)
 # define set_trace_state_variable_value_ptr \
   IPA_SYM_EXPORTED_NAME (set_trace_state_variable_value_ptr)
-# define ust_loaded IPA_SYM_EXPORTED_NAME (ust_loaded)
 # define helper_thread_id IPA_SYM_EXPORTED_NAME (helper_thread_id)
 # define cmd_buf IPA_SYM_EXPORTED_NAME (cmd_buf)
 # define ipa_tdesc_idx IPA_SYM_EXPORTED_NAME (ipa_tdesc_idx)
@@ -166,7 +164,6 @@ struct ipa_sym_addresses
   CORE_ADDR addr_get_raw_reg_ptr;
   CORE_ADDR addr_get_trace_state_variable_value_ptr;
   CORE_ADDR addr_set_trace_state_variable_value_ptr;
-  CORE_ADDR addr_ust_loaded;
   CORE_ADDR addr_ipa_tdesc_idx;
 };
 
@@ -203,7 +200,6 @@ static struct
   IPA_SYM(get_raw_reg_ptr),
   IPA_SYM(get_trace_state_variable_value_ptr),
   IPA_SYM(set_trace_state_variable_value_ptr),
-  IPA_SYM(ust_loaded),
   IPA_SYM(ipa_tdesc_idx),
 };
 
@@ -211,58 +207,12 @@ static struct ipa_sym_addresses ipa_sym_addrs;
 
 static int read_inferior_integer (CORE_ADDR symaddr, int *val);
 
-/* Returns true if both the in-process agent library and the static
-   tracepoints libraries are loaded in the inferior, and agent has
-   capability on static tracepoints.  */
-
-static int
-in_process_agent_supports_ust (void)
-{
-  int loaded = 0;
-
-  if (!agent_loaded_p ())
-    {
-      warning ("In-process agent not loaded");
-      return 0;
-    }
-
-  if (agent_capability_check (AGENT_CAPA_STATIC_TRACE))
-    {
-      /* Agent understands static tracepoint, then check whether UST is in
-	 fact loaded in the inferior.  */
-      if (read_inferior_integer (ipa_sym_addrs.addr_ust_loaded, &loaded))
-	{
-	  warning ("Error reading ust_loaded in lib");
-	  return 0;
-	}
-
-      return loaded;
-    }
-  else
-    return 0;
-}
-
 static void
 write_e_ipa_not_loaded (char *buffer)
 {
   sprintf (buffer,
 	   "E.In-process agent library not loaded in process.  "
-	   "Fast and static tracepoints unavailable.");
-}
-
-/* Write an error to BUFFER indicating that UST isn't loaded in the
-   inferior.  */
-
-static void
-write_e_ust_not_loaded (char *buffer)
-{
-#ifdef HAVE_UST
-  sprintf (buffer,
-	   "E.UST library not loaded in process.  "
-	   "Static tracepoints unavailable.");
-#else
-  sprintf (buffer, "E.GDBserver was built without static tracepoints support");
-#endif
+	   "Fast tracepoints unavailable.");
 }
 
 /* If the in-process agent library isn't loaded in the inferior, write
@@ -274,26 +224,6 @@ maybe_write_ipa_not_loaded (char *buffer)
   if (!agent_loaded_p ())
     {
       write_e_ipa_not_loaded (buffer);
-      return 1;
-    }
-  return 0;
-}
-
-/* If the in-process agent library and the ust (static tracepoints)
-   library aren't loaded in the inferior, write an error to BUFFER,
-   and return 1.  Otherwise, return 0.  */
-
-static int
-maybe_write_ipa_ust_not_loaded (char *buffer)
-{
-  if (!agent_loaded_p ())
-    {
-      write_e_ipa_not_loaded (buffer);
-      return 1;
-    }
-  else if (!in_process_agent_supports_ust ())
-    {
-      write_e_ust_not_loaded (buffer);
       return 1;
     }
   return 0;
@@ -344,6 +274,8 @@ tracepoint_look_up_symbols (void)
    GDBserver side.  */
 
 #ifdef IN_PROCESS_AGENT
+/* See target.h.  */
+
 int
 read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
 {
@@ -503,12 +435,6 @@ struct eval_expr_action
   struct agent_expr *expr;
 };
 
-/* An 'L' (collect static trace data) action.  */
-struct collect_static_trace_data_action
-{
-  struct tracepoint_action base;
-};
-
 #ifndef IN_PROCESS_AGENT
 static CORE_ADDR
 m_tracepoint_action_download (const struct tracepoint_action *action)
@@ -600,24 +526,6 @@ x_tracepoint_action_send ( char *buffer, const struct tracepoint_action *action)
   return agent_expr_send (buffer, eaction->expr);
 }
 
-static CORE_ADDR
-l_tracepoint_action_download (const struct tracepoint_action *action)
-{
-  CORE_ADDR ipa_action
-    = target_malloc (sizeof (struct collect_static_trace_data_action));
-
-  target_write_memory (ipa_action, (unsigned char *) action,
-			 sizeof (struct collect_static_trace_data_action));
-
-  return ipa_action;
-}
-
-static char *
-l_tracepoint_action_send (char *buffer, const struct tracepoint_action *action)
-{
-  return buffer;
-}
-
 static char *
 tracepoint_action_send (char *buffer, const struct tracepoint_action *action)
 {
@@ -629,8 +537,6 @@ tracepoint_action_send (char *buffer, const struct tracepoint_action *action)
       return r_tracepoint_action_send (buffer, action);
     case 'X':
       return x_tracepoint_action_send (buffer, action);
-    case 'L':
-      return l_tracepoint_action_send (buffer, action);
     }
   error ("Unknown trace action '%c'.", action->type);
 }
@@ -646,8 +552,6 @@ tracepoint_action_download (const struct tracepoint_action *action)
       return r_tracepoint_action_download (action);
     case 'X':
       return x_tracepoint_action_download (action);
-    case 'L':
-      return l_tracepoint_action_download (action);
     }
   error ("Unknown trace action '%c'.", action->type);
 }
@@ -680,13 +584,7 @@ enum tracepoint_type
 
   /* A fast tracepoint implemented with a jump instead of a trap.  */
   fast_tracepoint,
-
-  /* A static tracepoint, implemented by a program call into a tracing
-     library.  */
-  static_tracepoint
 };
-
-struct tracepoint_hit_ctx;
 
 typedef enum eval_result_type (*condfn) (unsigned char *,
 					 ULONGEST *);
@@ -791,7 +689,7 @@ struct tracepoint
   char **step_actions_str;
 
   /* Handle returned by the breakpoint or tracepoint module when we
-     inserted the trap or jump, or hooked into a static tracepoint.
+     inserted the trap or jump.
      NULL if we haven't inserted it yet.  */
   void *handle;
 #endif
@@ -824,7 +722,7 @@ struct wstep_state
 
 #endif
 
-EXTERN_C_PUSH
+extern "C" {
 
 /* The linked list of all tracepoints.  Marked explicitly as used as
    the in-process library doesn't use it for the fast tracepoints
@@ -846,7 +744,7 @@ IP_AGENT_EXPORT_VAR int trace_buffer_is_full;
    enum eval_result_type values.  */
 IP_AGENT_EXPORT_VAR int expr_eval_result = expr_eval_no_error;
 
-EXTERN_C_POP
+}
 
 #ifndef IN_PROCESS_AGENT
 
@@ -857,23 +755,18 @@ static struct tracepoint *last_tracepoint;
 
 static const char * const eval_result_names[] =
   {
-    "terror:in the attic",  /* this should never be reported */
-    "terror:empty expression",
-    "terror:empty stack",
-    "terror:stack overflow",
-    "terror:stack underflow",
-    "terror:unhandled opcode",
-    "terror:unrecognized opcode",
-    "terror:divide by zero"
+#define AX_RESULT_TYPE(ENUM,STR) STR,
+#include "ax-result-types.def"
+#undef AX_RESULT_TYPE
   };
 
 #endif
 
 /* The tracepoint in which the error occurred.  */
 
-EXTERN_C_PUSH
+extern "C" {
 IP_AGENT_EXPORT_VAR struct tracepoint *error_tracepoint;
-EXTERN_C_POP
+}
 
 struct trace_state_variable
 {
@@ -985,7 +878,7 @@ static int circular_trace_buffer;
 
 static LONGEST trace_buffer_size;
 
-EXTERN_C_PUSH
+extern "C" {
 
 /* Pointer to the block of memory that traceframes all go into.  */
 
@@ -996,7 +889,7 @@ IP_AGENT_EXPORT_VAR unsigned char *trace_buffer_lo;
 
 IP_AGENT_EXPORT_VAR unsigned char *trace_buffer_hi;
 
-EXTERN_C_POP
+}
 
 /* Control structure holding the read/write/etc. pointers into the
    trace buffer.  We need more than one of these to implement a
@@ -1276,8 +1169,6 @@ static char *tracing_stop_note;
 
 #endif
 
-/* Functions local to this file.  */
-
 /* Base "class" for tracepoint type specific data to be passed down to
    collect_data_at_tracepoint.  */
 struct tracepoint_hit_ctx
@@ -1298,35 +1189,6 @@ struct fast_tracepoint_ctx
   unsigned char *regspace;
 
   unsigned char *regs;
-  struct tracepoint *tpoint;
-};
-
-/* Static tracepoint specific data to be passed down to
-   collect_data_at_tracepoint.  */
-struct static_tracepoint_ctx
-{
-  struct tracepoint_hit_ctx base;
-
-  /* The regcache corresponding to the registers state at the time of
-     the tracepoint hit.  Initialized lazily, from REGS.  */
-  struct regcache regcache;
-  int regcache_initted;
-
-  /* The buffer space REGCACHE above uses.  We use a separate buffer
-     instead of letting the regcache malloc for both signal safety and
-     performance reasons; this is allocated on the stack instead.  */
-  unsigned char *regspace;
-
-  /* The register buffer as passed on by lttng/ust.  */
-  struct registers *regs;
-
-  /* The "printf" formatter and the args the user passed to the marker
-     call.  We use this to be able to collect "static trace data"
-     ($_sdata).  */
-  const char *fmt;
-  va_list *args;
-
-  /* The GDB tracepoint matching the probed marker that was "hit".  */
   struct tracepoint *tpoint;
 };
 
@@ -1969,18 +1831,6 @@ add_tracepoint_action (struct tracepoint *tpoint, const char *packet)
 	      ++act;
 	    break;
 	  }
-	case 'L':
-	  {
-	    struct collect_static_trace_data_action *raction =
-	      XNEW (struct collect_static_trace_data_action);
-
-	    raction->base.type = *act;
-	    action = &raction->base;
-
-	    trace_debug ("Want to collect static trace data");
-	    ++act;
-	    break;
-	  }
 	case 'S':
 	  trace_debug ("Unexpected step action, ignoring");
 	  ++act;
@@ -2404,17 +2254,6 @@ cmd_qtinit (char *packet)
   write_ok (packet);
 }
 
-/* Unprobe the UST marker at ADDRESS.  */
-
-static void
-unprobe_marker_at (CORE_ADDR address)
-{
-  char cmd[IPA_CMD_BUF_SIZE];
-
-  sprintf (cmd, "unprobe_marker_at:%s", paddress (address));
-  run_inferior_command (cmd, strlen (cmd) + 1);
-}
-
 /* Restore the program to its pre-tracing state.  This routine may be called
    in error situations, so it needs to be careful about only restoring
    from known-valid bits.  */
@@ -2423,11 +2262,8 @@ static void
 clear_installed_tracepoints (void)
 {
   struct tracepoint *tpoint;
-  struct tracepoint *prev_stpoint;
 
   target_pause_all (true);
-
-  prev_stpoint = NULL;
 
   /* Restore any bytes overwritten by tracepoints.  */
   for (tpoint = tracepoints; tpoint; tpoint = tpoint->next)
@@ -2459,19 +2295,6 @@ clear_installed_tracepoints (void)
 
 	    delete_fast_tracepoint_jump (jump);
 	  }
-	  break;
-	case static_tracepoint:
-	  if (prev_stpoint != NULL
-	      && prev_stpoint->address == tpoint->address)
-	    /* Nothing to do.  We already unprobed a tracepoint set at
-	       this marker address (and there can only be one probe
-	       per marker).  */
-	    ;
-	  else
-	    {
-	      unprobe_marker_at (tpoint->address);
-	      prev_stpoint = tpoint;
-	    }
 	  break;
 	}
 
@@ -2546,11 +2369,6 @@ cmd_qtdp (char *own_buf)
 	      packet = unpack_varlen_hex (packet, &count);
 	      tpoint->orig_size = count;
 	    }
-	  else if (*packet == 'S')
-	    {
-	      tpoint->type = static_tracepoint;
-	      ++packet;
-	    }
 	  else if (*packet == 'X')
 	    {
 	      tpoint->cond = gdb_parse_agent_expr (&packet);
@@ -2570,8 +2388,7 @@ cmd_qtdp (char *own_buf)
 
       trace_debug ("Defined %stracepoint %d at 0x%s, "
 		   "enabled %d step %" PRIu64 " pass %" PRIu64,
-		   tpoint->type == fast_tracepoint ? "fast "
-		   : tpoint->type == static_tracepoint ? "static " : "",
+		   tpoint->type == fast_tracepoint ? "fast " : "",
 		   tpoint->number, paddress (tpoint->address), tpoint->enabled,
 		   tpoint->step_count, tpoint->pass_count);
     }
@@ -2606,7 +2423,7 @@ cmd_qtdp (char *own_buf)
 
       if (tpoint->type != trap_tracepoint)
 	{
-	  /* Find another fast or static tracepoint at the same address.  */
+	  /* Find another fast tracepoint at the same address.  */
 	  for (tp = tracepoints; tp; tp = tp->next)
 	    {
 	      if (tp->address == tpoint->address && tp->type == tpoint->type
@@ -2619,8 +2436,6 @@ cmd_qtdp (char *own_buf)
 	    {
 	      if (tpoint->type == fast_tracepoint)
 		clone_fast_tracepoint (tpoint, tp);
-	      else if (tpoint->type == static_tracepoint)
-		tpoint->handle = (void *) -1;
 	    }
 	}
 
@@ -2782,7 +2597,7 @@ cmd_qtenable_disable (char *own_buf, int enable)
 
       tp->enabled = enable;
 
-      if (tp->type == fast_tracepoint || tp->type == static_tracepoint)
+      if (tp->type == fast_tracepoint)
 	{
 	  int offset = offsetof (struct tracepoint, enabled);
 	  CORE_ADDR obj_addr = tp->obj_addr_on_target + offset;
@@ -2921,8 +2736,7 @@ get_jump_space_head (void)
       if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_jump_pad_buffer,
 				      &gdb_jump_pad_head))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "error extracting jump_pad_buffer");
+	  internal_error ("error extracting jump_pad_buffer");
 	}
     }
 
@@ -2954,15 +2768,13 @@ claim_trampoline_space (ULONGEST used, CORE_ADDR *trampoline)
       if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer,
 				      &trampoline_buffer_tail))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "error extracting trampoline_buffer");
+	  internal_error ("error extracting trampoline_buffer");
 	}
 
       if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer_end,
 				      &trampoline_buffer_head))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "error extracting trampoline_buffer_end");
+	  internal_error ("error extracting trampoline_buffer_end");
 	}
     }
 
@@ -2997,8 +2809,7 @@ have_fast_tracepoint_trampoline_buffer (char *buf)
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer_end,
 				  &trampoline_end))
     {
-      internal_error (__FILE__, __LINE__,
-		      "error extracting trampoline_buffer_end");
+      internal_error ("error extracting trampoline_buffer_end");
     }
   
   if (buf)
@@ -3008,41 +2819,13 @@ have_fast_tracepoint_trampoline_buffer (char *buf)
       if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer_error,
 				  &errbuf))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "error extracting errbuf");
+	  internal_error ("error extracting errbuf");
 	}
 
       read_inferior_memory (errbuf, (unsigned char *) buf, 100);
     }
 
   return trampoline_end != 0;
-}
-
-/* Ask the IPA to probe the marker at ADDRESS.  Returns -1 if running
-   the command fails, or 0 otherwise.  If the command ran
-   successfully, but probing the marker failed, ERROUT will be filled
-   with the error to reply to GDB, and -1 is also returned.  This
-   allows directly passing IPA errors to GDB.  */
-
-static int
-probe_marker_at (CORE_ADDR address, char *errout)
-{
-  char cmd[IPA_CMD_BUF_SIZE];
-  int err;
-
-  sprintf (cmd, "probe_marker_at:%s", paddress (address));
-  err = run_inferior_command (cmd, strlen (cmd) + 1);
-
-  if (err == 0)
-    {
-      if (*cmd == 'E')
-	{
-	  strcpy (errout, cmd);
-	  return -1;
-	}
-    }
-
-  return err;
 }
 
 static void
@@ -3144,36 +2927,20 @@ install_tracepoint (struct tracepoint *tpoint, char *own_buf)
       tpoint->handle = set_breakpoint_at (tpoint->address,
 					  tracepoint_handler);
     }
-  else if (tpoint->type == fast_tracepoint || tpoint->type == static_tracepoint)
+  else if (tpoint->type == fast_tracepoint)
     {
       if (!agent_loaded_p ())
 	{
-	  trace_debug ("Requested a %s tracepoint, but fast "
-		       "tracepoints aren't supported.",
-		       tpoint->type == static_tracepoint ? "static" : "fast");
+	  trace_debug ("Requested a fast tracepoint, but fast "
+		       "tracepoints aren't supported.");
 	  write_e_ipa_not_loaded (own_buf);
 	  return;
 	}
-      if (tpoint->type == static_tracepoint
-	  && !in_process_agent_supports_ust ())
-	{
-	  trace_debug ("Requested a static tracepoint, but static "
-		       "tracepoints are not supported.");
-	  write_e_ust_not_loaded (own_buf);
-	  return;
-	}
 
-      if (tpoint->type == fast_tracepoint)
-	install_fast_tracepoint (tpoint, own_buf);
-      else
-	{
-	  if (probe_marker_at (tpoint->address, own_buf) == 0)
-	    tpoint->handle = (void *) -1;
-	}
-
+      install_fast_tracepoint (tpoint, own_buf);
     }
   else
-    internal_error (__FILE__, __LINE__, "Unknown tracepoint type");
+    internal_error ("Unknown tracepoint type");
 
   if (tpoint->handle == NULL)
     {
@@ -3189,7 +2956,7 @@ static void download_tracepoint_1 (struct tracepoint *tpoint);
 static void
 cmd_qtstart (char *packet)
 {
-  struct tracepoint *tpoint, *prev_ftpoint, *prev_stpoint;
+  struct tracepoint *tpoint, *prev_ftpoint;
   CORE_ADDR tpptr = 0, prev_tpptr = 0;
 
   trace_debug ("Starting the trace");
@@ -3212,9 +2979,6 @@ cmd_qtstart (char *packet)
 
   /* No previous fast tpoint yet.  */
   prev_ftpoint = NULL;
-
-  /* No previous static tpoint yet.  */
-  prev_stpoint = NULL;
 
   *packet = '\0';
 
@@ -3246,76 +3010,44 @@ cmd_qtstart (char *packet)
 	  tpoint->handle = set_breakpoint_at (tpoint->address,
 					      tracepoint_handler);
 	}
-      else if (tpoint->type == fast_tracepoint
-	       || tpoint->type == static_tracepoint)
+      else if (tpoint->type == fast_tracepoint)
 	{
 	  if (maybe_write_ipa_not_loaded (packet))
 	    {
-	      trace_debug ("Requested a %s tracepoint, but fast "
-			   "tracepoints aren't supported.",
-			   tpoint->type == static_tracepoint
-			   ? "static" : "fast");
+	      trace_debug ("Requested a fast tracepoint, but fast "
+			   "tracepoints aren't supported.");
 	      break;
 	    }
 
-	  if (tpoint->type == fast_tracepoint)
+	  int use_agent_p
+	    = use_agent && agent_capability_check (AGENT_CAPA_FAST_TRACE);
+
+	  if (prev_ftpoint != NULL
+	      && prev_ftpoint->address == tpoint->address)
 	    {
-	      int use_agent_p
-		= use_agent && agent_capability_check (AGENT_CAPA_FAST_TRACE);
-
-	      if (prev_ftpoint != NULL
-		  && prev_ftpoint->address == tpoint->address)
-		{
-		  if (use_agent_p)
-		    tracepoint_send_agent (tpoint);
-		  else
-		    download_tracepoint_1 (tpoint);
-
-		  clone_fast_tracepoint (tpoint, prev_ftpoint);
-		}
+	      if (use_agent_p)
+		tracepoint_send_agent (tpoint);
 	      else
-		{
-		  /* Tracepoint is installed successfully?  */
-		  int installed = 0;
+		download_tracepoint_1 (tpoint);
 
-		  /* Download and install fast tracepoint by agent.  */
-		  if (use_agent_p)
-		    installed = !tracepoint_send_agent (tpoint);
-		  else
-		    {
-		      download_tracepoint_1 (tpoint);
-		      installed = !install_fast_tracepoint (tpoint, packet);
-		    }
-
-		  if (installed)
-		    prev_ftpoint = tpoint;
-		}
+	      clone_fast_tracepoint (tpoint, prev_ftpoint);
 	    }
 	  else
 	    {
-	      if (!in_process_agent_supports_ust ())
-		{
-		  trace_debug ("Requested a static tracepoint, but static "
-			       "tracepoints are not supported.");
-		  break;
-		}
+	      /* Tracepoint is installed successfully?  */
+	      int installed = 0;
 
-	      download_tracepoint_1 (tpoint);
-	      /* Can only probe a given marker once.  */
-	      if (prev_stpoint != NULL
-		  && prev_stpoint->address == tpoint->address)
-		tpoint->handle = (void *) -1;
+	      /* Download and install fast tracepoint by agent.  */
+	      if (use_agent_p)
+		installed = !tracepoint_send_agent (tpoint);
 	      else
 		{
-		  if (probe_marker_at (tpoint->address, packet) == 0)
-		    {
-		      tpoint->handle = (void *) -1;
-
-		      /* So that we can handle multiple static tracepoints
-			 at the same address easily.  */
-		      prev_stpoint = tpoint;
-		    }
+		  download_tracepoint_1 (tpoint);
+		  installed = !install_fast_tracepoint (tpoint, packet);
 		}
+
+	      if (installed)
+		prev_ftpoint = tpoint;
 	    }
 
 	  prev_tpptr = tpptr;
@@ -3362,22 +3094,19 @@ cmd_qtstart (char *packet)
     {
       if (write_inferior_integer (ipa_sym_addrs.addr_tracing, 1))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "Error setting tracing variable in lib");
+	  internal_error ("Error setting tracing variable in lib");
 	}
 
       if (write_inferior_data_pointer (ipa_sym_addrs.addr_stopping_tracepoint,
 				       0))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "Error clearing stopping_tracepoint variable"
+	  internal_error ("Error clearing stopping_tracepoint variable"
 			  " in lib");
 	}
 
       if (write_inferior_integer (ipa_sym_addrs.addr_trace_buffer_is_full, 0))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "Error clearing trace_buffer_is_full variable"
+	  internal_error ("Error clearing trace_buffer_is_full variable"
 			  " in lib");
 	}
 
@@ -3429,8 +3158,7 @@ stop_tracing (void)
     {
       if (write_inferior_integer (ipa_sym_addrs.addr_tracing, 0))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "Error clearing tracing variable in lib");
+	  internal_error ("Error clearing tracing variable in lib");
 	}
     }
 
@@ -3747,8 +3475,6 @@ response_tracepoint (char *packet, struct tracepoint *tpoint)
 	   tpoint->pass_count);
   if (tpoint->type == fast_tracepoint)
     sprintf (packet + strlen (packet), ":F%x", tpoint->orig_size);
-  else if (tpoint->type == static_tracepoint)
-    sprintf (packet + strlen (packet), ":S");
 
   if (tpoint->cond)
     {
@@ -3915,36 +3641,6 @@ cmd_qtsv (char *packet)
     }
   else
     strcpy (packet, "l");
-}
-
-/* Return the first static tracepoint marker, and initialize the state
-   machine that will iterate through all the static tracepoints
-   markers.  */
-
-static void
-cmd_qtfstm (char *packet)
-{
-  if (!maybe_write_ipa_ust_not_loaded (packet))
-    run_inferior_command (packet, strlen (packet) + 1);
-}
-
-/* Return additional static tracepoints markers.  */
-
-static void
-cmd_qtsstm (char *packet)
-{
-  if (!maybe_write_ipa_ust_not_loaded (packet))
-    run_inferior_command (packet, strlen (packet) + 1);
-}
-
-/* Return the definition of the static tracepoint at a given address.
-   Result packet is the same as qTsST's.  */
-
-static void
-cmd_qtstmat (char *packet)
-{
-  if (!maybe_write_ipa_ust_not_loaded (packet))
-    run_inferior_command (packet, strlen (packet) + 1);
 }
 
 /* Sent the agent a command to close it.  */
@@ -4262,21 +3958,6 @@ handle_tracepoint_query (char *packet)
       cmd_qtbuffer (packet);
       return 1;
     }
-  else if (strcmp ("qTfSTM", packet) == 0)
-    {
-      cmd_qtfstm (packet);
-      return 1;
-    }
-  else if (strcmp ("qTsSTM", packet) == 0)
-    {
-      cmd_qtsstm (packet);
-      return 1;
-    }
-  else if (startswith (packet, "qTSTMat:"))
-    {
-      cmd_qtstmat (packet);
-      return 1;
-    }
   else if (strcmp ("qTMinFTPILen", packet) == 0)
     {
       cmd_qtminftpilen (packet);
@@ -4309,7 +3990,7 @@ handle_tracepoint_query (char *packet)
    action covering the whole range.  */
 
 static void
-add_while_stepping_state (struct thread_info *tinfo,
+add_while_stepping_state (thread_info *tinfo,
 			  int tp_number, CORE_ADDR tp_address)
 {
   struct wstep_state *wstep = XNEW (struct wstep_state);
@@ -4335,7 +4016,7 @@ release_while_stepping_state (struct wstep_state *wstep)
    with thread TINFO.  */
 
 void
-release_while_stepping_state_list (struct thread_info *tinfo)
+release_while_stepping_state_list (thread_info *tinfo)
 {
   struct wstep_state *head;
 
@@ -4353,7 +4034,7 @@ release_while_stepping_state_list (struct thread_info *tinfo)
    collecting tracepoint data, false otherwise.  */
 
 int
-tracepoint_finished_step (struct thread_info *tinfo, CORE_ADDR stop_pc)
+tracepoint_finished_step (thread_info *tinfo, CORE_ADDR stop_pc)
 {
   struct tracepoint *tpoint;
   struct wstep_state *wstep;
@@ -4389,7 +4070,7 @@ tracepoint_finished_step (struct thread_info *tinfo, CORE_ADDR stop_pc)
 	       wstep->tp_number, paddress (wstep->tp_address));
 
   ctx.base.type = trap_tracepoint;
-  ctx.regcache = get_thread_regcache (tinfo, 1);
+  ctx.regcache = get_thread_regcache (tinfo);
 
   while (wstep != NULL)
     {
@@ -4458,7 +4139,7 @@ tracepoint_finished_step (struct thread_info *tinfo, CORE_ADDR stop_pc)
    tracing agents when the IPA's tracing stops for some reason.  */
 
 int
-handle_tracepoint_bkpts (struct thread_info *tinfo, CORE_ADDR stop_pc)
+handle_tracepoint_bkpts (thread_info *tinfo, CORE_ADDR stop_pc)
 {
   /* Pull in fast tracepoint trace frames from the inferior in-process
      agent's buffer into our buffer.  */
@@ -4539,7 +4220,7 @@ handle_tracepoint_bkpts (struct thread_info *tinfo, CORE_ADDR stop_pc)
    so.  */
 
 int
-tracepoint_was_hit (struct thread_info *tinfo, CORE_ADDR stop_pc)
+tracepoint_was_hit (thread_info *tinfo, CORE_ADDR stop_pc)
 {
   struct tracepoint *tpoint;
   int ret = 0;
@@ -4550,18 +4231,14 @@ tracepoint_was_hit (struct thread_info *tinfo, CORE_ADDR stop_pc)
     return 0;
 
   ctx.base.type = trap_tracepoint;
-  ctx.regcache = get_thread_regcache (tinfo, 1);
+  ctx.regcache = get_thread_regcache (tinfo);
 
   for (tpoint = tracepoints; tpoint; tpoint = tpoint->next)
     {
       /* Note that we collect fast tracepoints here as well.  We'll
 	 step over the fast tracepoint jump later, which avoids the
-	 double collect.  However, we don't collect for static
-	 tracepoints here, because UST markers are compiled in program,
-	 and probes will be executed in program.  So static tracepoints
-	 are collected there.   */
-      if (tpoint->enabled && stop_pc == tpoint->address
-	  && tpoint->type != static_tracepoint)
+	 double collect.  */
+      if (tpoint->enabled && stop_pc == tpoint->address)
 	{
 	  trace_debug ("Thread %s at address of tracepoint %d at 0x%s",
 		       target_pid_to_str (tinfo->id).c_str (),
@@ -4596,12 +4273,6 @@ tracepoint_was_hit (struct thread_info *tinfo, CORE_ADDR stop_pc)
   return ret;
 }
 
-#endif
-
-#if defined IN_PROCESS_AGENT && defined HAVE_UST
-struct ust_marker_data;
-static void collect_ust_data_at_tracepoint (struct tracepoint_hit_ctx *ctx,
-					    struct traceframe *tframe);
 #endif
 
 /* Create a trace frame for the hit of the given tracepoint in the
@@ -4695,9 +4366,9 @@ collect_data_at_step (struct tracepoint_hit_ctx *ctx,
 #ifdef IN_PROCESS_AGENT
 /* The target description index for IPA.  Passed from gdbserver, used
    to select ipa_tdesc.  */
-EXTERN_C_PUSH
+extern "C" {
 IP_AGENT_EXPORT_VAR int ipa_tdesc_idx;
-EXTERN_C_POP
+}
 #endif
 
 static struct regcache *
@@ -4719,27 +4390,6 @@ get_context_regcache (struct tracepoint_hit_ctx *ctx)
 	}
       regcache = &fctx->regcache;
     }
-#ifdef HAVE_UST
-  if (ctx->type == static_tracepoint)
-    {
-      struct static_tracepoint_ctx *sctx
-	= (struct static_tracepoint_ctx *) ctx;
-
-      if (!sctx->regcache_initted)
-	{
-	  sctx->regcache_initted = 1;
-	  init_register_cache (&sctx->regcache, ipa_tdesc, sctx->regspace);
-	  supply_regblock (&sctx->regcache, NULL);
-	  /* Pass down the tracepoint address, because REGS doesn't
-	     include the PC, but we know what it must have been.  */
-	  supply_static_tracepoint_registers (&sctx->regcache,
-					      (const unsigned char *)
-					      sctx->regs,
-					      sctx->tpoint->address);
-	}
-      regcache = &sctx->regcache;
-    }
-#endif
 #else
   if (ctx->type == trap_tracepoint)
     {
@@ -4810,7 +4460,7 @@ do_action_at_tracepoint (struct tracepoint_hit_ctx *ctx,
 			     regspace + 1);
 
 	/* Copy the register data to the regblock.  */
-	regcache_cpy (&tregcache, context_regcache);
+	tregcache.copy_from (context_regcache);
 
 #ifndef IN_PROCESS_AGENT
 	/* On some platforms, trap-based tracepoints will have the PC
@@ -4851,17 +4501,6 @@ do_action_at_tracepoint (struct tracepoint_hit_ctx *ctx,
 	    record_tracepoint_error (tpoint, "action expression", err);
 	    return;
 	  }
-      }
-      break;
-    case 'L':
-      {
-#if defined IN_PROCESS_AGENT && defined HAVE_UST
-	trace_debug ("Want to collect static trace data");
-	collect_ust_data_at_tracepoint (ctx, tframe);
-#else
-	trace_debug ("warning: collecting static trace data, "
-		     "but static tracepoints are not supported");
-#endif
       }
       break;
     default:
@@ -4921,8 +4560,7 @@ condition_true_at_tracepoint (struct tracepoint_hit_ctx *ctx,
   return (value ? 1 : 0);
 }
 
-/* Do memory copies for bytecodes.  */
-/* Do the recording of memory blocks for actions and bytecodes.  */
+/* See tracepoint.h.  */
 
 int
 agent_mem_read (struct eval_agent_expr_context *ctx,
@@ -4934,10 +4572,7 @@ agent_mem_read (struct eval_agent_expr_context *ctx,
 
   /* If a 'to' buffer is specified, use it.  */
   if (to != NULL)
-    {
-      read_inferior_memory (from, to, len);
-      return 0;
-    }
+    return read_inferior_memory (from, to, len);
 
   /* Otherwise, create a new memory block in the trace buffer.  */
   while (remaining > 0)
@@ -4958,7 +4593,8 @@ agent_mem_read (struct eval_agent_expr_context *ctx,
       memcpy (mspace, &blocklen, sizeof (blocklen));
       mspace += sizeof (blocklen);
       /* Record the memory block proper.  */
-      read_inferior_memory (from, mspace, blocklen);
+      if (read_inferior_memory (from, mspace, blocklen) != 0)
+	return 1;
       trace_debug ("%d bytes recorded", blocklen);
       remaining -= blocklen;
       from += blocklen;
@@ -5343,67 +4979,14 @@ traceframe_read_tsv (int tsvnum, LONGEST *val)
   return !found;
 }
 
-/* Read a requested block of static tracepoint data from a trace
-   frame.  */
-
-int
-traceframe_read_sdata (int tfnum, ULONGEST offset,
-		       unsigned char *buf, ULONGEST length,
-		       ULONGEST *nbytes)
-{
-  struct traceframe *tframe;
-  unsigned char *database, *dataptr;
-  unsigned int datasize;
-  unsigned short mlen;
-
-  trace_debug ("traceframe_read_sdata");
-
-  tframe = find_traceframe (tfnum);
-
-  if (!tframe)
-    {
-      trace_debug ("traceframe %d not found", tfnum);
-      return 1;
-    }
-
-  datasize = tframe->data_size;
-  database = &tframe->data[0];
-
-  /* Iterate through a traceframe's blocks, looking for static
-     tracepoint data.  */
-  dataptr = traceframe_find_block_type (database, datasize,
-					tfnum, 'S');
-  if (dataptr != NULL)
-    {
-      memcpy (&mlen, dataptr, sizeof (mlen));
-      dataptr += sizeof (mlen);
-      if (offset < mlen)
-	{
-	  if (offset + length > mlen)
-	    length = mlen - offset;
-
-	  memcpy (buf, dataptr, length);
-	  *nbytes = length;
-	}
-      else
-	*nbytes = 0;
-      return 0;
-    }
-
-  trace_debug ("traceframe %d has no static trace data", tfnum);
-
-  *nbytes = 0;
-  return 0;
-}
-
 /* Callback for traceframe_walk_blocks.  Builds a traceframe-info
-   object.  DATA is pointer to a struct buffer holding the
-   traceframe-info object being built.  */
+   object.  DATA is pointer to a string holding the traceframe-info
+   object being built.  */
 
 static int
 build_traceframe_info_xml (char blocktype, unsigned char *dataptr, void *data)
 {
-  struct buffer *buffer = (struct buffer *) data;
+  std::string *buffer = (std::string *) data;
 
   switch (blocktype)
     {
@@ -5416,9 +4999,9 @@ build_traceframe_info_xml (char blocktype, unsigned char *dataptr, void *data)
 	dataptr += sizeof (maddr);
 	memcpy (&mlen, dataptr, sizeof (mlen));
 	dataptr += sizeof (mlen);
-	buffer_xml_printf (buffer,
-			   "<memory start=\"0x%s\" length=\"0x%s\"/>\n",
-			   paddress (maddr), phex_nz (mlen, sizeof (mlen)));
+	string_xml_appendf (*buffer,
+			    "<memory start=\"0x%s\" length=\"0x%s\"/>\n",
+			    paddress (maddr), phex_nz (mlen, sizeof (mlen)));
 	break;
       }
     case 'V':
@@ -5426,7 +5009,7 @@ build_traceframe_info_xml (char blocktype, unsigned char *dataptr, void *data)
 	int vnum;
 
 	memcpy (&vnum, dataptr, sizeof (vnum));
-	buffer_xml_printf (buffer, "<tvar id=\"%d\"/>\n", vnum);
+	string_xml_appendf (*buffer, "<tvar id=\"%d\"/>\n", vnum);
 	break;
       }
     case 'R':
@@ -5448,7 +5031,7 @@ build_traceframe_info_xml (char blocktype, unsigned char *dataptr, void *data)
    BUFFER.  */
 
 int
-traceframe_read_info (int tfnum, struct buffer *buffer)
+traceframe_read_info (int tfnum, std::string *buffer)
 {
   struct traceframe *tframe;
 
@@ -5462,10 +5045,10 @@ traceframe_read_info (int tfnum, struct buffer *buffer)
       return 1;
     }
 
-  buffer_grow_str (buffer, "<traceframe-info>\n");
+  *buffer += "<traceframe-info>\n";
   traceframe_walk_blocks (tframe->data, tframe->data_size,
 			  tfnum, build_traceframe_info_xml, buffer);
-  buffer_grow_str0 (buffer, "</traceframe-info>\n");
+  *buffer += "</traceframe-info>\n";
   return 0;
 }
 
@@ -5599,27 +5182,23 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_jump_pad_buffer,
 				  &ipa_gdb_jump_pad_buffer))
     {
-      internal_error (__FILE__, __LINE__,
-		      "error extracting `gdb_jump_pad_buffer'");
+      internal_error ("error extracting `gdb_jump_pad_buffer'");
     }
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_jump_pad_buffer_end,
 				  &ipa_gdb_jump_pad_buffer_end))
     {
-      internal_error (__FILE__, __LINE__,
-		      "error extracting `gdb_jump_pad_buffer_end'");
+      internal_error ("error extracting `gdb_jump_pad_buffer_end'");
     }
 
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer,
 				  &ipa_gdb_trampoline_buffer))
     {
-      internal_error (__FILE__, __LINE__,
-		      "error extracting `gdb_trampoline_buffer'");
+      internal_error ("error extracting `gdb_trampoline_buffer'");
     }
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_trampoline_buffer_end,
 				  &ipa_gdb_trampoline_buffer_end))
     {
-      internal_error (__FILE__, __LINE__,
-		      "error extracting `gdb_trampoline_buffer_end'");
+      internal_error ("error extracting `gdb_trampoline_buffer_end'");
     }
 
   if (ipa_gdb_jump_pad_buffer <= stop_pc
@@ -5768,9 +5347,9 @@ fast_tracepoint_collecting, returning continue-until-break at %s",
    NULL if it isn't locked.  Note that this lock *must* be set while
    executing any *function other than the jump pad.  See
    fast_tracepoint_collecting.  */
-EXTERN_C_PUSH
+extern "C" {
 IP_AGENT_EXPORT_VAR collecting_t *collecting;
-EXTERN_C_POP
+}
 
 /* This is needed for -Wmissing-declarations.  */
 IP_AGENT_EXPORT_FUNC void gdb_collect (struct tracepoint *tpoint,
@@ -5859,14 +5438,14 @@ typedef ULONGEST (*get_raw_reg_ptr_type) (const unsigned char *, int);
 typedef LONGEST (*get_trace_state_variable_value_ptr_type) (int);
 typedef void (*set_trace_state_variable_value_ptr_type) (int, LONGEST);
 
-EXTERN_C_PUSH
+extern "C" {
 IP_AGENT_EXPORT_VAR gdb_collect_ptr_type gdb_collect_ptr = gdb_collect;
 IP_AGENT_EXPORT_VAR get_raw_reg_ptr_type get_raw_reg_ptr = get_raw_reg;
 IP_AGENT_EXPORT_VAR get_trace_state_variable_value_ptr_type
   get_trace_state_variable_value_ptr = get_trace_state_variable_value;
 IP_AGENT_EXPORT_VAR set_trace_state_variable_value_ptr_type
   set_trace_state_variable_value_ptr = set_trace_state_variable_value;
-EXTERN_C_POP
+}
 
 #endif
 
@@ -5978,8 +5557,7 @@ target_malloc (ULONGEST size)
       if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_tp_heap_buffer,
 				      &target_tp_heap))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "couldn't get target heap head pointer");
+	  internal_error ("couldn't get target heap head pointer");
 	}
     }
 
@@ -6020,8 +5598,7 @@ download_tracepoint_1 (struct tracepoint *tpoint)
   struct tracepoint target_tracepoint;
   CORE_ADDR tpptr = 0;
 
-  gdb_assert (tpoint->type == fast_tracepoint
-	      || tpoint->type == static_tracepoint);
+  gdb_assert (tpoint->type == fast_tracepoint);
 
   if (tpoint->cond != NULL && target_emit_ops () != NULL)
     {
@@ -6181,8 +5758,7 @@ download_tracepoint (struct tracepoint *tpoint)
 {
   struct tracepoint *tp, *tp_prev;
 
-  if (tpoint->type != fast_tracepoint
-      && tpoint->type != static_tracepoint)
+  if (tpoint->type != fast_tracepoint)
     return;
 
   download_tracepoint_1 (tpoint);
@@ -6192,7 +5768,7 @@ download_tracepoint (struct tracepoint *tpoint)
   tp_prev = NULL;
   for (tp = tracepoints; tp != tpoint; tp = tp->next)
     {
-      if (tp->type == fast_tracepoint || tp->type == static_tracepoint)
+      if (tp->type == fast_tracepoint)
 	tp_prev = tp;
     }
 
@@ -6205,8 +5781,7 @@ download_tracepoint (struct tracepoint *tpoint)
 				      + offsetof (struct tracepoint, next),
 				      &tp_prev_target_next_addr))
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "error reading `tp_prev->next'");
+	  internal_error ("error reading `tp_prev->next'");
 	}
 
       /* tpoint->next = tp_prev->next */
@@ -6354,7 +5929,7 @@ upload_fast_traceframes (void)
     unsigned int prev, counter;
 
     /* Update the token, with new counters, and the GDBserver stamp
-       bit.  Alway reuse the current TBC index.  */
+       bit.  Always reuse the current TBC index.  */
     prev = ipa_trace_buffer_ctrl_curr & GDBSERVER_FLUSH_COUNT_MASK_CURR;
     counter = (prev + 0x100) & GDBSERVER_FLUSH_COUNT_MASK_CURR;
 
@@ -6458,8 +6033,7 @@ upload_fast_traceframes (void)
 
       if (ipa_tframe.tpnum == 0)
 	{
-	  internal_error (__FILE__, __LINE__,
-			  "Uploading: No (more) fast traceframes, but"
+	  internal_error ("Uploading: No (more) fast traceframes, but"
 			  " ipa_traceframe_count == %u??\n",
 			  ipa_traceframe_write_count
 			  - ipa_traceframe_read_count);
@@ -6562,256 +6136,8 @@ upload_fast_traceframes (void)
 
 #ifdef IN_PROCESS_AGENT
 
-IP_AGENT_EXPORT_VAR int ust_loaded;
 IP_AGENT_EXPORT_VAR char cmd_buf[IPA_CMD_BUF_SIZE];
 
-#ifdef HAVE_UST
-
-/* Static tracepoints.  */
-
-/* UST puts a "struct tracepoint" in the global namespace, which
-   conflicts with our tracepoint.  Arguably, being a library, it
-   shouldn't take ownership of such a generic name.  We work around it
-   here.  */
-#define tracepoint ust_tracepoint
-#include <ust/ust.h>
-#undef tracepoint
-
-extern int serialize_to_text (char *outbuf, int bufsize,
-			      const char *fmt, va_list ap);
-
-#define GDB_PROBE_NAME "gdb"
-
-/* We dynamically search for the UST symbols instead of linking them
-   in.  This lets the user decide if the application uses static
-   tracepoints, instead of always pulling libust.so in.  This vector
-   holds pointers to all functions we care about.  */
-
-static struct
-{
-  int (*serialize_to_text) (char *outbuf, int bufsize,
-			    const char *fmt, va_list ap);
-
-  int (*ltt_probe_register) (struct ltt_available_probe *pdata);
-  int (*ltt_probe_unregister) (struct ltt_available_probe *pdata);
-
-  int (*ltt_marker_connect) (const char *channel, const char *mname,
-			     const char *pname);
-  int (*ltt_marker_disconnect) (const char *channel, const char *mname,
-				const char *pname);
-
-  void (*marker_iter_start) (struct marker_iter *iter);
-  void (*marker_iter_next) (struct marker_iter *iter);
-  void (*marker_iter_stop) (struct marker_iter *iter);
-  void (*marker_iter_reset) (struct marker_iter *iter);
-} ust_ops;
-
-#include <dlfcn.h>
-
-/* Cast through typeof to catch incompatible API changes.  Since UST
-   only builds with gcc, we can freely use gcc extensions here
-   too.  */
-#define GET_UST_SYM(SYM)					\
-  do								\
-    {								\
-      if (ust_ops.SYM == NULL)					\
-	ust_ops.SYM = (typeof (&SYM)) dlsym (RTLD_DEFAULT, #SYM);	\
-      if (ust_ops.SYM == NULL)					\
-	return 0;						\
-    } while (0)
-
-#define USTF(SYM) ust_ops.SYM
-
-/* Get pointers to all libust.so functions we care about.  */
-
-static int
-dlsym_ust (void)
-{
-  GET_UST_SYM (serialize_to_text);
-
-  GET_UST_SYM (ltt_probe_register);
-  GET_UST_SYM (ltt_probe_unregister);
-  GET_UST_SYM (ltt_marker_connect);
-  GET_UST_SYM (ltt_marker_disconnect);
-
-  GET_UST_SYM (marker_iter_start);
-  GET_UST_SYM (marker_iter_next);
-  GET_UST_SYM (marker_iter_stop);
-  GET_UST_SYM (marker_iter_reset);
-
-  ust_loaded = 1;
-  return 1;
-}
-
-/* Given an UST marker, return the matching gdb static tracepoint.
-   The match is done by address.  */
-
-static struct tracepoint *
-ust_marker_to_static_tracepoint (const struct marker *mdata)
-{
-  struct tracepoint *tpoint;
-
-  for (tpoint = tracepoints; tpoint; tpoint = tpoint->next)
-    {
-      if (tpoint->type != static_tracepoint)
-	continue;
-
-      if (tpoint->address == (uintptr_t) mdata->location)
-	return tpoint;
-    }
-
-  return NULL;
-}
-
-/* The probe function we install on lttng/ust markers.  Whenever a
-   probed ust marker is hit, this function is called.  This is similar
-   to gdb_collect, only for static tracepoints, instead of fast
-   tracepoints.  */
-
-static void
-gdb_probe (const struct marker *mdata, void *probe_private,
-	   struct registers *regs, void *call_private,
-	   const char *fmt, va_list *args)
-{
-  struct tracepoint *tpoint;
-  struct static_tracepoint_ctx ctx;
-  const struct target_desc *ipa_tdesc;
-
-  /* Don't do anything until the trace run is completely set up.  */
-  if (!tracing)
-    {
-      trace_debug ("gdb_probe: not tracing\n");
-      return;
-    }
-
-  ipa_tdesc = get_ipa_tdesc (ipa_tdesc_idx);
-  ctx.base.type = static_tracepoint;
-  ctx.regcache_initted = 0;
-  ctx.regs = regs;
-  ctx.fmt = fmt;
-  ctx.args = args;
-
-  /* Wrap the regblock in a register cache (in the stack, we don't
-     want to malloc here).  */
-  ctx.regspace = alloca (ipa_tdesc->registers_size);
-  if (ctx.regspace == NULL)
-    {
-      trace_debug ("Trace buffer block allocation failed, skipping");
-      return;
-    }
-
-  tpoint = ust_marker_to_static_tracepoint (mdata);
-  if (tpoint == NULL)
-    {
-      trace_debug ("gdb_probe: marker not known: "
-		   "loc:0x%p, ch:\"%s\",n:\"%s\",f:\"%s\"",
-		   mdata->location, mdata->channel,
-		   mdata->name, mdata->format);
-      return;
-    }
-
-  if (!tpoint->enabled)
-    {
-      trace_debug ("gdb_probe: tracepoint disabled");
-      return;
-    }
-
-  ctx.tpoint = tpoint;
-
-  trace_debug ("gdb_probe: collecting marker: "
-	       "loc:0x%p, ch:\"%s\",n:\"%s\",f:\"%s\"",
-	       mdata->location, mdata->channel,
-	       mdata->name, mdata->format);
-
-  /* Test the condition if present, and collect if true.  */
-  if (tpoint->cond == NULL
-      || condition_true_at_tracepoint ((struct tracepoint_hit_ctx *) &ctx,
-				       tpoint))
-    {
-      collect_data_at_tracepoint ((struct tracepoint_hit_ctx *) &ctx,
-				  tpoint->address, tpoint);
-
-      if (stopping_tracepoint
-	  || trace_buffer_is_full
-	  || expr_eval_result != expr_eval_no_error)
-	stop_tracing ();
-    }
-  else
-    {
-      /* If there was a condition and it evaluated to false, the only
-	 way we would stop tracing is if there was an error during
-	 condition expression evaluation.  */
-      if (expr_eval_result != expr_eval_no_error)
-	stop_tracing ();
-    }
-}
-
-/* Called if the gdb static tracepoint requested collecting "$_sdata",
-   static tracepoint string data.  This is a string passed to the
-   tracing library by the user, at the time of the tracepoint marker
-   call.  E.g., in the UST marker call:
-
-     trace_mark (ust, bar33, "str %s", "FOOBAZ");
-
-   the collected data is "str FOOBAZ".
-*/
-
-static void
-collect_ust_data_at_tracepoint (struct tracepoint_hit_ctx *ctx,
-				struct traceframe *tframe)
-{
-  struct static_tracepoint_ctx *umd = (struct static_tracepoint_ctx *) ctx;
-  unsigned char *bufspace;
-  int size;
-  va_list copy;
-  unsigned short blocklen;
-
-  if (umd == NULL)
-    {
-      trace_debug ("Wanted to collect static trace data, "
-		   "but there's no static trace data");
-      return;
-    }
-
-  va_copy (copy, *umd->args);
-  size = USTF(serialize_to_text) (NULL, 0, umd->fmt, copy);
-  va_end (copy);
-
-  trace_debug ("Want to collect ust data");
-
-  /* 'S' + size + string */
-  bufspace = add_traceframe_block (tframe, umd->tpoint,
-				   1 + sizeof (blocklen) + size + 1);
-  if (bufspace == NULL)
-    {
-      trace_debug ("Trace buffer block allocation failed, skipping");
-      return;
-    }
-
-  /* Identify a static trace data block.  */
-  *bufspace = 'S';
-
-  blocklen = size + 1;
-  memcpy (bufspace + 1, &blocklen, sizeof (blocklen));
-
-  va_copy (copy, *umd->args);
-  USTF(serialize_to_text) ((char *) bufspace + 1 + sizeof (blocklen),
-			   size + 1, umd->fmt, copy);
-  va_end (copy);
-
-  trace_debug ("Storing static tracepoint data in regblock: %s",
-	       bufspace + 1 + sizeof (blocklen));
-}
-
-/* The probe to register with lttng/ust.  */
-static struct ltt_available_probe gdb_ust_probe =
-  {
-    GDB_PROBE_NAME,
-    NULL,
-    gdb_probe,
-  };
-
-#endif /* HAVE_UST */
 #endif /* IN_PROCESS_AGENT */
 
 #ifndef IN_PROCESS_AGENT
@@ -6827,14 +6153,14 @@ static int
 run_inferior_command (char *cmd, int len)
 {
   int err = -1;
-  int pid = current_ptid.pid ();
+  int pid = current_thread->id.pid ();
 
   trace_debug ("run_inferior_command: running: %s", cmd);
 
   target_pause_all (false);
   uninsert_all_breakpoints ();
 
-  err = agent_run_command (pid, (const char *) cmd, len);
+  err = agent_run_command (pid, cmd, len);
 
   reinsert_all_breakpoints ();
   target_unpause_all (false);
@@ -6856,9 +6182,9 @@ run_inferior_command (char *cmd, int len)
 
 /* Thread ID of the helper thread.  GDBserver reads this to know which
    is the help thread.  This is an LWP id on Linux.  */
-EXTERN_C_PUSH
+extern "C" {
 IP_AGENT_EXPORT_VAR int helper_thread_id;
-EXTERN_C_POP
+}
 
 static int
 init_named_socket (const char *name)
@@ -6940,229 +6266,6 @@ gdb_agent_socket_init (void)
   return fd;
 }
 
-#ifdef HAVE_UST
-
-/* The next marker to be returned on a qTsSTM command.  */
-static const struct marker *next_st;
-
-/* Returns the first known marker.  */
-
-struct marker *
-first_marker (void)
-{
-  struct marker_iter iter;
-
-  USTF(marker_iter_reset) (&iter);
-  USTF(marker_iter_start) (&iter);
-
-  return iter.marker;
-}
-
-/* Returns the marker following M.  */
-
-const struct marker *
-next_marker (const struct marker *m)
-{
-  struct marker_iter iter;
-
-  USTF(marker_iter_reset) (&iter);
-  USTF(marker_iter_start) (&iter);
-
-  for (; iter.marker != NULL; USTF(marker_iter_next) (&iter))
-    {
-      if (iter.marker == m)
-	{
-	  USTF(marker_iter_next) (&iter);
-	  return iter.marker;
-	}
-    }
-
-  return NULL;
-}
-
-/* Return an hexstr version of the STR C string, fit for sending to
-   GDB.  */
-
-static char *
-cstr_to_hexstr (const char *str)
-{
-  int len = strlen (str);
-  char *hexstr = xmalloc (len * 2 + 1);
-  bin2hex ((gdb_byte *) str, hexstr, len);
-  return hexstr;
-}
-
-/* Compose packet that is the response to the qTsSTM/qTfSTM/qTSTMat
-   packets.  */
-
-static void
-response_ust_marker (char *packet, const struct marker *st)
-{
-  char *strid, *format, *tmp;
-
-  next_st = next_marker (st);
-
-  tmp = xmalloc (strlen (st->channel) + 1 +
-		 strlen (st->name) + 1);
-  sprintf (tmp, "%s/%s", st->channel, st->name);
-
-  strid = cstr_to_hexstr (tmp);
-  free (tmp);
-
-  format = cstr_to_hexstr (st->format);
-
-  sprintf (packet, "m%s:%s:%s",
-	   paddress ((uintptr_t) st->location),
-	   strid,
-	   format);
-
-  free (strid);
-  free (format);
-}
-
-/* Return the first static tracepoint, and initialize the state
-   machine that will iterate through all the static tracepoints.  */
-
-static void
-cmd_qtfstm (char *packet)
-{
-  trace_debug ("Returning first trace state variable definition");
-
-  if (first_marker ())
-    response_ust_marker (packet, first_marker ());
-  else
-    strcpy (packet, "l");
-}
-
-/* Return additional trace state variable definitions. */
-
-static void
-cmd_qtsstm (char *packet)
-{
-  trace_debug ("Returning static tracepoint");
-
-  if (next_st)
-    response_ust_marker (packet, next_st);
-  else
-    strcpy (packet, "l");
-}
-
-/* Disconnect the GDB probe from a marker at a given address.  */
-
-static void
-unprobe_marker_at (char *packet)
-{
-  char *p = packet;
-  ULONGEST address;
-  struct marker_iter iter;
-
-  p += sizeof ("unprobe_marker_at:") - 1;
-
-  p = unpack_varlen_hex (p, &address);
-
-  USTF(marker_iter_reset) (&iter);
-  USTF(marker_iter_start) (&iter);
-  for (; iter.marker != NULL; USTF(marker_iter_next) (&iter))
-    if ((uintptr_t ) iter.marker->location == address)
-      {
-	int result;
-
-	result = USTF(ltt_marker_disconnect) (iter.marker->channel,
-					      iter.marker->name,
-					      GDB_PROBE_NAME);
-	if (result < 0)
-	  warning ("could not disable marker %s/%s",
-		   iter.marker->channel, iter.marker->name);
-	break;
-      }
-}
-
-/* Connect the GDB probe to a marker at a given address.  */
-
-static int
-probe_marker_at (char *packet)
-{
-  char *p = packet;
-  ULONGEST address;
-  struct marker_iter iter;
-  struct marker *m;
-
-  p += sizeof ("probe_marker_at:") - 1;
-
-  p = unpack_varlen_hex (p, &address);
-
-  USTF(marker_iter_reset) (&iter);
-
-  for (USTF(marker_iter_start) (&iter), m = iter.marker;
-       m != NULL;
-       USTF(marker_iter_next) (&iter), m = iter.marker)
-    if ((uintptr_t ) m->location == address)
-      {
-	int result;
-
-	trace_debug ("found marker for address.  "
-		     "ltt_marker_connect (marker = %s/%s)",
-		     m->channel, m->name);
-
-	result = USTF(ltt_marker_connect) (m->channel, m->name,
-					   GDB_PROBE_NAME);
-	if (result && result != -EEXIST)
-	  trace_debug ("ltt_marker_connect (marker = %s/%s, errno = %d)",
-		       m->channel, m->name, -result);
-
-	if (result < 0)
-	  {
-	    sprintf (packet, "E.could not connect marker: channel=%s, name=%s",
-		     m->channel, m->name);
-	    return -1;
-	  }
-
-	strcpy (packet, "OK");
-	return 0;
-      }
-
-  sprintf (packet, "E.no marker found at 0x%s", paddress (address));
-  return -1;
-}
-
-static int
-cmd_qtstmat (char *packet)
-{
-  char *p = packet;
-  ULONGEST address;
-  struct marker_iter iter;
-  struct marker *m;
-
-  p += sizeof ("qTSTMat:") - 1;
-
-  p = unpack_varlen_hex (p, &address);
-
-  USTF(marker_iter_reset) (&iter);
-
-  for (USTF(marker_iter_start) (&iter), m = iter.marker;
-       m != NULL;
-       USTF(marker_iter_next) (&iter), m = iter.marker)
-    if ((uintptr_t ) m->location == address)
-      {
-	response_ust_marker (packet, m);
-	return 0;
-      }
-
-  strcpy (packet, "l");
-  return -1;
-}
-
-static void
-gdb_ust_init (void)
-{
-  if (!dlsym_ust ())
-    return;
-
-  USTF(ltt_probe_register) (&gdb_ust_probe);
-}
-
-#endif /* HAVE_UST */
-
 #include <sys/syscall.h>
 
 static void
@@ -7237,28 +6340,6 @@ gdb_agent_helper_thread (void *arg)
 		{
 		  stop_loop = 1;
 		}
-#ifdef HAVE_UST
-	      else if (strcmp ("qTfSTM", cmd_buf) == 0)
-		{
-		  cmd_qtfstm (cmd_buf);
-		}
-	      else if (strcmp ("qTsSTM", cmd_buf) == 0)
-		{
-		  cmd_qtsstm (cmd_buf);
-		}
-	      else if (startswith (cmd_buf, "unprobe_marker_at:"))
-		{
-		  unprobe_marker_at (cmd_buf);
-		}
-	      else if (startswith (cmd_buf, "probe_marker_at:"))
-		{
-		  probe_marker_at (cmd_buf);
-		}
-	      else if (startswith (cmd_buf, "qTSTMat:"))
-		{
-		  cmd_qtstmat (cmd_buf);
-		}
-#endif /* HAVE_UST */
 	    }
 
 	  /* Fix compiler's warning: ignoring return value of 'write'.  */
@@ -7287,9 +6368,9 @@ gdb_agent_helper_thread (void *arg)
 #include <signal.h>
 #include <pthread.h>
 
-EXTERN_C_PUSH
+extern "C" {
 IP_AGENT_EXPORT_VAR int gdb_agent_capability = AGENT_CAPA_STATIC_TRACE;
-EXTERN_C_POP
+}
 
 static void
 gdb_agent_init (void)
@@ -7318,10 +6399,6 @@ gdb_agent_init (void)
 
   while (helper_thread_id == 0)
     usleep (1);
-
-#ifdef HAVE_UST
-  gdb_ust_init ();
-#endif
 }
 
 #include <sys/mman.h>

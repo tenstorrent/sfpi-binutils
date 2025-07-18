@@ -1,6 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1999-2022 Free Software Foundation, Inc.
+   Copyright (C) 1999-2024 Free Software Foundation, Inc.
 
    Written by Elena Zannoni <ezannoni@cygnus.com> of Cygnus Solutions.
 
@@ -19,8 +19,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
+#include "exceptions.h"
+#include "gdbsupport/job-control.h"
+#include "run-on-main-thread.h"
 #include "top.h"
+#include "ui.h"
 #include "inferior.h"
 #include "infrun.h"
 #include "target.h"
@@ -29,14 +32,13 @@
 #include "event-top.h"
 #include "interps.h"
 #include <signal.h>
-#include "cli/cli-script.h"     /* for reset_command_nest_depth */
+#include "cli/cli-script.h"
 #include "main.h"
 #include "gdbthread.h"
 #include "observable.h"
-#include "gdbcmd.h"		/* for dont_repeat() */
+#include "cli/cli-cmds.h"
 #include "annotate.h"
 #include "maint.h"
-#include "gdbsupport/buffer.h"
 #include "ser-event.h"
 #include "gdbsupport/gdb_select.h"
 #include "gdbsupport/gdb-sigmask.h"
@@ -47,6 +49,10 @@
 /* readline include files.  */
 #include "readline/readline.h"
 #include "readline/history.h"
+
+#ifdef TUI
+#include "tui/tui.h"
+#endif
 
 /* readline defines this.  */
 #undef savestring
@@ -133,6 +139,9 @@ static struct async_signal_handler *async_sigterm_token;
    character is processed.  */
 void (*after_char_processing_hook) (void);
 
+#if RL_VERSION_MAJOR == 7
+extern "C" void _rl_signal_handler (int);
+#endif
 
 /* Wrapper function for calling into the readline library.  This takes
    care of a couple things:
@@ -175,7 +184,7 @@ void (*after_char_processing_hook) (void);
    (sjlj-based) C++ exceptions.  */
 
 static struct gdb_exception
-gdb_rl_callback_read_char_wrapper_noexcept () noexcept
+gdb_rl_callback_read_char_wrapper_sjlj ()
 {
   struct gdb_exception gdb_expt;
 
@@ -186,6 +195,28 @@ gdb_rl_callback_read_char_wrapper_noexcept () noexcept
   TRY_SJLJ
     {
       rl_callback_read_char ();
+#if RL_VERSION_MAJOR >= 8
+      /* It can happen that readline (while in rl_callback_read_char)
+	 received a signal, but didn't handle it yet.  Make sure it's handled
+	 now.  If we don't do that we run into two related problems:
+	 - we have to wait for another event triggering
+	   rl_callback_read_char before the signal is handled
+	 - there's no guarantee that the signal will be processed before the
+	   event.  */
+      while (rl_pending_signal () != 0)
+	/* Do this in a while loop, in case rl_check_signals also leaves a
+	   pending signal.  I'm not sure if that's possible, but it seems
+	   better to handle the scenario than to assert.  */
+	rl_check_signals ();
+#elif RL_VERSION_MAJOR == 7
+      /* Unfortunately, rl_check_signals is not available.  Use private
+	 function _rl_signal_handler instead.  */
+
+      while (rl_pending_signal () != 0)
+	_rl_signal_handler (rl_pending_signal ());
+#else
+#error "Readline major version >= 7 expected"
+#endif
       if (after_char_processing_hook)
 	(*after_char_processing_hook) ();
     }
@@ -196,6 +227,22 @@ gdb_rl_callback_read_char_wrapper_noexcept () noexcept
   END_CATCH_SJLJ
 
   return gdb_expt;
+}
+
+/* Wrapper around gdb_rl_callback_read_char_wrapper_sjlj to ensure
+   noexcept.  */
+
+static struct gdb_exception
+gdb_rl_callback_read_char_wrapper_noexcept () noexcept
+{
+  try
+    {
+      return gdb_rl_callback_read_char_wrapper_sjlj ();
+    }
+  catch (gdb_exception &ex)
+    {
+      return std::move (ex);
+    }
 }
 
 static void
@@ -222,6 +269,17 @@ gdb_rl_callback_handler (char *rl) noexcept
      -- gdb_exception has a destructor with side effects.  */
   static struct gdb_exception gdb_rl_expt;
   struct ui *ui = current_ui;
+
+  /* In bracketed paste mode, pasting a complete line can result in a
+     literal newline appearing at the end of LINE.  However, we never
+     want this in gdb.  */
+  if (rl != nullptr)
+    {
+      size_t len = strlen (rl);
+      while (len > 0 && (rl[len - 1] == '\r' || rl[len - 1] == '\n'))
+	--len;
+      rl[len] = '\0';
+    }
 
   try
     {
@@ -270,8 +328,8 @@ change_line_handler (int editing)
 
   /* Don't try enabling editing if the interpreter doesn't support it
      (e.g., MI).  */
-  if (!interp_supports_command_editing (top_level_interpreter ())
-      || !interp_supports_command_editing (command_interp ()))
+  if (!top_level_interpreter ()->supports_command_editing ()
+      || !command_interp ()->supports_command_editing ())
     return;
 
   if (editing)
@@ -329,6 +387,23 @@ gdb_rl_callback_handler_install (const char *prompt)
      therefore loses input.  */
   gdb_assert (!callback_handler_installed);
 
+#ifdef RL_STATE_EOF
+  /* Some versions of readline contain a bug where the rl_eof_found flag
+     would not be reset back to 0 in rl_initialize, despite the
+     RL_STATE_EOF flag being cleared in this function.
+
+     The consequence of this mistake is that readline will appear to get
+     stuck in the EOF state, and will emit an extra '\n' character each
+     time an input line is completed.
+
+     Work around this by clearing the EOF state now ourselves.  */
+  if (RL_ISSTATE (RL_STATE_EOF))
+    {
+      RL_UNSETSTATE (RL_STATE_EOF);
+      rl_eof_found = 0;
+    }
+#endif /* RL_STATE_EOF */
+
   rl_callback_handler_install (prompt, gdb_rl_callback_handler);
   callback_handler_installed = true;
 }
@@ -383,7 +458,7 @@ display_gdb_prompt (const char *new_prompt)
       struct ui *ui = current_ui;
 
       if (ui->prompt_state == PROMPTED)
-	internal_error (__FILE__, __LINE__, _("double prompt"));
+	internal_error (_("double prompt"));
       else if (ui->prompt_state == PROMPT_BLOCKED)
 	{
 	  /* This is to trick readline into not trying to display the
@@ -433,6 +508,22 @@ display_gdb_prompt (const char *new_prompt)
     }
 }
 
+/* Notify the 'before_prompt' observer, and run any additional actions
+   that must be done before we display the prompt.  */
+static void
+notify_before_prompt (const char *prompt)
+{
+  /* Give observers a chance of changing the prompt.  E.g., the python
+     `gdb.prompt_hook' is installed as an observer.  */
+  gdb::observers::before_prompt.notify (prompt);
+
+  /* As we are about to display the prompt, and so GDB might be sitting
+     idle for some time, close all the cached BFDs.  This ensures that
+     when we next start running a user command all BFDs will be reopened
+     as needed, and as a result, we will see any on-disk changes.  */
+  bfd_cache_close_all ();
+}
+
 /* Return the top level prompt, as specified by "set prompt", possibly
    overridden by the python gdb.prompt_hook hook, and then composed
    with the prompt prefix and suffix (annotations).  */
@@ -440,9 +531,7 @@ display_gdb_prompt (const char *new_prompt)
 static std::string
 top_level_prompt (void)
 {
-  /* Give observers a chance of changing the prompt.  E.g., the python
-     `gdb.prompt_hook' is installed as an observer.  */
-  gdb::observers::before_prompt.notify (get_prompt ().c_str ());
+  notify_before_prompt (get_prompt ().c_str ());
 
   const std::string &prompt = get_prompt ();
 
@@ -461,88 +550,13 @@ top_level_prompt (void)
   return prompt;
 }
 
-/* See top.h.  */
-
-struct ui *main_ui;
-struct ui *current_ui;
-struct ui *ui_list;
-
-/* Get a pointer to the current UI's line buffer.  This is used to
+/* Get a reference to the current UI's line buffer.  This is used to
    construct a whole line of input from partial input.  */
 
-static struct buffer *
+static std::string &
 get_command_line_buffer (void)
 {
-  return &current_ui->line_buffer;
-}
-
-/* When there is an event ready on the stdin file descriptor, instead
-   of calling readline directly throught the callback function, or
-   instead of calling gdb_readline_no_editing_callback, give gdb a
-   chance to detect errors and do something.  */
-
-void
-stdin_event_handler (int error, gdb_client_data client_data)
-{
-  struct ui *ui = (struct ui *) client_data;
-
-  if (error)
-    {
-      /* Switch to the main UI, so diagnostics always go there.  */
-      current_ui = main_ui;
-
-      delete_file_handler (ui->input_fd);
-      if (main_ui == ui)
-	{
-	  /* If stdin died, we may as well kill gdb.  */
-	  gdb_printf (gdb_stderr, _("error detected on stdin\n"));
-	  quit_command ((char *) 0, 0);
-	}
-      else
-	{
-	  /* Simply delete the UI.  */
-	  delete ui;
-	}
-    }
-  else
-    {
-      /* Switch to the UI whose input descriptor woke up the event
-	 loop.  */
-      current_ui = ui;
-
-      /* This makes sure a ^C immediately followed by further input is
-	 always processed in that order.  E.g,. with input like
-	 "^Cprint 1\n", the SIGINT handler runs, marks the async
-	 signal handler, and then select/poll may return with stdin
-	 ready, instead of -1/EINTR.  The
-	 gdb.base/double-prompt-target-event-error.exp test exercises
-	 this.  */
-      QUIT;
-
-      do
-	{
-	  call_stdin_event_handler_again_p = 0;
-	  ui->call_readline (client_data);
-	}
-      while (call_stdin_event_handler_again_p != 0);
-    }
-}
-
-/* See top.h.  */
-
-void
-ui_register_input_event_handler (struct ui *ui)
-{
-  add_file_handler (ui->input_fd, stdin_event_handler, ui,
-		    string_printf ("ui-%d", ui->num), true);
-}
-
-/* See top.h.  */
-
-void
-ui_unregister_input_event_handler (struct ui *ui)
-{
-  delete_file_handler (ui->input_fd);
+  return current_ui->line_buffer;
 }
 
 /* Re-enable stdin after the end of an execution command in
@@ -554,10 +568,11 @@ async_enable_stdin (void)
 {
   struct ui *ui = current_ui;
 
-  if (ui->prompt_state == PROMPT_BLOCKED)
+  if (ui->prompt_state == PROMPT_BLOCKED
+      && !ui->keep_prompt_blocked)
     {
       target_terminal::ours ();
-      ui_register_input_event_handler (ui);
+      ui->register_file_handler ();
       ui->prompt_state = PROMPT_NEEDED;
     }
 }
@@ -571,7 +586,7 @@ async_disable_stdin (void)
   struct ui *ui = current_ui;
 
   ui->prompt_state = PROMPT_BLOCKED;
-  delete_file_handler (ui->input_fd);
+  ui->unregister_file_handler ();
 }
 
 
@@ -602,46 +617,41 @@ command_handler (const char *command)
     }
 }
 
-/* Append RL, an input line returned by readline or one of its
-   emulations, to CMD_LINE_BUFFER.  Returns the command line if we
-   have a whole command line ready to be processed by the command
-   interpreter or NULL if the command line isn't complete yet (input
-   line ends in a backslash).  */
+/* Append RL, an input line returned by readline or one of its emulations, to
+   CMD_LINE_BUFFER.  Return true if we have a whole command line ready to be
+   processed by the command interpreter or false if the command line isn't
+   complete yet (input line ends in a backslash).  */
 
-static char *
-command_line_append_input_line (struct buffer *cmd_line_buffer, const char *rl)
+static bool
+command_line_append_input_line (std::string &cmd_line_buffer, const char *rl)
 {
-  char *cmd;
-  size_t len;
-
-  len = strlen (rl);
+  size_t len = strlen (rl);
 
   if (len > 0 && rl[len - 1] == '\\')
     {
       /* Don't copy the backslash and wait for more.  */
-      buffer_grow (cmd_line_buffer, rl, len - 1);
-      cmd = NULL;
+      cmd_line_buffer.append (rl, len - 1);
+      return false;
     }
   else
     {
       /* Copy whole line including terminating null, and we're
 	 done.  */
-      buffer_grow (cmd_line_buffer, rl, len + 1);
-      cmd = cmd_line_buffer->buffer;
+      cmd_line_buffer.append (rl, len + 1);
+      return true;
     }
-
-  return cmd;
 }
 
 /* Handle a line of input coming from readline.
 
-   If the read line ends with a continuation character (backslash),
-   save the partial input in CMD_LINE_BUFFER (except the backslash),
-   and return NULL.  Otherwise, save the partial input and return a
-   pointer to CMD_LINE_BUFFER's buffer (null terminated), indicating a
-   whole command line is ready to be executed.
+   If the read line ends with a continuation character (backslash), return
+   nullptr.  Otherwise, return a pointer to the command line, indicating a whole
+   command line is ready to be executed.
 
-   Returns EOF on end of file.
+   The returned pointer may or may not point to CMD_LINE_BUFFER's internal
+   buffer.
+
+   Return EOF on end of file.
 
    If REPEAT, handle command repetitions:
 
@@ -652,72 +662,63 @@ command_line_append_input_line (struct buffer *cmd_line_buffer, const char *rl)
        command instead of the empty input line.
 */
 
-char *
-handle_line_of_input (struct buffer *cmd_line_buffer,
+const char *
+handle_line_of_input (std::string &cmd_line_buffer,
 		      const char *rl, int repeat,
 		      const char *annotation_suffix)
 {
   struct ui *ui = current_ui;
   int from_tty = ui->instream == ui->stdin_stream;
-  char *p1;
-  char *cmd;
 
   if (rl == NULL)
     return (char *) EOF;
 
-  cmd = command_line_append_input_line (cmd_line_buffer, rl);
-  if (cmd == NULL)
+  bool complete = command_line_append_input_line (cmd_line_buffer, rl);
+  if (!complete)
     return NULL;
-
-  /* We have a complete command line now.  Prepare for the next
-     command, but leave ownership of memory to the buffer .  */
-  cmd_line_buffer->used_size = 0;
 
   if (from_tty && annotation_level > 1)
     printf_unfiltered (("\n\032\032post-%s\n"), annotation_suffix);
 
 #define SERVER_COMMAND_PREFIX "server "
-  server_command = startswith (cmd, SERVER_COMMAND_PREFIX);
+  server_command = startswith (cmd_line_buffer.c_str (), SERVER_COMMAND_PREFIX);
   if (server_command)
     {
       /* Note that we don't call `save_command_line'.  Between this
 	 and the check in dont_repeat, this insures that repeating
 	 will still do the right thing.  */
-      return cmd + strlen (SERVER_COMMAND_PREFIX);
+      return cmd_line_buffer.c_str () + strlen (SERVER_COMMAND_PREFIX);
     }
 
   /* Do history expansion if that is wished.  */
-  if (history_expansion_p && from_tty && input_interactive_p (current_ui))
+  if (history_expansion_p && from_tty && current_ui->input_interactive_p ())
     {
       char *cmd_expansion;
       int expanded;
 
-      expanded = history_expand (cmd, &cmd_expansion);
+      /* Note: here, we pass a pointer to the std::string's internal buffer as
+	 a `char *`.  At the time of writing, readline's history_expand does
+	 not modify the passed-in string.  Ideally, readline should be modified
+	 to make that parameter `const char *`.  */
+      expanded = history_expand (&cmd_line_buffer[0], &cmd_expansion);
       gdb::unique_xmalloc_ptr<char> history_value (cmd_expansion);
       if (expanded)
 	{
-	  size_t len;
-
 	  /* Print the changes.  */
 	  printf_unfiltered ("%s\n", history_value.get ());
 
 	  /* If there was an error, call this function again.  */
 	  if (expanded < 0)
-	    return cmd;
+	    return cmd_line_buffer.c_str ();
 
-	  /* history_expand returns an allocated string.  Just replace
-	     our buffer with it.  */
-	  len = strlen (history_value.get ());
-	  xfree (buffer_finish (cmd_line_buffer));
-	  cmd_line_buffer->buffer = history_value.get ();
-	  cmd_line_buffer->buffer_size = len + 1;
-	  cmd = history_value.release ();
+	  cmd_line_buffer = history_value.get ();
 	}
     }
 
   /* If we just got an empty line, and that is supposed to repeat the
      previous command, return the previously saved command.  */
-  for (p1 = cmd; *p1 == ' ' || *p1 == '\t'; p1++)
+  const char *p1;
+  for (p1 = cmd_line_buffer.c_str (); *p1 == ' ' || *p1 == '\t'; p1++)
     ;
   if (repeat && *p1 == '\0')
     return get_saved_command_line ();
@@ -729,17 +730,21 @@ handle_line_of_input (struct buffer *cmd_line_buffer,
      and then later fetch it from the value history and remove the
      '#'.  The kill ring is probably better, but some people are in
      the habit of commenting things out.  */
-  if (*cmd != '\0' && from_tty && input_interactive_p (current_ui))
-    gdb_add_history (cmd);
+  if (cmd_line_buffer[0] != '\0' && from_tty && current_ui->input_interactive_p ())
+    gdb_add_history (cmd_line_buffer.c_str ());
 
   /* Save into global buffer if appropriate.  */
   if (repeat)
     {
-      save_command_line (cmd);
+      save_command_line (cmd_line_buffer.c_str ());
+
+      /* It is important that we return a pointer to the saved command line
+	 here, for the `cmd_start == saved_command_line` check in
+	 execute_command to work.  */
       return get_saved_command_line ();
     }
-  else
-    return cmd;
+
+  return cmd_line_buffer.c_str ();
 }
 
 /* See event-top.h.  */
@@ -748,7 +753,7 @@ void
 gdb_rl_deprep_term_function (void)
 {
 #ifdef RL_STATE_EOF
-  gdb::optional<scoped_restore_tmpl<int>> restore_eof_found;
+  std::optional<scoped_restore_tmpl<int>> restore_eof_found;
 
   if (RL_ISSTATE (RL_STATE_EOF))
     {
@@ -772,11 +777,10 @@ gdb_rl_deprep_term_function (void)
 void
 command_line_handler (gdb::unique_xmalloc_ptr<char> &&rl)
 {
-  struct buffer *line_buffer = get_command_line_buffer ();
+  std::string &line_buffer = get_command_line_buffer ();
   struct ui *ui = current_ui;
-  char *cmd;
 
-  cmd = handle_line_of_input (line_buffer, rl.get (), 1, "prompt");
+  const char *cmd = handle_line_of_input (line_buffer, rl.get (), 1, "prompt");
   if (cmd == (char *) EOF)
     {
       /* stdin closed.  The connection with the terminal is gone.
@@ -839,6 +843,9 @@ command_line_handler (gdb::unique_xmalloc_ptr<char> &&rl)
     {
       ui->prompt_state = PROMPT_NEEDED;
 
+      /* Ensure the UI's line buffer is empty for the next command.  */
+      SCOPE_EXIT { line_buffer.clear (); };
+
       command_handler (cmd);
 
       if (ui->prompt_state != PROMPTED)
@@ -854,11 +861,8 @@ void
 gdb_readline_no_editing_callback (gdb_client_data client_data)
 {
   int c;
-  char *result;
-  struct buffer line_buffer;
+  std::string line_buffer;
   struct ui *ui = current_ui;
-
-  buffer_init (&line_buffer);
 
   FILE *stream = ui->instream != nullptr ? ui->instream : ui->stdin_stream;
   gdb_assert (stream != nullptr);
@@ -879,32 +883,28 @@ gdb_readline_no_editing_callback (gdb_client_data client_data)
 
       if (c == EOF)
 	{
-	  if (line_buffer.used_size > 0)
+	  if (!line_buffer.empty ())
 	    {
 	      /* The last line does not end with a newline.  Return it, and
 		 if we are called again fgetc will still return EOF and
 		 we'll return NULL then.  */
 	      break;
 	    }
-	  xfree (buffer_finish (&line_buffer));
 	  ui->input_handler (NULL);
 	  return;
 	}
 
       if (c == '\n')
 	{
-	  if (line_buffer.used_size > 0
-	      && line_buffer.buffer[line_buffer.used_size - 1] == '\r')
-	    line_buffer.used_size--;
+	  if (!line_buffer.empty () && line_buffer.back () == '\r')
+	    line_buffer.pop_back ();
 	  break;
 	}
 
-      buffer_grow_char (&line_buffer, c);
+      line_buffer += c;
     }
 
-  buffer_grow_char (&line_buffer, '\0');
-  result = buffer_finish (&line_buffer);
-  ui->input_handler (gdb::unique_xmalloc_ptr<char> (result));
+  ui->input_handler (make_unique_xstrdup (line_buffer.c_str ()));
 }
 
 
@@ -925,11 +925,60 @@ unblock_signal (int sig)
   return false;
 }
 
+/* Signal safe language specific strings.  */
+
+#ifdef GDB_PRINT_INTERNAL_BACKTRACE
+static const char *str_fatal_signal;
+static const char *str_sigsegv;
+#ifdef SIGFPE
+static const char *str_sigfpe;
+#endif
+#ifdef SIGBUS
+static const char *str_sigbus;
+#endif
+#ifdef SIGABRT
+static const char *str_sigabrt;
+#endif
+static const char *str_unknown_signal;
+static const char *str_fatal_error_detected_gdb_will_now_terminate;
+static const char *str_this_is_a_bug;
+static const char *str_for_instructions_see;
+
+/* Initialize language specific strings.  */
+
+static void
+init_str_handle_fatal_signal ()
+{
+  str_fatal_signal = _("Fatal signal: ");
+  str_sigsegv = strsignal (SIGSEGV);
+#ifdef SIGFPE
+  str_sigfpe = strsignal (SIGFPE);
+#endif
+#ifdef SIGBUS
+  str_sigbus = strsignal (SIGBUS);
+#endif
+#ifdef SIGABRT
+  str_sigabrt = strsignal (SIGABRT);
+#endif
+  str_unknown_signal = _("Unknown signal");
+  str_fatal_error_detected_gdb_will_now_terminate =
+	_("A fatal error internal to GDB has been detected, "
+	  "further\ndebugging is not possible.  GDB will now "
+	  "terminate.\n\n");
+  str_this_is_a_bug = _("This is a bug, please report it.");
+  str_for_instructions_see = _("  For instructions, see:\n");
+}
+#endif
+
 /* Called to handle fatal signals.  SIG is the signal number.  */
 
-static void ATTRIBUTE_NORETURN
+[[noreturn]] static void
 handle_fatal_signal (int sig)
 {
+#ifdef TUI
+  tui_disable ();
+#endif
+
 #ifdef GDB_PRINT_INTERNAL_BACKTRACE
   const auto sig_write = [] (const char *msg) -> void
   {
@@ -939,19 +988,40 @@ handle_fatal_signal (int sig)
   if (bt_on_fatal_signal)
     {
       sig_write ("\n\n");
-      sig_write (_("Fatal signal: "));
-      sig_write (strsignal (sig));
+      sig_write (str_fatal_signal);
+      switch (sig)
+	{
+	case SIGSEGV:
+	  sig_write (str_sigsegv);
+	  break;
+#ifdef SIGFPE
+	case SIGFPE:
+	  sig_write (str_sigfpe);
+	  break;
+#endif
+#ifdef SIGBUS
+	case SIGBUS:
+	  sig_write (str_sigbus);
+	  break;
+#endif
+#ifdef SIGABRT
+	case SIGABRT:
+	  sig_write (str_sigabrt);
+	  break;
+#endif
+	default:
+	  sig_write (str_unknown_signal);
+	  break;
+	}
       sig_write ("\n");
 
       gdb_internal_backtrace ();
 
-      sig_write (_("A fatal error internal to GDB has been detected, "
-		   "further\ndebugging is not possible.  GDB will now "
-		   "terminate.\n\n"));
-      sig_write (_("This is a bug, please report it."));
+      sig_write (str_fatal_error_detected_gdb_will_now_terminate);
+      sig_write (str_this_is_a_bug);
       if (REPORT_BUGS_TO[0] != '\0')
 	{
-	  sig_write (_("  For instructions, see:\n"));
+	  sig_write (str_for_instructions_see);
 	  sig_write (REPORT_BUGS_TO);
 	  sig_write (".");
 	}
@@ -961,7 +1031,7 @@ handle_fatal_signal (int sig)
     }
 #endif
 
-  /* If possible arrange for SIG to have its default behaviour (which
+  /* If possible arrange for SIG to have its default behavior (which
      should be to terminate the current process), unblock SIG, and reraise
      the signal.  This ensures GDB terminates with the expected signal.  */
   if (signal (sig, SIG_DFL) != SIG_ERR
@@ -1053,7 +1123,7 @@ gdb_init_signals (void)
 
   sigint_token =
     create_async_signal_handler (async_request_quit, NULL, "sigint");
-  signal (SIGINT, handle_sigint);
+  install_sigint_handler (handle_sigint);
 
   async_sigterm_token
     = create_async_signal_handler (async_sigterm_handler, NULL, "sigterm");
@@ -1079,6 +1149,10 @@ gdb_init_signals (void)
     create_async_signal_handler (async_sigtstp_handler, NULL, "sigtstp");
 #endif
 
+#ifdef GDB_PRINT_INTERNAL_BACKTRACE
+  init_str_handle_fatal_signal ();
+#endif
+
 #ifdef SIGFPE
   signal (SIGFPE, handle_fatal_signal);
 #endif
@@ -1094,15 +1168,55 @@ gdb_init_signals (void)
   install_handle_sigsegv ();
 }
 
-/* See defs.h.  */
+/* See event-top.h.  */
 
 void
-quit_serial_event_set (void)
+quit (void)
+{
+  if (sync_quit_force_run)
+    {
+      sync_quit_force_run = false;
+      throw_forced_quit ("SIGTERM");
+    }
+
+#ifdef __MSDOS__
+  /* No steenking SIGINT will ever be coming our way when the
+     program is resumed.  Don't lie.  */
+  throw_quit ("Quit");
+#else
+  if (job_control
+      /* If there is no terminal switching for this target, then we can't
+	 possibly get screwed by the lack of job control.  */
+      || !target_supports_terminal_ours ())
+    throw_quit ("Quit");
+  else
+    throw_quit ("Quit (expect signal SIGINT when the program is resumed)");
+#endif
+}
+
+/* See event-top.h.  */
+
+void
+maybe_quit ()
+{
+  if (!is_main_thread ())
+    return;
+
+  if (sync_quit_force_run)
+    quit ();
+
+  quit_handler ();
+}
+
+/* See event-top.h.  */
+
+void
+quit_serial_event_set ()
 {
   serial_event_set (quit_serial_event);
 }
 
-/* See defs.h.  */
+/* See event-top.h.  */
 
 void
 quit_serial_event_clear (void)
@@ -1145,13 +1259,67 @@ handle_sigint (int sig)
 
   /* We could be running in a loop reading in symfiles or something so
      it may be quite a while before we get back to the event loop.  So
-     set quit_flag to 1 here.  Then if QUIT is called before we get to
+     set quit_flag to true here.  Then if QUIT is called before we get to
      the event loop, we will unwind as expected.  */
   set_quit_flag ();
 
   /* In case nothing calls QUIT before the event loop is reached, the
      event loop handles it.  */
   mark_async_signal_handler (sigint_token);
+}
+
+/* Copy file descriptors smaller than N from SRC to DST and return DST.
+   Portable version of FD_COPY.  */
+
+static fd_set *
+fd_copy (fd_set *dst, const fd_set *src, int n)
+{
+  FD_ZERO (dst);
+  for (int i = 0; i < n; ++i)
+    if (FD_ISSET (i, const_cast<fd_set *>(src)))
+      FD_SET (i, dst);
+
+  return dst;
+}
+
+/* Copy SRC to DST and return DST.  */
+
+static struct timeval *
+timeval_copy (struct timeval *dst, const struct timeval *src)
+{
+  *dst = *src;
+  return dst;
+}
+
+/* Version of select that can be used in a loop, since unlike select it keeps
+   requested and returned values separate.  */
+
+static int
+gdb_select (int n,
+	    const fd_set *req_readfds, fd_set *ret_readfds,
+	    const fd_set *req_writefds, fd_set *ret_writefds,
+	    const fd_set *req_exceptfds, fd_set *ret_exceptfds,
+	    const struct timeval *req_timeout, struct timeval *ret_timeout)
+{
+  ret_readfds
+    = (req_readfds == nullptr
+       ? nullptr
+       : fd_copy (ret_readfds, req_readfds, n));
+  ret_writefds
+    = (req_writefds == nullptr
+       ? nullptr
+       : fd_copy (ret_writefds, req_writefds, n));
+  ret_exceptfds
+    = (req_exceptfds == nullptr
+       ? nullptr
+       : fd_copy (ret_exceptfds, req_exceptfds, n));
+
+  ret_timeout
+    = (req_timeout == nullptr
+       ? nullptr
+       : timeval_copy (ret_timeout, req_timeout));
+
+  return gdb_select (n, ret_readfds, ret_writefds, ret_exceptfds, ret_timeout);
 }
 
 /* See gdb_select.h.  */
@@ -1176,11 +1344,64 @@ interruptible_select (int n,
   if (n <= fd)
     n = fd + 1;
 
-  do
+  bool tsan_forced_timeout = false;
+#if defined (__SANITIZE_THREAD__)
+  struct timeval tv;
+  if (timeout == nullptr)
     {
-      res = gdb_select (n, readfds, writefds, exceptfds, timeout);
+      /* A nullptr timeout means select is blocking, and ThreadSanitizer has
+	 a bug that it considers select non-blocking, and consequently when
+	 intercepting select it will not call signal handlers for pending
+	 signals, and gdb will hang in select waiting for those signal
+	 handlers to be called.
+
+	 Filed here ( https://github.com/google/sanitizers/issues/1813 ).
+
+	 Work around this by:
+	 - forcing a small timeout, and
+	 - upon timeout calling a function that ThreadSanitizer does consider
+	   blocking: usleep, forcing signal handlers to be called for pending
+	   signals.  */
+      tv.tv_sec = 0;
+      tv.tv_usec = 1000;
+      timeout = &tv;
+      tsan_forced_timeout = true;
     }
-  while (res == -1 && errno == EINTR);
+#endif
+
+  {
+    fd_set ret_readfds, ret_writefds, ret_exceptfds;
+    struct timeval ret_timeout;
+
+    while (true)
+      {
+	res = gdb_select (n,
+			  readfds, &ret_readfds,
+			  writefds, &ret_writefds,
+			  exceptfds, &ret_exceptfds,
+			  timeout, &ret_timeout);
+
+	if (res == -1 && errno == EINTR)
+	  continue;
+
+	if (tsan_forced_timeout && res == 0)
+	  {
+	    usleep (0);
+	    continue;
+	  }
+
+	break;
+      }
+
+    if (readfds != nullptr)
+      fd_copy (readfds, &ret_readfds, n);
+    if (writefds != nullptr)
+      fd_copy (writefds, &ret_writefds, n);
+    if (exceptfds != nullptr)
+      fd_copy (exceptfds, &ret_exceptfds, n);
+    if (timeout)
+      timeval_copy (timeout, &ret_timeout);
+  }
 
   if (res == 1 && FD_ISSET (fd, readfds))
     {
@@ -1199,7 +1420,15 @@ async_sigterm_handler (gdb_client_data arg)
 }
 
 /* See defs.h.  */
-volatile int sync_quit_force_run;
+volatile bool sync_quit_force_run;
+
+/* See defs.h.  */
+void
+set_force_quit_flag ()
+{
+  sync_quit_force_run = true;
+  set_quit_flag ();
+}
 
 /* Quit GDB if SIGTERM is received.
    GDB would quit anyway, but this way it will clean up properly.  */
@@ -1208,8 +1437,7 @@ handle_sigterm (int sig)
 {
   signal (sig, handle_sigterm);
 
-  sync_quit_force_run = 1;
-  set_quit_flag ();
+  set_force_quit_flag ();
 
   mark_async_signal_handler (async_sigterm_token);
 }
@@ -1218,7 +1446,7 @@ handle_sigterm (int sig)
 void
 async_request_quit (gdb_client_data arg)
 {
-  /* If the quit_flag has gotten reset back to 0 by the time we get
+  /* If the quit_flag has gotten reset back to false by the time we get
      back here, that means that an exception was thrown to unwind the
      current command before we got back to the event loop.  So there
      is no reason to call quit again here.  */
@@ -1252,6 +1480,7 @@ async_do_nothing (gdb_client_data arg)
 static void
 handle_sighup (int sig)
 {
+  scoped_restore restore_errno = make_scoped_restore (&errno);
   mark_async_signal_handler (sighup_token);
   signal (sig, handle_sighup);
 }
@@ -1271,14 +1500,15 @@ async_disconnect (gdb_client_data arg)
       gdb_puts ("Could not kill the program being debugged",
 		gdb_stderr);
       exception_print (gdb_stderr, exception);
+      if (exception.reason == RETURN_FORCED_QUIT)
+	throw;
     }
 
   for (inferior *inf : all_inferiors ())
     {
-      switch_to_inferior_no_thread (inf);
       try
 	{
-	  pop_all_targets ();
+	  inf->pop_all_targets ();
 	}
       catch (const gdb_exception &exception)
 	{
@@ -1328,21 +1558,12 @@ gdb_setup_readline (int editing)
 {
   struct ui *ui = current_ui;
 
-  /* This function is a noop for the sync case.  The assumption is
-     that the sync setup is ALL done in gdb_init, and we would only
-     mess it up here.  The sync stuff should really go away over
-     time.  */
-  if (!batch_silent)
-    gdb_stdout = new pager_file (new stdio_file (ui->outstream));
-  gdb_stderr = new stderr_file (ui->errstream);
-  gdb_stdlog = new timestamped_file (gdb_stderr);
-  gdb_stdtarg = gdb_stderr; /* for moment */
-  gdb_stdtargerr = gdb_stderr; /* for moment */
-
   /* If the input stream is connected to a terminal, turn on editing.
      However, that is only allowed on the main UI, as we can only have
-     one instance of readline.  */
-  if (ISATTY (ui->instream) && editing && ui == main_ui)
+     one instance of readline.  Also, INSTREAM might be nullptr when
+     executing a user-defined command.  */
+  if (ui->instream != nullptr && ISATTY (ui->instream)
+      && editing && ui == main_ui)
     {
       /* Tell gdb that we will be using the readline library.  This
 	 could be overwritten by a command in .gdbinit like 'set
@@ -1366,7 +1587,7 @@ gdb_setup_readline (int editing)
      Another source is going to be the target program (inferior), but
      that must be registered only when it actually exists (I.e. after
      we say 'run' or after we connect to a remote target.  */
-  ui_register_input_event_handler (ui);
+  ui->register_file_handler ();
 }
 
 /* Disable command input through the standard CLI channels.  Used in
@@ -1378,22 +1599,9 @@ gdb_disable_readline (void)
 {
   struct ui *ui = current_ui;
 
-  /* FIXME - It is too heavyweight to delete and remake these every
-     time you run an interpreter that needs readline.  It is probably
-     better to have the interpreters cache these, which in turn means
-     that this needs to be moved into interpreter specific code.  */
-
-#if 0
-  ui_file_delete (gdb_stdout);
-  ui_file_delete (gdb_stderr);
-  gdb_stdlog = NULL;
-  gdb_stdtarg = NULL;
-  gdb_stdtargerr = NULL;
-#endif
-
   if (ui->command_editing)
     gdb_rl_callback_handler_remove ();
-  delete_file_handler (ui->input_fd);
+  ui->unregister_file_handler ();
 }
 
 scoped_segv_handler_restore::scoped_segv_handler_restore (segv_handler_t new_handler)

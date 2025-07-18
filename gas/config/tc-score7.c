@@ -1,5 +1,5 @@
 /* tc-score7.c -- Assembler for Score7
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2025 Free Software Foundation, Inc.
    Contributed by:
    Brain.lin (brain.lin@sunplusct.com)
    Mei Ligang (ligang@sunnorth.com.cn)
@@ -5085,20 +5085,17 @@ static void
 s7_build_score_ops_hsh (void)
 {
   unsigned int i;
-  static struct obstack insn_obstack;
 
-  obstack_begin (&insn_obstack, 4000);
   for (i = 0; i < sizeof (s7_score_insns) / sizeof (struct s7_asm_opcode); i++)
     {
       const struct s7_asm_opcode *insn = s7_score_insns + i;
-      size_t len = strlen (insn->template_name);
+      size_t len = strlen (insn->template_name) + 1;
       struct s7_asm_opcode *new_opcode;
       char *template_name;
-      new_opcode = (struct s7_asm_opcode *)
-          obstack_alloc (&insn_obstack, sizeof (struct s7_asm_opcode));
-      template_name = (char *) obstack_alloc (&insn_obstack, len + 1);
 
-      strcpy (template_name, insn->template_name);
+      new_opcode = notes_alloc (sizeof (*new_opcode));
+      template_name = notes_memdup (insn->template_name, len, len);
+
       new_opcode->template_name = template_name;
       new_opcode->parms = insn->parms;
       new_opcode->value = insn->value;
@@ -5114,22 +5111,17 @@ static void
 s7_build_dependency_insn_hsh (void)
 {
   unsigned int i;
-  static struct obstack dependency_obstack;
 
-  obstack_begin (&dependency_obstack, 4000);
   for (i = 0; i < ARRAY_SIZE (s7_insn_to_dependency_table); i++)
     {
       const struct s7_insn_to_dependency *tmp = s7_insn_to_dependency_table + i;
-      size_t len = strlen (tmp->insn_name);
+      size_t len = strlen (tmp->insn_name) + 1;
       struct s7_insn_to_dependency *new_i2d;
       char *insn_name;
 
-      new_i2d = (struct s7_insn_to_dependency *)
-          obstack_alloc (&dependency_obstack,
-                         sizeof (struct s7_insn_to_dependency));
-      insn_name = (char *) obstack_alloc (&dependency_obstack, len + 1);
+      new_i2d = notes_alloc (sizeof (*new_i2d));
+      insn_name = notes_memdup (tmp->insn_name, len, len);
 
-      strcpy (insn_name, tmp->insn_name);
       new_i2d->insn_name = insn_name;
       new_i2d->type = tmp->type;
       str_hash_insert (s7_dependency_insn_hsh, new_i2d->insn_name, new_i2d, 0);
@@ -5374,21 +5366,6 @@ s7_build_reg_hsh (struct s7_reg_map *map)
 }
 
 
-
-/* If we change section we must dump the literal pool first.  */
-static void
-s7_s_score_bss (int ignore ATTRIBUTE_UNUSED)
-{
-  subseg_set (bss_section, (subsegT) get_absolute_expression ());
-  demand_empty_rest_of_line ();
-}
-
-static void
-s7_s_score_text (int ignore)
-{
-  obj_elf_text (ignore);
-  record_alignment (now_seg, 2);
-}
 
 static void
 s7_s_section (int ignore)
@@ -5935,7 +5912,7 @@ s7_s_score_lcomm (int bytes_p)
 
   c = get_symbol_name (&name);
   p = input_line_pointer;
-  *p = c;
+  restore_line_pointer (c);
 
   if (name == p)
     {
@@ -5944,7 +5921,7 @@ s7_s_score_lcomm (int bytes_p)
       return;
     }
 
-  SKIP_WHITESPACE_AFTER_NAME ();
+  SKIP_WHITESPACE ();
 
   /* Accept an optional comma after the name.  The comma used to be
      required, but Irix 5 cc does not generate it.  */
@@ -6036,18 +6013,6 @@ s7_s_score_lcomm (int bytes_p)
         }
 
       record_alignment (bss_seg, align);
-    }
-  else
-    {
-      /* Assume some objects may require alignment on some systems.  */
-#if defined (TC_ALPHA) && ! defined (VMS)
-      if (temp > 1)
-        {
-          align = ffs (temp) - 1;
-          if (temp % (1 << align))
-            abort ();
-        }
-#endif
     }
 
   *p = 0;
@@ -6848,10 +6813,10 @@ s7_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
   bfd_reloc_code_real_type code;
   const char *type;
 
-  reloc = retval[0] = XNEW (arelent);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
+  retval[0] = reloc;
   retval[1] = NULL;
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc->addend = fixp->fx_offset;
@@ -6879,9 +6844,9 @@ s7_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
       newval |= (((off >> 14) & 0x3) << 16);
       s7_number_to_chars (buf, newval, s7_INSN_SIZE);
 
-      retval[1] = XNEW (arelent);
+      retval[1] = notes_alloc (sizeof (arelent));
+      retval[2]->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
       retval[2] = NULL;
-      retval[1]->sym_ptr_ptr = XNEW (asymbol *);
       *retval[1]->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
       retval[1]->address = (reloc->address + s7_RELAX_RELOC2 (fixp->fx_frag->fr_subtype));
 

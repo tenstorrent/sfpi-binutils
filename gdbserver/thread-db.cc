@@ -1,5 +1,5 @@
 /* Thread management interface, for the remote server for GDB.
-   Copyright (C) 2002-2022 Free Software Foundation, Inc.
+   Copyright (C) 2002-2024 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -18,7 +18,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "server.h"
 
 #include "linux-low.h"
 
@@ -155,30 +154,35 @@ thread_db_state_str (td_thr_state_e state)
 }
 #endif
 
-/* Get thread info about PTID, accessing memory via the current
-   thread.  */
+/* Get thread info about PTID.  */
 
 static int
 find_one_thread (ptid_t ptid)
 {
-  td_thrhandle_t th;
-  td_thrinfo_t ti;
-  td_err_e err;
-  struct lwp_info *lwp;
-  struct thread_db *thread_db = current_process ()->priv->thread_db;
-  int lwpid = ptid.lwp ();
-
   thread_info *thread = find_thread_ptid (ptid);
-  lwp = get_thread_lwp (thread);
+  lwp_info *lwp = get_thread_lwp (thread);
   if (lwp->thread_known)
     return 1;
 
-  /* Get information about this thread.  */
-  err = thread_db->td_ta_map_lwp2thr_p (thread_db->thread_agent, lwpid, &th);
+  /* Get information about this thread.  libthread_db will need to read some
+     memory, which will be done on the current process, so make PTID's process
+     the current one.  */
+  process_info *proc = find_process_pid (ptid.pid ());
+  gdb_assert (proc != nullptr);
+
+  scoped_restore_current_thread restore_thread;
+  switch_to_process (proc);
+
+  thread_db *thread_db = proc->priv->thread_db;
+  td_thrhandle_t th;
+  int lwpid = ptid.lwp ();
+  td_err_e err = thread_db->td_ta_map_lwp2thr_p (thread_db->thread_agent, lwpid,
+						 &th);
   if (err != TD_OK)
     error ("Cannot get thread handle for LWP %d: %s",
 	   lwpid, thread_db_err_str (err));
 
+  td_thrinfo_t ti;
   err = thread_db->td_thr_get_info_p (&th, &ti);
   if (err != TD_OK)
     error ("Cannot get thread info for LWP %d: %s",
@@ -212,7 +216,7 @@ static int
 attach_thread (const td_thrhandle_t *th_p, td_thrinfo_t *ti_p)
 {
   struct process_info *proc = current_process ();
-  int pid = pid_of (proc);
+  int pid = proc->pid;
   ptid_t ptid = ptid_t (pid, ti_p->ti_lid);
   struct lwp_info *lwp;
   int err;
@@ -305,7 +309,7 @@ static void
 thread_db_find_new_threads (void)
 {
   td_err_e err;
-  ptid_t ptid = current_ptid;
+  ptid_t ptid = current_thread->id;
   struct thread_db *thread_db = current_process ()->priv->thread_db;
   int loop, iteration;
 
@@ -378,16 +382,15 @@ thread_db_look_up_one_symbol (const char *name, CORE_ADDR *addrp)
 }
 
 int
-thread_db_get_tls_address (struct thread_info *thread, CORE_ADDR offset,
+thread_db_get_tls_address (thread_info *thread, CORE_ADDR offset,
 			   CORE_ADDR load_module, CORE_ADDR *address)
 {
   psaddr_t addr;
   td_err_e err;
   struct lwp_info *lwp;
-  struct process_info *proc;
   struct thread_db *thread_db;
+  process_info *proc = thread->process ();
 
-  proc = get_thread_process (thread);
   thread_db = proc->priv->thread_db;
 
   /* If the thread layer is not (yet) initialized, fail.  */
@@ -444,14 +447,13 @@ thread_db_get_tls_address (struct thread_info *thread, CORE_ADDR offset,
 bool
 thread_db_thread_handle (ptid_t ptid, gdb_byte **handle, int *handle_len)
 {
-  struct thread_db *thread_db;
   struct lwp_info *lwp;
   thread_info *thread = find_thread_ptid (ptid);
 
   if (thread == NULL)
     return false;
 
-  thread_db = get_thread_process (thread)->priv->thread_db;
+  thread_db *thread_db = thread->process ()->priv->thread_db;
 
   if (thread_db == NULL)
     return false;
@@ -746,7 +748,7 @@ thread_db_init (void)
 	 find_one_thread then.  That uses thread_db entry points that
 	 do not walk libpthread's thread list, so should be safe, as
 	 well as more efficient.  */
-      if (!linux_proc_task_list_dir_exists (pid_of (proc)))
+      if (!linux_proc_task_list_dir_exists (proc->pid))
 	thread_db_find_new_threads ();
       thread_db_look_up_symbols ();
       return 1;
@@ -867,10 +869,9 @@ thread_db_handle_monitor_command (char *mon)
 /* See linux-low.h.  */
 
 void
-thread_db_notice_clone (struct thread_info *parent_thr, ptid_t child_ptid)
+thread_db_notice_clone (thread_info *parent_thr, ptid_t child_ptid)
 {
-  process_info *parent_proc = get_thread_process (parent_thr);
-  struct thread_db *thread_db = parent_proc->priv->thread_db;
+  thread_db *thread_db = parent_thr->process ()->priv->thread_db;
 
   /* If the thread layer isn't initialized, return.  It may just
      be that the program uses clone, but does not use libthread_db.  */

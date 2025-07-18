@@ -1,6 +1,6 @@
 /* Target-dependent code for the Toshiba MeP for GDB, the GNU debugger.
 
-   Copyright (C) 2001-2022 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
 
    Contributed by Red Hat, Inc.
 
@@ -19,13 +19,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
+#include "extract-store-integer.h"
 #include "frame.h"
 #include "frame-unwind.h"
 #include "frame-base.h"
 #include "symtab.h"
 #include "gdbtypes.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "gdbcore.h"
 #include "value.h"
 #include "inferior.h"
@@ -47,7 +47,10 @@
 #include "gdbarch.h"
 
 /* Get the user's customized MeP coprocessor register names from
-   libopcodes.  */
+   libopcodes.  Make cgen names unique to prevent ODR conflicts with other
+   targets.  */
+#define GDB_CGEN_REMAP_PREFIX mep
+#include "cgen-remap.h"
 #include "opcodes/mep-desc.h"
 #include "opcodes/mep-opc.h"
 
@@ -57,7 +60,7 @@
 /* A quick recap for GDB hackers not familiar with the whole Toshiba
    Media Processor story:
 
-   The MeP media engine is a configureable processor: users can design
+   The MeP media engine is a configurable processor: users can design
    their own coprocessors, implement custom instructions, adjust cache
    sizes, select optional standard facilities like add-and-saturate
    instructions, and so on.  Then, they can build custom versions of
@@ -116,7 +119,7 @@
      options are present on the current processor.  */
 
 
-struct mep_gdbarch_tdep : gdbarch_tdep
+struct mep_gdbarch_tdep : gdbarch_tdep_base
 {
   /* A CGEN cpu descriptor for this BFD architecture and machine.
 
@@ -260,7 +263,7 @@ me_module_register_set (CONFIG_ATTR me_module,
        specifically excluding the generic coprocessor register sets.  */
 
   mep_gdbarch_tdep *tdep
-    = (mep_gdbarch_tdep *) gdbarch_tdep (target_gdbarch ());
+    = gdbarch_tdep<mep_gdbarch_tdep> (current_inferior ()->arch ());
   CGEN_CPU_DESC desc = tdep->cpu_desc;
   const CGEN_HW_ENTRY *hw;
 
@@ -849,14 +852,14 @@ current_me_module (void)
   if (target_has_registers ())
     {
       ULONGEST regval;
-      regcache_cooked_read_unsigned (get_current_regcache (),
+      regcache_cooked_read_unsigned (get_thread_regcache (inferior_thread ()),
 				     MEP_MODULE_REGNUM, &regval);
       return (CONFIG_ATTR) regval;
     }
   else
     {
       mep_gdbarch_tdep *tdep
-	= (mep_gdbarch_tdep *) gdbarch_tdep (target_gdbarch ());
+	= gdbarch_tdep<mep_gdbarch_tdep> (current_inferior ()->arch ());
       return tdep->me_module;
     }
 }
@@ -876,7 +879,7 @@ current_options (void)
   if (target_has_registers ())
     {
       ULONGEST regval;
-      regcache_cooked_read_unsigned (get_current_regcache (),
+      regcache_cooked_read_unsigned (get_thread_regcache (inferior_thread ()),
 				     MEP_OPT_REGNUM, &regval);
       return regval;
     }
@@ -1016,7 +1019,7 @@ mep_register_name (struct gdbarch *gdbarch, int regnr)
      would affect the output of 'info all-registers', which would
      disturb the test suites.  So we leave it invisible.  */
   else
-    return NULL;
+    return "";
 }
 
 
@@ -1131,8 +1134,8 @@ mep_pseudo_cr32_read (struct gdbarch *gdbarch,
   int rawnum = mep_pseudo_to_raw[cookednum];
   gdb_byte buf64[8];
 
-  gdb_assert (TYPE_LENGTH (register_type (gdbarch, rawnum)) == sizeof (buf64));
-  gdb_assert (TYPE_LENGTH (register_type (gdbarch, cookednum)) == 4);
+  gdb_assert (register_type (gdbarch, rawnum)->length () == sizeof (buf64));
+  gdb_assert (register_type (gdbarch, cookednum)->length () == 4);
   status = regcache->raw_read (rawnum, buf64);
   if (status == REG_VALID)
     {
@@ -1217,8 +1220,8 @@ mep_pseudo_cr32_write (struct gdbarch *gdbarch,
   int rawnum = mep_pseudo_to_raw[cookednum];
   gdb_byte buf64[8];
   
-  gdb_assert (TYPE_LENGTH (register_type (gdbarch, rawnum)) == sizeof (buf64));
-  gdb_assert (TYPE_LENGTH (register_type (gdbarch, cookednum)) == 4);
+  gdb_assert (register_type (gdbarch, rawnum)->length () == sizeof (buf64));
+  gdb_assert (register_type (gdbarch, cookednum)->length () == 4);
   /* Slow, but legible.  */
   store_unsigned_integer (buf64, 8, byte_order,
 			  extract_unsigned_integer (buf, 4, byte_order));
@@ -1910,7 +1913,7 @@ typedef BP_MANIPULATION (mep_break_insn) mep_breakpoint;
 
 
 static struct mep_prologue *
-mep_analyze_frame_prologue (struct frame_info *this_frame,
+mep_analyze_frame_prologue (const frame_info_ptr &this_frame,
 			    void **this_prologue_cache)
 {
   if (! *this_prologue_cache)
@@ -1940,7 +1943,7 @@ mep_analyze_frame_prologue (struct frame_info *this_frame,
 /* Given the next frame and a prologue cache, return this frame's
    base.  */
 static CORE_ADDR
-mep_frame_base (struct frame_info *this_frame,
+mep_frame_base (const frame_info_ptr &this_frame,
 		void **this_prologue_cache)
 {
   struct mep_prologue *p
@@ -1968,7 +1971,7 @@ mep_frame_base (struct frame_info *this_frame,
 
 
 static void
-mep_frame_this_id (struct frame_info *this_frame,
+mep_frame_this_id (const frame_info_ptr &this_frame,
 		   void **this_prologue_cache,
 		   struct frame_id *this_id)
 {
@@ -1978,7 +1981,7 @@ mep_frame_this_id (struct frame_info *this_frame,
 
 
 static struct value *
-mep_frame_prev_register (struct frame_info *this_frame,
+mep_frame_prev_register (const frame_info_ptr &this_frame,
 			 void **this_prologue_cache, int regnum)
 {
   struct mep_prologue *p
@@ -2058,15 +2061,16 @@ mep_frame_prev_register (struct frame_info *this_frame,
 }
 
 
-static const struct frame_unwind mep_frame_unwind = {
+static const struct frame_unwind_legacy mep_frame_unwind (
   "mep prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   mep_frame_this_id,
   mep_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 
 /* Return values.  */
@@ -2075,7 +2079,7 @@ static const struct frame_unwind mep_frame_unwind = {
 static int
 mep_use_struct_convention (struct type *type)
 {
-  return (TYPE_LENGTH (type) > MEP_GPR_SIZE);
+  return (type->length () > MEP_GPR_SIZE);
 }
 
 
@@ -2094,15 +2098,15 @@ mep_extract_return_value (struct gdbarch *arch,
 
   /* Return values > MEP_GPR_SIZE bytes are returned in memory,
      pointed to by R0.  */
-  gdb_assert (TYPE_LENGTH (type) <= MEP_GPR_SIZE);
+  gdb_assert (type->length () <= MEP_GPR_SIZE);
 
   if (byte_order == BFD_ENDIAN_BIG)
-    offset = MEP_GPR_SIZE - TYPE_LENGTH (type);
+    offset = MEP_GPR_SIZE - type->length ();
   else
     offset = 0;
 
   /* Return values that do fit in a single register are returned in R0.  */
-  regcache->cooked_read_part (MEP_R0_REGNUM, offset, TYPE_LENGTH (type),
+  regcache->cooked_read_part (MEP_R0_REGNUM, offset, type->length (),
 			      valbuf);
 }
 
@@ -2116,7 +2120,7 @@ mep_store_return_value (struct gdbarch *arch,
   int byte_order = gdbarch_byte_order (arch);
 
   /* Values that fit in a single register go in R0.  */
-  if (TYPE_LENGTH (type) <= MEP_GPR_SIZE)
+  if (type->length () <= MEP_GPR_SIZE)
     {
       /* Values that don't occupy a full register appear at the least
 	 significant end of the value.  This is the offset to where the
@@ -2124,11 +2128,11 @@ mep_store_return_value (struct gdbarch *arch,
       int offset;
 
       if (byte_order == BFD_ENDIAN_BIG)
-	offset = MEP_GPR_SIZE - TYPE_LENGTH (type);
+	offset = MEP_GPR_SIZE - type->length ();
       else
 	offset = 0;
 
-      regcache->cooked_write_part (MEP_R0_REGNUM, offset, TYPE_LENGTH (type),
+      regcache->cooked_write_part (MEP_R0_REGNUM, offset, type->length (),
 				   valbuf);
     }
 
@@ -2156,7 +2160,7 @@ mep_return_value (struct gdbarch *gdbarch, struct value *function,
 	     returned in R0.  Fetch R0's value and then read the memory
 	     at that address.  */
 	  regcache_raw_read_unsigned (regcache, MEP_R0_REGNUM, &addr);
-	  read_memory (addr, readbuf, TYPE_LENGTH (type));
+	  read_memory (addr, readbuf, type->length ());
 	}
       if (writebuf)
 	{
@@ -2228,14 +2232,14 @@ push_large_arguments (CORE_ADDR sp, int argc, struct value **argv,
 
   for (i = 0; i < argc; i++)
     {
-      unsigned arg_len = TYPE_LENGTH (value_type (argv[i]));
+      unsigned arg_len = argv[i]->type ()->length ();
 
       if (arg_len > MEP_GPR_SIZE)
 	{
 	  /* Reserve space for the copy, and then round the SP down, to
 	     make sure it's all aligned properly.  */
 	  sp = (sp - arg_len) & -4;
-	  write_memory (sp, value_contents (argv[i]).data (), arg_len);
+	  write_memory (sp, argv[i]->contents ().data (), arg_len);
 	  copy[i] = sp;
 	}
     }
@@ -2288,9 +2292,9 @@ mep_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       ULONGEST value;
 
       /* Arguments that fit in a GPR get expanded to fill the GPR.  */
-      if (TYPE_LENGTH (value_type (argv[i])) <= MEP_GPR_SIZE)
-	value = extract_unsigned_integer (value_contents (argv[i]).data (),
-					  TYPE_LENGTH (value_type (argv[i])),
+      if (argv[i]->type ()->length () <= MEP_GPR_SIZE)
+	value = extract_unsigned_integer (argv[i]->contents ().data (),
+					  argv[i]->type ()->length (),
 					  byte_order);
 
       /* Arguments too large to fit in a GPR get copied to the stack,
@@ -2331,8 +2335,6 @@ mep_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 static struct gdbarch *
 mep_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
-  struct gdbarch *gdbarch;
-
   /* Which me_module are we building a gdbarch object for?  */
   CONFIG_ATTR me_module;
 
@@ -2391,14 +2393,15 @@ mep_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
        arches = gdbarch_list_lookup_by_info (arches->next, &info))
     {
       mep_gdbarch_tdep *tdep
-	= (mep_gdbarch_tdep *) gdbarch_tdep (arches->gdbarch);
+	= gdbarch_tdep<mep_gdbarch_tdep> (arches->gdbarch);
 
       if (tdep->me_module == me_module)
 	return arches->gdbarch;
     }
 
-  mep_gdbarch_tdep *tdep = new mep_gdbarch_tdep;
-  gdbarch = gdbarch_alloc (&info, tdep);
+  gdbarch *gdbarch
+    = gdbarch_alloc (&info, gdbarch_tdep_up (new mep_gdbarch_tdep));
+  mep_gdbarch_tdep *tdep = gdbarch_tdep<mep_gdbarch_tdep> (gdbarch);
 
   /* Get a CGEN CPU descriptor for this architecture.  */
   {
@@ -2422,7 +2425,8 @@ mep_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_register_type (gdbarch, mep_register_type);
   set_gdbarch_num_pseudo_regs (gdbarch, MEP_NUM_PSEUDO_REGS);
   set_gdbarch_pseudo_register_read (gdbarch, mep_pseudo_register_read);
-  set_gdbarch_pseudo_register_write (gdbarch, mep_pseudo_register_write);
+  set_gdbarch_deprecated_pseudo_register_write (gdbarch,
+						mep_pseudo_register_write);
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, mep_debug_reg_to_regnum);
   set_gdbarch_stab_reg_to_regnum (gdbarch, mep_debug_reg_to_regnum);
 
@@ -2463,7 +2467,7 @@ _initialize_mep_tdep ()
   mep_cr_reggroup  = reggroup_new ("cr", USER_REGGROUP); 
   mep_ccr_reggroup = reggroup_new ("ccr", USER_REGGROUP);
 
-  register_gdbarch_init (bfd_arch_mep, mep_gdbarch_init);
+  gdbarch_register (bfd_arch_mep, mep_gdbarch_init);
 
   mep_init_pseudoregister_maps ();
 }

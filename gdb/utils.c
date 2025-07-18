@@ -1,6 +1,6 @@
 /* General utility routines for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,9 +17,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include <ctype.h>
 #include "gdbsupport/gdb_wait.h"
+#include "gdbsupport/scoped_signal_handler.h"
 #include "event-top.h"
 #include "gdbthread.h"
 #include "fnmatch.h"
@@ -29,7 +29,8 @@
 #endif /* HAVE_SYS_RESOURCE_H */
 
 #ifdef TUI
-#include "tui/tui.h"		/* For tui_get_command_dimension.   */
+/* For tui_get_command_dimension and tui_disable.   */
+#include "tui/tui.h"
 #endif
 
 #ifdef __GO32__
@@ -37,7 +38,7 @@
 #endif
 
 #include <signal.h>
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "serial.h"
 #include "bfd.h"
 #include "target.h"
@@ -51,10 +52,11 @@
 #include "gdbsupport/gdb_obstack.h"
 #include "gdbcore.h"
 #include "top.h"
+#include "ui.h"
 #include "main.h"
 #include "solist.h"
 
-#include "inferior.h"		/* for signed_pointer_to_address */
+#include "inferior.h"
 
 #include "gdb_curses.h"
 
@@ -66,7 +68,7 @@
 #include "gdbsupport/gdb_regex.h"
 #include "gdbsupport/job-control.h"
 #include "gdbsupport/selftest.h"
-#include "gdbsupport/gdb_optional.h"
+#include <optional>
 #include "cp-support.h"
 #include <algorithm>
 #include "gdbsupport/pathstuff.h"
@@ -79,6 +81,8 @@
 #include "gdbsupport/buildargv.h"
 #include "pager.h"
 #include "run-on-main-thread.h"
+#include "gdbsupport/gdb_tilde_expand.h"
+#include "gdbsupport/eintr.h"
 
 void (*deprecated_error_begin_hook) (void);
 
@@ -126,7 +130,32 @@ show_pagination_enabled (struct ui_file *file, int from_tty,
 }
 
 
+/* Warning hook pointer.  This has to be 'static' to avoid link
+   problems with thread-locals on AIX.  */
 
+static thread_local warning_hook_handler warning_hook;
+
+/* See utils.h.  */
+
+warning_hook_handler
+get_warning_hook_handler ()
+{
+  return warning_hook;
+}
+
+/* See utils.h.  */
+
+scoped_restore_warning_hook::scoped_restore_warning_hook
+     (warning_hook_handler new_handler)
+       : m_save (warning_hook)
+{
+  warning_hook = new_handler;
+}
+
+scoped_restore_warning_hook::~scoped_restore_warning_hook ()
+{
+  warning_hook = m_save;
+}
 
 /* Print a warning message.  The first argument STRING is the warning
    message, used as an fprintf format string, the second is the
@@ -137,11 +166,11 @@ show_pagination_enabled (struct ui_file *file, int from_tty,
 void
 vwarning (const char *string, va_list args)
 {
-  if (deprecated_warning_hook)
-    (*deprecated_warning_hook) (string, args);
+  if (warning_hook != nullptr)
+    warning_hook->warn (string, args);
   else
     {
-      gdb::optional<target_terminal::scoped_restore_terminal_state> term_state;
+      std::optional<target_terminal::scoped_restore_terminal_state> term_state;
       if (target_supports_terminal_ours ())
 	{
 	  term_state.emplace ();
@@ -164,15 +193,9 @@ verror (const char *string, va_list args)
   throw_verror (GENERIC_ERROR, string, args);
 }
 
-void
-error_stream (const string_file &stream)
-{
-  error (("%s"), stream.c_str ());
-}
-
 /* Emit a message and abort.  */
 
-static void ATTRIBUTE_NORETURN
+[[noreturn]] static void
 abort_with_message (const char *msg)
 {
   if (current_ui == NULL)
@@ -222,7 +245,7 @@ can_dump_core (enum resource_limit_kind limit_kind)
     case LIMIT_CUR:
       if (rlim.rlim_cur == 0)
 	return 0;
-      /* Fall through.  */
+      [[fallthrough]];
 
     case LIMIT_MAX:
       if (rlim.rlim_max == 0)
@@ -354,6 +377,10 @@ internal_vproblem (struct internal_problem *problem,
       }
   }
 
+#ifdef TUI
+  tui_disable ();
+#endif
+
   /* Create a string containing the full error/warning message.  Need
      to call query with this full string, as otherwize the reason
      (error/warning) and question become separated.  Format using a
@@ -375,7 +402,7 @@ internal_vproblem (struct internal_problem *problem,
     }
 
   /* Try to get the message out and at the start of a new line.  */
-  gdb::optional<target_terminal::scoped_restore_terminal_state> term_state;
+  std::optional<target_terminal::scoped_restore_terminal_state> term_state;
   if (target_supports_terminal_ours ())
     {
       term_state.emplace ();
@@ -412,7 +439,7 @@ internal_vproblem (struct internal_problem *problem,
   else if (problem->should_quit == internal_problem_no)
     quit_p = 0;
   else
-    internal_error (__FILE__, __LINE__, _("bad switch"));
+    internal_error (_("bad switch"));
 
   gdb_puts (_("\nThis is a bug, please report it."), gdb_stderr);
   if (REPORT_BUGS_TO[0])
@@ -442,7 +469,7 @@ internal_vproblem (struct internal_problem *problem,
   else if (problem->should_dump_core == internal_problem_no)
     dump_core_p = 0;
   else
-    internal_error (__FILE__, __LINE__, _("bad switch"));
+    internal_error (_("bad switch"));
 
   if (quit_p)
     {
@@ -572,11 +599,11 @@ add_internal_problem_command (struct internal_problem *problem)
   if (problem->user_settable_should_dump_core)
     {
       std::string set_core_doc
-	= string_printf (_("Set whether GDB should create a core file of "
-			   "GDB when %s is detected."), problem->name);
+	= string_printf (_("Set whether GDB should dump core "
+			   "when %s is detected."), problem->name);
       std::string show_core_doc
-	= string_printf (_("Show whether GDB will create a core file of "
-			   "GDB when %s is detected."), problem->name);
+	= string_printf (_("Show whether GDB should dump core "
+			   "when %s is detected."), problem->name);
       add_setshow_enum_cmd ("corefile", class_maintenance,
 			    internal_problem_modes,
 			    &problem->should_dump_core,
@@ -592,11 +619,11 @@ add_internal_problem_command (struct internal_problem *problem)
   if (problem->user_settable_should_print_backtrace)
     {
       std::string set_bt_doc
-	= string_printf (_("Set whether GDB should print a backtrace of "
-			   "GDB when %s is detected."), problem->name);
+	= string_printf (_("Set whether GDB should show backtrace "
+			   "when %s is detected."), problem->name);
       std::string show_bt_doc
-	= string_printf (_("Show whether GDB will print a backtrace of "
-			   "GDB when %s is detected."), problem->name);
+	= string_printf (_("Show whether GDB should show backtrace "
+			   "when %s is detected."), problem->name);
       add_setshow_boolean_cmd ("backtrace", class_maintenance,
 			       &problem->should_print_backtrace,
 			       set_bt_doc.c_str (),
@@ -609,42 +636,6 @@ add_internal_problem_command (struct internal_problem *problem)
     }
 }
 
-/* Return a newly allocated string, containing the PREFIX followed
-   by the system error message for errno (separated by a colon).  */
-
-static std::string
-perror_string (const char *prefix)
-{
-  const char *err = safe_strerror (errno);
-  return std::string (prefix) + ": " + err;
-}
-
-/* Print the system error message for errno, and also mention STRING
-   as the file name for which the error was encountered.  Use ERRCODE
-   for the thrown exception.  Then return to command level.  */
-
-static void ATTRIBUTE_NORETURN
-throw_perror_with_name (enum errors errcode, const char *string)
-{
-  std::string combined = perror_string (string);
-
-  /* I understand setting these is a matter of taste.  Still, some people
-     may clear errno but not know about bfd_error.  Doing this here is not
-     unreasonable.  */
-  bfd_set_error (bfd_error_no_error);
-  errno = 0;
-
-  throw_error (errcode, _("%s."), combined.c_str ());
-}
-
-/* See throw_perror_with_name, ERRCODE defaults here to GENERIC_ERROR.  */
-
-void
-perror_with_name (const char *string)
-{
-  throw_perror_with_name (GENERIC_ERROR, string);
-}
-
 /* Same as perror_with_name except that it prints a warning instead
    of throwing an error.  */
 
@@ -655,57 +646,15 @@ perror_warning_with_name (const char *string)
   warning (_("%s"), combined.c_str ());
 }
 
-/* Print the system error message for ERRCODE, and also mention STRING
-   as the file name for which the error was encountered.  */
+/* See utils.h.  */
 
 void
-print_sys_errmsg (const char *string, int errcode)
+warning_filename_and_errno (const char *filename, int saved_errno)
 {
-  const char *err = safe_strerror (errcode);
-  gdb_printf (gdb_stderr, "%s: %s.\n", string, err);
+  warning (_("%ps: %s"), styled_string (file_name_style.style (), filename),
+	   safe_strerror (saved_errno));
 }
 
-/* Control C eventually causes this to be called, at a convenient time.  */
-
-void
-quit (void)
-{
-  if (sync_quit_force_run)
-    {
-      sync_quit_force_run = 0;
-      quit_force (NULL, 0);
-    }
-
-#ifdef __MSDOS__
-  /* No steenking SIGINT will ever be coming our way when the
-     program is resumed.  Don't lie.  */
-  throw_quit ("Quit");
-#else
-  if (job_control
-      /* If there is no terminal switching for this target, then we can't
-	 possibly get screwed by the lack of job control.  */
-      || !target_supports_terminal_ours ())
-    throw_quit ("Quit");
-  else
-    throw_quit ("Quit (expect signal SIGINT when the program is resumed)");
-#endif
-}
-
-/* See defs.h.  */
-
-void
-maybe_quit (void)
-{
-  if (!is_main_thread ())
-    return;
-
-  if (sync_quit_force_run)
-    quit ();
-
-  quit_handler ();
-}
-
-
 /* Called when a memory allocation fails, with the number of bytes of
    memory requested in SIZE.  */
 
@@ -714,13 +663,12 @@ malloc_failure (long size)
 {
   if (size > 0)
     {
-      internal_error (__FILE__, __LINE__,
-		      _("virtual memory exhausted: can't allocate %ld bytes."),
+      internal_error (_("virtual memory exhausted: can't allocate %ld bytes."),
 		      size);
     }
   else
     {
-      internal_error (__FILE__, __LINE__, _("virtual memory exhausted."));
+      internal_error (_("virtual memory exhausted."));
     }
 }
 
@@ -755,36 +703,6 @@ myread (int desc, char *addr, int len)
   return orglen;
 }
 
-/* See utils.h.  */
-
-ULONGEST
-uinteger_pow (ULONGEST v1, LONGEST v2)
-{
-  if (v2 < 0)
-    {
-      if (v1 == 0)
-	error (_("Attempt to raise 0 to negative power."));
-      else
-	return 0;
-    }
-  else
-    {
-      /* The Russian Peasant's Algorithm.  */
-      ULONGEST v;
-
-      v = 1;
-      for (;;)
-	{
-	  if (v2 & 1L)
-	    v *= v1;
-	  v2 >>= 1;
-	  if (v2 == 0)
-	    return v;
-	  v1 *= v1;
-	}
-    }
-}
-
 
 
 /* An RAII class that sets up to handle input and then tears down
@@ -799,7 +717,7 @@ public:
       m_ui (NULL)
   {
     target_terminal::ours ();
-    ui_register_input_event_handler (current_ui);
+    current_ui->register_file_handler ();
     if (current_ui->prompt_state == PROMPT_BLOCKED)
       m_ui = current_ui;
   }
@@ -807,7 +725,7 @@ public:
   ~scoped_input_handler ()
   {
     if (m_ui != NULL)
-      ui_unregister_input_event_handler (m_ui);
+      m_ui->unregister_file_handler ();
   }
 
   DISABLE_COPY_AND_ASSIGN (scoped_input_handler);
@@ -880,7 +798,7 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
      way, important error messages don't get lost when talking to GDB
      over a pipe.  */
   if (current_ui->instream != current_ui->stdin_stream
-      || !input_interactive_p (current_ui)
+      || !current_ui->input_interactive_p ()
       /* Restrict queries to the main UI.  */
       || current_ui != main_ui)
     {
@@ -903,7 +821,9 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
     }
 
   /* Format the question outside of the loop, to avoid reusing args.  */
-  std::string question = string_vprintf (ctlstr, args);
+  string_file tem (gdb_stdout->can_emit_style_escape ());
+  gdb_vprintf (&tem, ctlstr, args);
+  std::string question = tem.release ();
   std::string prompt
     = string_printf (_("%s%s(%s or %s) %s"),
 		     annotation_level > 1 ? "\n\032\032pre-query\n" : "",
@@ -1178,6 +1098,10 @@ static bool filter_initialized = false;
 
 
 
+/* See utils.h.  */
+
+int readline_hidden_cols = 0;
+
 /* Initialize the number of lines per page and chars per line.  */
 
 void
@@ -1206,8 +1130,28 @@ init_page_info (void)
 
       /* Get the screen size from Readline.  */
       rl_get_screen_size (&rows, &cols);
+
+      /* Readline:
+	 - ignores the COLUMNS variable when detecting screen width
+	   (because rl_prefer_env_winsize defaults to 0)
+	 - puts the detected screen width in the COLUMNS variable
+	   (because rl_change_environment defaults to 1)
+	 - may report one less than the detected screen width in
+	   rl_get_screen_size (when _rl_term_autowrap == 0).
+	 We could use _rl_term_autowrap, but we want to avoid introducing
+	 another dependency on readline private variables, so set
+	 readline_hidden_cols by comparing COLUMNS to cols as returned by
+	 rl_get_screen_size.  */
+      const char *columns_env_str = getenv ("COLUMNS");
+      gdb_assert (columns_env_str != nullptr);
+      int columns_env_val = atoi (columns_env_str);
+      gdb_assert (columns_env_val != 0);
+      readline_hidden_cols = columns_env_val - cols;
+      gdb_assert (readline_hidden_cols >= 0);
+      gdb_assert (readline_hidden_cols <= 1);
+
       lines_per_page = rows;
-      chars_per_line = cols;
+      chars_per_line = cols + readline_hidden_cols;
 
       /* Readline should have fetched the termcap entry for us.
 	 Only try to use tgetnum function if rl_get_screen_size
@@ -1262,6 +1206,15 @@ set_batch_flag_and_restore_page_info::~set_batch_flag_and_restore_page_info ()
   set_width ();
 }
 
+/* An approximation of SQRT(INT_MAX) that is:
+   - cheap to calculate,
+   - guaranteed to be smaller than SQRT(INT_MAX), such that
+     sqrt_int_max * sqrt_int_max doesn't overflow, and
+   - "close enough" to SQRT(INT_MAX), for instance for INT_MAX == 2147483647,
+     SQRT(INT_MAX) is ~46341 and sqrt_int_max == 32767.  */
+
+static const int sqrt_int_max = INT_MAX >> (sizeof (int) * 8 / 2);
+
 /* Set the screen size based on LINES_PER_PAGE and CHARS_PER_LINE.  */
 
 static void
@@ -1280,8 +1233,6 @@ set_screen_size (void)
      Cap "infinity" to approximately sqrt(INT_MAX) so that we don't
      overflow in rl_set_screen_size, which multiplies rows and columns
      to compute the number of characters on the screen.  */
-
-  const int sqrt_int_max = INT_MAX >> (sizeof (int) * 8 / 2);
 
   if (rows <= 0 || rows > sqrt_int_max)
     {
@@ -1333,6 +1284,114 @@ set_screen_width_and_height (int width, int height)
 
   set_screen_size ();
   set_width ();
+}
+
+/* Import termcap variable UP (instead of readline private variable
+   _rl_term_up, which we're trying to avoid, see PR build/10723).  The UP
+   variable doesn't seem be part of the regular termcap interface, but rather
+   curses-specific.  But if it's missing in the termcap library, then readline
+   provides a fallback version.  Let's assume the fallback is not part of the
+   private readline interface.  */
+extern "C" char *UP;
+
+/* Implement "maint info screen".  */
+
+static void
+maintenance_info_screen (const char *args, int from_tty)
+{
+  int rows, cols;
+  rl_get_screen_size (&rows, &cols);
+
+  gdb_printf (gdb_stdout,
+	      _("Number of characters gdb thinks "
+		"are in a line is %u%s.\n"),
+	      chars_per_line,
+	      chars_per_line == UINT_MAX ? " (unlimited)" : "");
+
+  gdb_printf (gdb_stdout,
+	      _("Number of characters readline reports "
+		"are in a line is %d%s.\n"),
+	      cols,
+	      (cols == sqrt_int_max
+	       ? " (unlimited)"
+	       : (cols == sqrt_int_max - 1
+		  ? " (unlimited - 1)"
+		  : "")));
+
+#ifdef HAVE_LIBCURSES
+  gdb_printf (gdb_stdout,
+	     _("Number of characters curses thinks "
+	       "are in a line is %d.\n"),
+	     COLS);
+#endif
+
+  gdb_printf (gdb_stdout,
+	      _("Number of characters environment thinks "
+		"are in a line is %s (COLUMNS).\n"),
+	      getenv ("COLUMNS"));
+
+  gdb_printf (gdb_stdout,
+	      _("Number of lines gdb thinks are in a page is %u%s.\n"),
+	      lines_per_page,
+	      lines_per_page == UINT_MAX ? " (unlimited)" : "");
+
+  gdb_printf (gdb_stdout,
+	      _("Number of lines readline reports "
+		"are in a page is %d%s.\n"),
+	      rows,
+	      rows == sqrt_int_max ? " (unlimited)" : "");
+
+#ifdef HAVE_LIBCURSES
+  gdb_printf (gdb_stdout,
+	     _("Number of lines curses thinks "
+	       "are in a page is %d.\n"),
+	      LINES);
+#endif
+
+  gdb_printf (gdb_stdout,
+	      _("Number of lines environment thinks "
+		"are in a page is %s (LINES).\n"),
+	      getenv ("LINES"));
+
+  bool have_up = UP != nullptr && *UP != '\0';
+
+  /* Fetch value of readline variable horizontal-scroll-mode.  */
+  const char *horizontal_scroll_mode_value
+    = rl_variable_value ("horizontal-scroll-mode");
+  bool force_horizontal_scroll_mode
+    = (horizontal_scroll_mode_value != nullptr
+       && strcmp (horizontal_scroll_mode_value, "on") == 0);
+
+  const char *mode = nullptr;
+  const char *reason = nullptr;
+  if (batch_flag)
+    {
+      mode = "unsupported";
+      reason = "gdb batch mode";
+    }
+  else if (!have_up)
+    {
+      mode = "unsupported";
+      reason = "terminal is not Cursor Up capable";
+    }
+  else if (force_horizontal_scroll_mode)
+    {
+      mode = "disabled";
+      reason = "horizontal-scroll-mode";
+    }
+  else if (readline_hidden_cols)
+    {
+      mode = "readline";
+      reason = "terminal is not auto wrap capable, last column reserved";
+    }
+  else
+    {
+      mode = "terminal";
+      reason = "terminal is auto wrap capable";
+    }
+
+  gdb_printf (gdb_stdout, _("Readline wrapping mode: %s (%s).\n"), mode,
+	      reason);
 }
 
 void
@@ -1791,6 +1850,12 @@ gdb_puts (const char *linebuffer, struct ui_file *stream)
   stream->puts (linebuffer);
 }
 
+void
+gdb_puts (const std::string &s, ui_file *stream)
+{
+  gdb_puts (s.c_str (), stream);
+}
+
 /* See utils.h.  */
 
 void
@@ -1971,7 +2036,7 @@ fprintf_symbol (struct ui_file *stream, const char *name,
       else
 	{
 	  gdb::unique_xmalloc_ptr<char> demangled
-	    = language_demangle (language_def (lang), name, arg_mode);
+	    = language_def (lang)->demangle_symbol (name, arg_mode);
 	  gdb_puts (demangled ? demangled.get () : name, stream);
 	}
     }
@@ -2139,6 +2204,8 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
   bool have_colon_op = (language == language_cplus
 			|| language == language_rust
 			|| language == language_fortran);
+
+  gdb_assert (match_for_lcd == nullptr || match_for_lcd->empty ());
 
   while (1)
     {
@@ -2398,7 +2465,31 @@ strncmp_iw_with_mode (const char *string1, const char *string2,
 	  return 0;
 	}
       else
-	return (*string1 != '\0' && *string1 != '(');
+	{
+	  if (*string1 == '(')
+	    {
+	      int p_count = 0;
+
+	      do
+		{
+		  if (*string1 == '(')
+		    ++p_count;
+		  else if (*string1 == ')')
+		    --p_count;
+		  ++string1;
+		}
+	      while (*string1 != '\0' && p_count > 0);
+
+	      /* There maybe things like 'const' after the parameters,
+		 which we do want to ignore.  However, if there's an '@'
+		 then this likely indicates something like '@plt' which we
+		 should not ignore.  */
+	      return *string1 == '@';
+	    }
+
+	  return *string1 == '\0' ? 0 : 1;
+	}
+
     }
   else
     return 1;
@@ -2930,6 +3021,11 @@ strncmp_iw_with_mode_tests ()
   CHECK_MATCH ("foo[abi:a][abi:b](bar[abi:c][abi:d])", "foo[abi:a][abi:b](bar[abi:c][abi:d])",
 	       MATCH_PARAMS);
   CHECK_MATCH ("foo[abi:a][abi:b](bar[abi:c][abi:d])", "foo", MATCH_PARAMS);
+  CHECK_NO_MATCH ("foo(args)@plt", "foo", MATCH_PARAMS);
+  CHECK_NO_MATCH ("foo((())args(()))@plt", "foo", MATCH_PARAMS);
+  CHECK_MATCH ("foo((())args(()))", "foo", MATCH_PARAMS);
+  CHECK_MATCH ("foo(args) const", "foo", MATCH_PARAMS);
+  CHECK_MATCH ("foo(args)const", "foo", MATCH_PARAMS);
 
   /* strncmp_iw_with_mode also supports case insensitivity.  */
   {
@@ -3100,35 +3196,7 @@ strcmp_iw_ordered (const char *string1, const char *string2)
     }
 }
 
-/* See utils.h.  */
-
-bool
-streq (const char *lhs, const char *rhs)
-{
-  return !strcmp (lhs, rhs);
-}
-
 
-
-/*
-   ** subset_compare()
-   **    Answer whether string_to_compare is a full or partial match to
-   **    template_string.  The partial match must be in sequence starting
-   **    at index 0.
- */
-int
-subset_compare (const char *string_to_compare, const char *template_string)
-{
-  int match;
-
-  if (template_string != NULL && string_to_compare != NULL
-      && strlen (string_to_compare) <= strlen (template_string))
-    match =
-      (startswith (template_string, string_to_compare));
-  else
-    match = 0;
-  return match;
-}
 
 static void
 show_debug_timestamp (struct ui_file *file, int from_tty,
@@ -3138,28 +3206,6 @@ show_debug_timestamp (struct ui_file *file, int from_tty,
 	      value);
 }
 
-
-/* See utils.h.  */
-
-CORE_ADDR
-address_significant (gdbarch *gdbarch, CORE_ADDR addr)
-{
-  /* Clear insignificant bits of a target address and sign extend resulting
-     address, avoiding shifts larger or equal than the width of a CORE_ADDR.
-     The local variable ADDR_BIT stops the compiler reporting a shift overflow
-     when it won't occur.  Skip updating of target address if current target
-     has not set gdbarch significant_addr_bit.  */
-  int addr_bit = gdbarch_significant_addr_bit (gdbarch);
-
-  if (addr_bit && (addr_bit < (sizeof (CORE_ADDR) * HOST_CHAR_BIT)))
-    {
-      CORE_ADDR sign = (CORE_ADDR) 1 << (addr_bit - 1);
-      addr &= ((CORE_ADDR) 1 << addr_bit) - 1;
-      addr = (addr ^ sign) - sign;
-    }
-
-  return addr;
-}
 
 const char *
 paddress (struct gdbarch *gdbarch, CORE_ADDR addr)
@@ -3423,35 +3469,19 @@ wait_to_die_with_timeout (pid_t pid, int *status, int timeout)
   if (timeout > 0)
     {
 #ifdef SIGALRM
-#if defined (HAVE_SIGACTION) && defined (SA_RESTART)
-      struct sigaction sa, old_sa;
-
-      sa.sa_handler = sigalrm_handler;
-      sigemptyset (&sa.sa_mask);
-      sa.sa_flags = 0;
-      sigaction (SIGALRM, &sa, &old_sa);
-#else
-      sighandler_t ofunc;
-
-      ofunc = signal (SIGALRM, sigalrm_handler);
-#endif
+      scoped_signal_handler<SIGALRM> alarm_restore (sigalrm_handler);
 
       alarm (timeout);
 #endif
 
-      waitpid_result = waitpid (pid, status, 0);
+      waitpid_result = gdb::waitpid (pid, status, 0);
 
 #ifdef SIGALRM
       alarm (0);
-#if defined (HAVE_SIGACTION) && defined (SA_RESTART)
-      sigaction (SIGALRM, &old_sa, NULL);
-#else
-      signal (SIGALRM, ofunc);
-#endif
 #endif
     }
   else
-    waitpid_result = waitpid (pid, status, WNOHANG);
+    waitpid_result = gdb::waitpid (pid, status, WNOHANG);
 
   if (waitpid_result == pid)
     return pid;
@@ -3461,8 +3491,8 @@ wait_to_die_with_timeout (pid_t pid, int *status, int timeout)
 
 #endif /* HAVE_WAITPID */
 
-/* Provide fnmatch compatible function for FNM_FILE_NAME matching of host files.
-   Both FNM_FILE_NAME and FNM_NOESCAPE must be set in FLAGS.
+/* Provide fnmatch compatible function for matching of host files.
+   FNM_NOESCAPE must be set in FLAGS.
 
    It handles correctly HAVE_DOS_BASED_FILE_SYSTEM and
    HAVE_CASE_INSENSITIVE_FILE_SYSTEM.  */
@@ -3470,8 +3500,6 @@ wait_to_die_with_timeout (pid_t pid, int *status, int timeout)
 int
 gdb_filename_fnmatch (const char *pattern, const char *string, int flags)
 {
-  gdb_assert ((flags & FNM_FILE_NAME) != 0);
-
   /* It is unclear how '\' escaping vs. directory separator should coexist.  */
   gdb_assert ((flags & FNM_NOESCAPE) != 0);
 
@@ -3674,6 +3702,60 @@ copy_bitwise (gdb_byte *dest, ULONGEST dest_offset,
     }
 }
 
+/* See utils.h.  */
+
+std::string
+extract_single_filename_arg (const char *args)
+{
+  if (args == nullptr)
+    return {};
+
+  std::string filename = extract_string_maybe_quoted (&args);
+  args = skip_spaces (args);
+  if (*args != '\0')
+    error (_("Junk after filename \"%s\": %s"), filename.c_str (), args);
+  if (!filename.empty ())
+    filename = gdb_tilde_expand (filename.c_str ());
+  return filename;
+}
+
+#if GDB_SELF_TEST
+static void
+test_assign_set_return_if_changed ()
+{
+  bool changed;
+  int a;
+
+  for (bool initial : { false, true })
+    {
+      changed = initial;
+      a = 1;
+      assign_set_if_changed (a, 1, changed);
+      SELF_CHECK (a == 1);
+      SELF_CHECK (changed == initial);
+    }
+
+  for (bool initial : { false, true })
+    {
+      changed = initial;
+      a = 1;
+      assign_set_if_changed (a, 2, changed);
+      SELF_CHECK (a == 2);
+      SELF_CHECK (changed == true);
+    }
+
+  a = 1;
+  changed = assign_return_if_changed (a, 1);
+  SELF_CHECK (a == 1);
+  SELF_CHECK (changed == false);
+
+  a = 1;
+  assign_set_if_changed (a, 2, changed);
+  SELF_CHECK (a == 2);
+  SELF_CHECK (changed == true);
+}
+#endif
+
 void _initialize_utils ();
 void
 _initialize_utils ()
@@ -3729,11 +3811,16 @@ When set, debugging messages will be marked with seconds and microseconds."),
   add_internal_problem_command (&internal_warning_problem);
   add_internal_problem_command (&demangler_warning_problem);
 
+  add_cmd ("screen", class_maintenance, &maintenance_info_screen,
+	 _("Show screen characteristics."), &maintenanceinfolist);
+
 #if GDB_SELF_TEST
   selftests::register_test ("gdb_realpath", gdb_realpath_tests);
   selftests::register_test ("gdb_argv_array_view", gdb_argv_as_array_view_test);
   selftests::register_test ("strncmp_iw_with_mode",
 			    strncmp_iw_with_mode_tests);
   selftests::register_test ("pager", test_pager);
+  selftests::register_test ("assign_set_return_if_changed",
+			    test_assign_set_return_if_changed);
 #endif
 }

@@ -1,6 +1,6 @@
 /* Internal header for GDB/Scheme code.
 
-   Copyright (C) 2014-2022 Free Software Foundation, Inc.
+   Copyright (C) 2014-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GUILE_GUILE_INTERNAL_H
-#define GUILE_GUILE_INTERNAL_H
+#ifndef GDB_GUILE_GUILE_INTERNAL_H
+#define GDB_GUILE_GUILE_INTERNAL_H
 
 /* See README file in this directory for implementation notes, coding
    conventions, et.al.  */
@@ -27,6 +27,21 @@
 #include "hashtab.h"
 #include "extension-priv.h"
 #include "symtab.h"
+#include "objfiles.h"
+#include "top.h"
+
+/* GCC introduced C++20 support in GCC 8, using -std=c++2a (the name of the
+   C++20 standard before publishing) and __cplusplus 201709L.  In GCC 10,
+   -std=c++20 was added, but __cplusplus stayed at 201709L, and was only
+   changed to the standard 202002L in GCC 11.  Consequently, some C++20
+   features and restrictions need to be tested against the non-standard
+   201709L, otherwise the build with GCC 10 and -std=c++20 will break.  */
+#if __cplusplus >= 201709L
+/* Work around Werror=volatile in SCM_UNPACK for
+   SCM_DEBUG_TYPING_STRICTNESS == 1.  Reported upstream:
+   https://debbugs.gnu.org/cgi/bugreport.cgi?bug=65333 .  */
+#define SCM_DEBUG_TYPING_STRICTNESS 0
+#endif
 #include "libguile.h"
 
 struct block;
@@ -272,7 +287,6 @@ struct eqable_gdb_smob
 #undef GDB_SMOB_HEAD
 
 struct objfile;
-struct objfile_data;
 
 /* A predicate that returns non-zero if an object is a particular kind
    of gsmob.  */
@@ -286,14 +300,6 @@ extern void gdbscm_init_chained_gsmob (chained_gdb_smob *base);
 
 extern void gdbscm_init_eqable_gsmob (eqable_gdb_smob *base,
 				      SCM containing_scm);
-
-extern void gdbscm_add_objfile_ref (struct objfile *objfile,
-				    const struct objfile_data *data_key,
-				    chained_gdb_smob *g_smob);
-
-extern void gdbscm_remove_objfile_ref (struct objfile *objfile,
-				       const struct objfile_data *data_key,
-				       chained_gdb_smob *g_smob);
 
 extern htab_t gdbscm_create_eqable_gsmob_ptr_map (htab_hash hash_fn,
 						  htab_eq eq_fn);
@@ -333,32 +339,32 @@ extern SCM gdbscm_make_type_error (const char *subr, int arg_pos,
 extern SCM gdbscm_make_invalid_object_error (const char *subr, int arg_pos,
 					     SCM bad_value, const char *error);
 
-extern void gdbscm_invalid_object_error (const char *subr, int arg_pos,
-					 SCM bad_value, const char *error)
-   ATTRIBUTE_NORETURN;
+[[noreturn]] extern void gdbscm_invalid_object_error (const char *subr,
+						      int arg_pos,
+						      SCM bad_value,
+						      const char *error);
 
 extern SCM gdbscm_make_out_of_range_error (const char *subr, int arg_pos,
 					   SCM bad_value, const char *error);
 
-extern void gdbscm_out_of_range_error (const char *subr, int arg_pos,
-				       SCM bad_value, const char *error)
-   ATTRIBUTE_NORETURN;
+[[noreturn]] extern void gdbscm_out_of_range_error (const char *subr,
+						    int arg_pos, SCM bad_value,
+						    const char *error);
 
 extern SCM gdbscm_make_misc_error (const char *subr, int arg_pos,
 				   SCM bad_value, const char *error);
 
-extern void gdbscm_misc_error (const char *subr, int arg_pos,
-			       SCM bad_value, const char *error)
-   ATTRIBUTE_NORETURN;
+[[noreturn]] extern void gdbscm_misc_error (const char *subr, int arg_pos,
+					    SCM bad_value, const char *error);
 
-extern void gdbscm_throw (SCM exception) ATTRIBUTE_NORETURN;
+[[noreturn]] extern void gdbscm_throw (SCM exception);
 
 struct gdbscm_gdb_exception;
 extern SCM gdbscm_scm_from_gdb_exception
   (const gdbscm_gdb_exception &exception);
 
-extern void gdbscm_throw_gdb_exception (gdbscm_gdb_exception exception)
-  ATTRIBUTE_NORETURN;
+[[noreturn]] extern void gdbscm_throw_gdb_exception
+  (gdbscm_gdb_exception exception);
 
 extern void gdbscm_print_exception_with_stack (SCM port, SCM stack,
 					       SCM key, SCM args);
@@ -375,8 +381,8 @@ extern excp_matcher_func gdbscm_user_error_p;
 extern SCM gdbscm_make_memory_error (const char *subr, const char *msg,
 				     SCM args);
 
-extern void gdbscm_memory_error (const char *subr, const char *msg, SCM args)
-  ATTRIBUTE_NORETURN;
+[[noreturn]] extern void gdbscm_memory_error (const char *subr,
+					      const char *msg, SCM args);
 
 /* scm-safe-call.c */
 
@@ -446,6 +452,14 @@ extern int gdbscm_valid_command_class_p (int command_class);
 extern char *gdbscm_canonicalize_command_name (const char *name,
 					       int want_trailing_space);
 
+/* scm-color.c */
+
+extern SCM coscm_scm_from_color (const ui_file_style::color &color);
+
+extern int coscm_is_color (SCM scm);
+
+extern const ui_file_style::color & coscm_get_color (SCM color_scm);
+
 /* scm-frame.c */
 
 struct frame_smob;
@@ -455,7 +469,7 @@ extern int frscm_is_frame (SCM scm);
 extern frame_smob *frscm_get_frame_smob_arg_unsafe (SCM frame_scm, int arg_pos,
 						    const char *func_name);
 
-extern struct frame_info *frscm_frame_smob_to_frame (frame_smob *);
+extern struct frame_info_ptr frscm_frame_smob_to_frame (frame_smob *);
 
 /* scm-iterator.c */
 
@@ -603,7 +617,7 @@ extern bool gdbscm_auto_load_enabled (const struct extension_language_defn *);
 
 extern void gdbscm_preserve_values
   (const struct extension_language_defn *,
-   struct objfile *, htab_t copied_types);
+   struct objfile *, copied_types_hash_t &copied_types);
 
 extern enum ext_lang_rc gdbscm_apply_val_pretty_printer
   (const struct extension_language_defn *,
@@ -624,6 +638,7 @@ extern void gdbscm_initialize_arches (void);
 extern void gdbscm_initialize_auto_load (void);
 extern void gdbscm_initialize_blocks (void);
 extern void gdbscm_initialize_breakpoints (void);
+extern void gdbscm_initialize_colors (void);
 extern void gdbscm_initialize_commands (void);
 extern void gdbscm_initialize_disasm (void);
 extern void gdbscm_initialize_exceptions (void);
@@ -712,6 +727,10 @@ gdbscm_wrap (Function &&func, Args &&... args)
     {
       result = func (std::forward<Args> (args)...);
     }
+  catch (const gdb_exception_forced_quit &e)
+    {
+      quit_force (NULL, 0);
+    }
   catch (const gdb_exception &except)
     {
       exc = unpack (except);
@@ -725,4 +744,4 @@ gdbscm_wrap (Function &&func, Args &&... args)
   return result;
 }
 
-#endif /* GUILE_GUILE_INTERNAL_H */
+#endif /* GDB_GUILE_GUILE_INTERNAL_H */

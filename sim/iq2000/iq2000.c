@@ -1,5 +1,5 @@
 /* IQ2000 simulator support code
-   Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2000-2024 Free Software Foundation, Inc.
    Contributed by Cygnus Support.
 
    This file is part of the GNU simulators.
@@ -58,7 +58,6 @@ do_syscall (SIM_CPU *current_cpu, PCADDR pc)
   int syscall = H2T_4 (iq2000bf_h_gr_get (current_cpu, 11));
 #endif
   int syscall_function = iq2000bf_h_gr_get (current_cpu, 4);
-  int i;
   char *buf;
   int PARM1 = iq2000bf_h_gr_get (current_cpu, 5);
   int PARM2 = iq2000bf_h_gr_get (current_cpu, 6);
@@ -78,6 +77,9 @@ do_syscall (SIM_CPU *current_cpu, PCADDR pc)
 	  /* Fail.  */
 	  puts ("fail");
 	  exit (1);
+	default:
+	  puts ("unknown exit");
+	  exit (2);
 	}
 
     case TARGET_NEWLIB_SYS_write:
@@ -105,7 +107,8 @@ do_syscall (SIM_CPU *current_cpu, PCADDR pc)
       SET_H_GR (ret_reg,
 		sim_io_read (CPU_STATE (current_cpu),
 			     PARM1, buf, PARM3));
-      sim_write (CPU_STATE (current_cpu), CPU2DATA(PARM2), buf, PARM3);
+      sim_write (CPU_STATE (current_cpu), CPU2DATA(PARM2),
+		 (unsigned char *) buf, PARM3);
       free (buf);
       break;
 	    
@@ -205,7 +208,7 @@ set_h_pc (SIM_CPU *cpu, PCADDR addr)
 }
 
 int
-iq2000bf_fetch_register (SIM_CPU *cpu, int nr, unsigned char *buf, int len)
+iq2000bf_fetch_register (SIM_CPU *cpu, int nr, void *buf, int len)
 {
   if (nr >= GPR0_REGNUM
       && nr < (GPR0_REGNUM + NR_GPR)
@@ -226,7 +229,7 @@ iq2000bf_fetch_register (SIM_CPU *cpu, int nr, unsigned char *buf, int len)
 }
 
 int
-iq2000bf_store_register (SIM_CPU *cpu, int nr, unsigned char *buf, int len)
+iq2000bf_store_register (SIM_CPU *cpu, int nr, const void *buf, int len)
 {
   if (nr >= GPR0_REGNUM
       && nr < (GPR0_REGNUM + NR_GPR)

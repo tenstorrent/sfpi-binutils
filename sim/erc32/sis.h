@@ -1,4 +1,4 @@
-/* Copyright (C) 1995-2022 Free Software Foundation, Inc.
+/* Copyright (C) 1995-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@
 #define I_ACC_EXC 1
 
 /* Maximum events in event queue */
-#define EVENT_MAX	256
+#define MAX_EVENTS	256
 
 /* Maximum # of floating point queue */
 #define FPUQN	1
@@ -114,7 +114,7 @@ struct pstate {
     uint64_t          pwdtime;	/* Cycles in power-down mode */
     uint64_t          nstore;	/* Number of load instructions */
     uint64_t          nload;	/* Number of store instructions */
-    uint64_t          nannul;	/* Number of annuled instructions */
+    uint64_t          nannul;	/* Number of annulled instructions */
     uint64_t          nbranch;	/* Number of branch instructions */
     uint32_t          ildreg;	/* Destination of last load instruction */
     uint64_t          ildtime;	/* Last time point for load dependency */
@@ -124,7 +124,7 @@ struct pstate {
 };
 
 struct evcell {
-    void            (*cfunc) ();
+    void            (*cfunc) (int32_t);
     int32_t           arg;
     uint64_t          time;
     struct evcell  *nxt;
@@ -137,7 +137,7 @@ struct estate {
 };
 
 struct irqcell {
-    void            (*callback) ();
+    void            (*callback) (int32_t);
     int32_t           arg;
 };
 
@@ -183,8 +183,8 @@ extern void	init_signals (void);
 struct disassemble_info;
 extern void	dis_mem (uint32_t addr, uint32_t len,
 			 struct disassemble_info *info);
-extern void	event (void (*cfunc) (), int32_t arg, uint64_t delta);
-extern void	set_int (int32_t level, void (*callback) (), int32_t arg);
+extern void	event (void (*cfunc) (int32_t), int32_t arg, uint64_t delta);
+extern void	set_int (int32_t level, void (*callback) (int32_t), int32_t arg);
 extern void	advance_time (struct pstate  *sregs);
 extern uint32_t	now (void);
 extern int	wait_for_irq (void);
@@ -204,8 +204,6 @@ extern void	init_regs (struct pstate *sregs);
 /* interf.c */
 extern int	run_sim (struct pstate *sregs,
 			 uint64_t icount, int dis);
-extern int      fprintf_styled (void *stream, enum disassembler_style style,
-				const char *fmt, ...) ATTRIBUTE_PRINTF (3, 4);
 
 /* float.c */
 extern int	get_accex (void);
