@@ -1,6 +1,6 @@
 /* Target-dependent code for the CSKY architecture, for GDB.
 
-   Copyright (C) 2010-2022 Free Software Foundation, Inc.
+   Copyright (C) 2010-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CSKY_TDEP_H
-#define CSKY_TDEP_H
+#ifndef GDB_CSKY_TDEP_H
+#define GDB_CSKY_TDEP_H
 
 #include "gdbarch.h"
 
@@ -31,7 +31,7 @@ enum lr_type_t
 };
 
 /* Target-dependent structure in gdbarch.  */
-struct csky_gdbarch_tdep : gdbarch_tdep
+struct csky_gdbarch_tdep : gdbarch_tdep_base
 {
   /* Save FPU, VDSP ABI.  */
   unsigned int fpu_abi;
@@ -93,6 +93,9 @@ enum csky_regnum
   CSKY_PSR_REGNUM = CSKY_CR0_REGNUM,
 
   CSKY_MAX_REGISTER_SIZE = 16,
+
+  /* Actually, the max regs number should be 1187. But if the
+     gdb stub does not send a tdesc-xml file to gdb, 253 works. */
   CSKY_MAX_REGS = 253
 };
 
@@ -107,6 +110,10 @@ enum csky_regnum
 
 /* For fr0~fr15, fr16~fr31, vr0~vr15 check.  */
 #define CSKY_FULL16_ONEHOT_VALUE   0xffff
+
+/* Define for CSKY FV pseudo regs for dwarf regs. */
+#define FV_PSEUDO_REGNO_FIRST  74
+#define FV_PSEUDO_REGNO_LAST   201
 
 /* Number of processor registers w/o ICE registers.  */
 #define CSKY_NUM_REGS (CSKY_MAX_REGS - CSKY_CRBANK_NUM_REGS)
@@ -372,4 +379,15 @@ enum csky_regnum
 #define CSKY_MOVI_R7_173 0x00adea07
 #define CSKY_TRAP_0 0x2020c000
 
-#endif
+/* Sizeof (tls) */
+#define CSKY_SIGCONTEXT_PT_REGS_TLS  4
+
+/* Macro for kernel 4.x  */
+#define CSKY_MOVI_R7_139 0x008bea07
+
+/* Macro for check long branch.  */
+#define CSKY_JMPI_PC_4      0x1eac0
+#define CSKY_LRW_T1_PC_8    0x2ea8d
+#define CSKY_JMP_T1_VS_NOP  0x6c037834
+
+#endif /* GDB_CSKY_TDEP_H */

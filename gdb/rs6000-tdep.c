@@ -1,6 +1,6 @@
 /* Target-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,14 +17,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
+#include "extract-store-integer.h"
 #include "frame.h"
 #include "inferior.h"
 #include "infrun.h"
 #include "symtab.h"
 #include "target.h"
 #include "gdbcore.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "objfiles.h"
 #include "arch-utils.h"
 #include "regcache.h"
@@ -35,7 +35,7 @@
 #include "osabi.h"
 #include "infcall.h"
 #include "sim-regno.h"
-#include "gdb/sim-ppc.h"
+#include "sim/sim-ppc.h"
 #include "reggroups.h"
 #include "dwarf2/frame.h"
 #include "target-descriptions.h"
@@ -43,8 +43,8 @@
 #include "record-full.h"
 #include "auxv.h"
 
-#include "coff/internal.h"	/* for libcoff.h */
-#include "libcoff.h"		/* for xcoff_data */
+#include "coff/internal.h"
+#include "libcoff.h"
 #include "coff/xcoff.h"
 #include "libxcoff.h"
 
@@ -130,7 +130,7 @@
     && (regnum) < (tdep)->ppc_cefpr0_regnum + ppc_num_efprs)
 
 /* Holds the current set of options to be passed to the disassembler.  */
-static char *powerpc_disassembler_options;
+static std::string powerpc_disassembler_options;
 
 /* The list of available "set powerpc ..." and "show powerpc ..."
    commands.  */
@@ -155,7 +155,7 @@ static const char *powerpc_vector_abi_string = "auto";
 
 /* PowerPC-related per-inferior data.  */
 
-static inferior_key<ppc_inferior_data> ppc_inferior_data_key;
+static const registry<inferior>::key<ppc_inferior_data> ppc_inferior_data_key;
 
 /* Get the per-inferior PowerPC data for INF.  */
 
@@ -201,7 +201,7 @@ struct rs6000_framedata
 int
 vsx_register_p (struct gdbarch *gdbarch, int regno)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   if (tdep->ppc_vsr0_regnum < 0)
     return 0;
   else
@@ -213,7 +213,7 @@ vsx_register_p (struct gdbarch *gdbarch, int regno)
 int
 altivec_register_p (struct gdbarch *gdbarch, int regno)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   if (tdep->ppc_vr0_regnum < 0 || tdep->ppc_vrsave_regnum < 0)
     return 0;
   else
@@ -225,7 +225,7 @@ altivec_register_p (struct gdbarch *gdbarch, int regno)
 int
 spe_register_p (struct gdbarch *gdbarch, int regno)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   
   /* Is it a reference to EV0 -- EV31, and do we have those?  */
   if (IS_SPE_PSEUDOREG (tdep, regno))
@@ -257,7 +257,7 @@ spe_register_p (struct gdbarch *gdbarch, int regno)
 int
 ppc_floating_point_unit_p (struct gdbarch *gdbarch)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   return (tdep->ppc_fp0_regnum >= 0
 	  && tdep->ppc_fpscr_regnum >= 0);
@@ -268,7 +268,7 @@ ppc_floating_point_unit_p (struct gdbarch *gdbarch)
 int
 ppc_altivec_support_p (struct gdbarch *gdbarch)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   return (tdep->ppc_vr0_regnum >= 0
 	  && tdep->ppc_vrsave_regnum >= 0);
@@ -297,7 +297,7 @@ set_sim_regno (int *table, int gdb_regno, int sim_regno)
 static void
 init_sim_regno_table (struct gdbarch *arch)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (arch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (arch);
   int total_regs = gdbarch_num_regs (arch);
   int *sim_regno = GDBARCH_OBSTACK_CALLOC (arch, total_regs, int);
   int i;
@@ -391,7 +391,7 @@ init_sim_regno_table (struct gdbarch *arch)
 static int
 rs6000_register_sim_regno (struct gdbarch *gdbarch, int reg)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int sim_regno;
 
   if (tdep->sim_regno == NULL)
@@ -522,7 +522,7 @@ ppc_supply_gregset (const struct regset *regset, struct regcache *regcache,
 		    int regnum, const void *gregs, size_t len)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   const struct ppc_reg_offsets *offsets
     = (const struct ppc_reg_offsets *) regset->regmap;
   size_t offset;
@@ -578,7 +578,7 @@ ppc_supply_fpregset (const struct regset *regset, struct regcache *regcache,
   if (!ppc_floating_point_unit_p (gdbarch))
     return;
 
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   offsets = (const struct ppc_reg_offsets *) regset->regmap;
   if (regnum == -1)
     {
@@ -611,7 +611,7 @@ ppc_collect_gregset (const struct regset *regset,
 		     int regnum, void *gregs, size_t len)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   const struct ppc_reg_offsets *offsets
     = (const struct ppc_reg_offsets *) regset->regmap;
   size_t offset;
@@ -668,7 +668,7 @@ ppc_collect_fpregset (const struct regset *regset,
   if (!ppc_floating_point_unit_p (gdbarch))
     return;
 
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   offsets = (const struct ppc_reg_offsets *) regset->regmap;
   if (regnum == -1)
     {
@@ -743,10 +743,10 @@ insn_changes_sp_or_jumps (unsigned long insn)
 	   limit for the size of an epilogue.  */
 
 static int
-rs6000_in_function_epilogue_frame_p (struct frame_info *curfrm,
+rs6000_in_function_epilogue_frame_p (const frame_info_ptr &curfrm,
 				     struct gdbarch *gdbarch, CORE_ADDR pc)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   bfd_byte insn_buf[PPC_INSN_SIZE];
   CORE_ADDR scan_pc, func_start, func_end, epilogue_start, epilogue_end;
@@ -816,7 +816,7 @@ rs6000_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 /* Get the ith function argument for the current function.  */
 static CORE_ADDR
-rs6000_fetch_pointer_argument (struct frame_info *frame, int argi, 
+rs6000_fetch_pointer_argument (const frame_info_ptr &frame, int argi,
 			       struct type *type)
 {
   return get_frame_register_unsigned (frame, 3 + argi);
@@ -889,7 +889,8 @@ ppc_displaced_step_copy_insn (struct gdbarch *gdbarch,
 			      CORE_ADDR from, CORE_ADDR to,
 			      struct regcache *regs)
 {
-  size_t len = gdbarch_max_insn_length (gdbarch);
+  size_t len = gdbarch_displaced_step_buffer_length (gdbarch);
+  gdb_assert (len > PPC_INSN_SIZE);
   std::unique_ptr<ppc_displaced_step_copy_insn_closure> closure
     (new ppc_displaced_step_copy_insn_closure (len));
   gdb_byte *buf = closure->buf.data ();
@@ -939,7 +940,7 @@ ppc_displaced_step_copy_insn (struct gdbarch *gdbarch,
 
   displaced_debug_printf ("copy %s->%s: %s",
 			  paddress (gdbarch, from), paddress (gdbarch, to),
-			  displaced_step_dump_bytes (buf, len).c_str ());
+			  bytes_to_string (buf, len).c_str ());
 
   /* This is a work around for a problem with g++ 4.8.  */
   return displaced_step_copy_insn_closure_up (closure.release ());
@@ -951,8 +952,18 @@ static void
 ppc_displaced_step_fixup (struct gdbarch *gdbarch,
 			  struct displaced_step_copy_insn_closure *closure_,
 			  CORE_ADDR from, CORE_ADDR to,
-			  struct regcache *regs)
+			  struct regcache *regs, bool completed_p)
 {
+  /* If the displaced instruction didn't complete successfully then all we
+     need to do is restore the program counter.  */
+  if (!completed_p)
+    {
+      CORE_ADDR pc = regcache_read_pc (regs);
+      pc = from + (pc - to);
+      regcache_write_pc (regs, pc);
+      return;
+    }
+
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   /* Our closure is a copy of the instruction.  */
   ppc_displaced_step_copy_insn_closure *closure
@@ -1042,7 +1053,7 @@ ppc_displaced_step_fixup (struct gdbarch *gdbarch,
       if (insn & 0x1)
 	{
 	  /* Link register needs to be set to the next instruction's PC.  */
-	  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+	  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 	  regcache_cooked_write_unsigned (regs,
 					  tdep->ppc_lr_regnum,
 					  from + PPC_INSN_SIZE);
@@ -1058,7 +1069,7 @@ ppc_displaced_step_fixup (struct gdbarch *gdbarch,
   else
     {
       /* Handle any other instructions that do not fit in the categories
-         above.  */
+	 above.  */
       regcache_cooked_write_unsigned (regs, gdbarch_pc_regnum (gdbarch),
 				      from + offset);
     }
@@ -1076,7 +1087,7 @@ ppc_displaced_step_prepare  (gdbarch *arch, thread_info *thread,
     {
       /* Figure out where the displaced step buffer is.  */
       CORE_ADDR disp_step_buf_addr
-	= displaced_step_at_entry_point (thread->inf->gdbarch);
+	= displaced_step_at_entry_point (thread->inf->arch ());
 
       per_inferior->disp_step_buf.emplace (disp_step_buf_addr);
     }
@@ -1088,13 +1099,13 @@ ppc_displaced_step_prepare  (gdbarch *arch, thread_info *thread,
 
 static displaced_step_finish_status
 ppc_displaced_step_finish (gdbarch *arch, thread_info *thread,
-			   gdb_signal sig)
+			   const target_waitstatus &status)
 {
   ppc_inferior_data *per_inferior = get_ppc_per_inferior (thread->inf);
 
   gdb_assert (per_inferior->disp_step_buf.has_value ());
 
-  return per_inferior->disp_step_buf->finish (arch, thread, sig);
+  return per_inferior->disp_step_buf->finish (arch, thread, status);
 }
 
 /* Implementation of gdbarch_displaced_step_restore_all_in_ptid.  */
@@ -1378,7 +1389,7 @@ rs6000_fetch_instruction (struct gdbarch *gdbarch, const CORE_ADDR pc)
   return op;
 }
 
-/* GCC generates several well-known sequences of instructions at the begining
+/* GCC generates several well-known sequences of instructions at the beginning
    of each function prologue when compiling with -fstack-check.  If one of
    such sequences starts at START_PC, then return the address of the
    instruction immediately past this sequence.  Otherwise, return START_PC.  */
@@ -1590,7 +1601,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
   int num_skip_non_prologue_insns = 0;
   int r0_contains_arg = 0;
   const struct bfd_arch_info *arch_info = gdbarch_bfd_arch_info (gdbarch);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   memset (fdata, 0, sizeof (struct rs6000_framedata));
@@ -1633,7 +1644,6 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	     address at runtime, can appear to save more than one link
 	     register vis:
 
-	     *INDENT-OFF*
 	     stwu r1,-304(r1)
 	     mflr r3
 	     bl 0xff570d0 (blrl)
@@ -1642,7 +1652,6 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
 	     stw r31,300(r1)
 	     stw r3,308(r1);
 	     ...
-	     *INDENT-ON*
 
 	     remember just the first one, but skip over additional
 	     ones.  */
@@ -2154,7 +2163,7 @@ skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc, CORE_ADDR lim_pc,
      this might be a call to an initializer in main(), introduced by gcc2.
      We'd like to skip over it as well.  Fortunately, xlc does some extra
      work before calling a function right after a prologue, thus we can
-     single out such gcc2 behaviour.  */
+     single out such gcc2 behavior.  */
 
 
   if ((op & 0xfc000001) == 0x48000001)
@@ -2241,7 +2250,7 @@ rs6000_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
     {
       CORE_ADDR displ = op & BL_DISPLACEMENT_MASK;
       CORE_ADDR call_dest = pc + 4 + displ;
-      struct bound_minimal_symbol s = lookup_minimal_symbol_by_pc (call_dest);
+      bound_minimal_symbol s = lookup_minimal_symbol_by_pc (call_dest);
 
       /* We check for ___eabi (three leading underscores) in addition
 	 to __eabi in case the GCC option "-fleading-underscore" was
@@ -2307,15 +2316,14 @@ rs6000_in_solib_return_trampoline (struct gdbarch *gdbarch,
    code that should be skipped.  */
 
 static CORE_ADDR
-rs6000_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
+rs6000_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned int ii, op;
   int rel;
   CORE_ADDR solib_target_pc;
-  struct bound_minimal_symbol msymbol;
 
   static unsigned trampoline_code[] =
   {
@@ -2330,7 +2338,7 @@ rs6000_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
   };
 
   /* Check for bigtoc fixup code.  */
-  msymbol = lookup_minimal_symbol_by_pc (pc);
+  bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (pc);
   if (msymbol.minsym
       && rs6000_in_solib_return_trampoline (gdbarch, pc,
 					    msymbol.minsym->linkage_name ()))
@@ -2368,7 +2376,7 @@ rs6000_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
 static struct type *
 rs6000_builtin_type_vec64 (struct gdbarch *gdbarch)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (!tdep->ppc_builtin_type_vec64)
     {
@@ -2413,7 +2421,7 @@ rs6000_builtin_type_vec64 (struct gdbarch *gdbarch)
 static struct type *
 rs6000_builtin_type_vec128 (struct gdbarch *gdbarch)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (!tdep->ppc_builtin_type_vec128)
     {
@@ -2433,8 +2441,9 @@ rs6000_builtin_type_vec128 (struct gdbarch *gdbarch)
       */
 
       /* PPC specific type for IEEE 128-bit float field */
+      type_allocator alloc (gdbarch);
       struct type *t_float128
-	= arch_float_type (gdbarch, 128, "float128_t", floatformats_ieee_quad);
+	= init_float_type (alloc, 128, "float128_t", floatformats_ieee_quad);
 
       struct type *t;
 
@@ -2467,7 +2476,7 @@ rs6000_builtin_type_vec128 (struct gdbarch *gdbarch)
 static const char *
 rs6000_register_name (struct gdbarch *gdbarch, int regno)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   /* The upper half "registers" have names in the XML description,
      but we present only the low GPRs and the full 64-bit registers
@@ -2485,7 +2494,8 @@ rs6000_register_name (struct gdbarch *gdbarch, int regno)
 
   /* Hide the upper halves of the cvs0~cvs31 registers.  */
   if (PPC_CVSR0_UPPER_REGNUM <= regno
-      && regno < PPC_CVSR0_UPPER_REGNUM + ppc_num_gprs)
+      && regno < (to_underlying (PPC_CVSR0_UPPER_REGNUM)
+		  + to_underlying (ppc_num_gprs)))
     return "";
 
   /* Check if the SPE pseudo registers are available.  */
@@ -2605,7 +2615,7 @@ rs6000_register_name (struct gdbarch *gdbarch, int regno)
 static struct type *
 rs6000_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   /* These are the e500 pseudo-registers.  */
   if (IS_SPE_PSEUDOREG (tdep, regnum))
@@ -2628,8 +2638,7 @@ rs6000_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
     /* POWER7 Extended FP pseudo-registers.  */
     return builtin_type (gdbarch)->builtin_double;
   else
-    internal_error (__FILE__, __LINE__,
-		    _("rs6000_pseudo_register_type: "
+    internal_error (_("rs6000_pseudo_register_type: "
 		      "called on unexpected register '%s' (%d)"),
 		    gdbarch_register_name (gdbarch, regnum), regnum);
 }
@@ -2644,7 +2653,7 @@ static int
 rs6000_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 				   const struct reggroup *group)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (IS_V_ALIAS_PSEUDOREG (tdep, regnum))
     return 0;
@@ -2659,18 +2668,36 @@ static int
 rs6000_convert_register_p (struct gdbarch *gdbarch, int regnum,
 			   struct type *type)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   return (tdep->ppc_fp0_regnum >= 0
 	  && regnum >= tdep->ppc_fp0_regnum
 	  && regnum < tdep->ppc_fp0_regnum + ppc_num_fprs
 	  && type->code () == TYPE_CODE_FLT
-	  && TYPE_LENGTH (type)
-	     != TYPE_LENGTH (builtin_type (gdbarch)->builtin_double));
+	  && (type->length ()
+	      == builtin_type (gdbarch)->builtin_float->length ()));
 }
 
 static int
-rs6000_register_to_value (struct frame_info *frame,
+ieee_128_float_regnum_adjust (struct gdbarch *gdbarch, struct type *type,
+			      int regnum)
+{
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
+
+  /* If we have the an IEEE 128-bit floating point value, need to map the
+   register number to the corresponding VSR.  */
+  if (tdep->ppc_vsr0_regnum != -1
+      && regnum >= tdep->ppc_fp0_regnum
+      && regnum < (tdep->ppc_fp0_regnum + ppc_num_fprs)
+      && (gdbarch_long_double_format (gdbarch) == floatformats_ieee_quad)
+      && (type->length() == 16))
+    regnum = regnum - tdep->ppc_fp0_regnum + tdep->ppc_vsr0_regnum;
+
+  return regnum;
+}
+
+static int
+rs6000_register_to_value (const frame_info_ptr &frame,
 			  int regnum,
 			  struct type *type,
 			  gdb_byte *to,
@@ -2681,11 +2708,15 @@ rs6000_register_to_value (struct frame_info *frame,
   
   gdb_assert (type->code () == TYPE_CODE_FLT);
 
-  if (!get_frame_register_bytes (frame, regnum, 0,
-				 gdb::make_array_view (from,
-						       register_size (gdbarch,
-								      regnum)),
-				 optimizedp, unavailablep))
+  /* We have an IEEE 128-bit float -- need to change regnum mapping from
+     fpr to vsr.  */
+  regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
+
+  auto from_view
+    = gdb::make_array_view (from, register_size (gdbarch, regnum));
+  frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
+  if (!get_frame_register_bytes (next_frame, regnum, 0, from_view, optimizedp,
+				 unavailablep))
     return 0;
 
   target_float_convert (from, builtin_type (gdbarch)->builtin_double,
@@ -2695,7 +2726,7 @@ rs6000_register_to_value (struct frame_info *frame,
 }
 
 static void
-rs6000_value_to_register (struct frame_info *frame,
+rs6000_value_to_register (const frame_info_ptr &frame,
 			  int regnum,
 			  struct type *type,
 			  const gdb_byte *from)
@@ -2705,9 +2736,40 @@ rs6000_value_to_register (struct frame_info *frame,
 
   gdb_assert (type->code () == TYPE_CODE_FLT);
 
-  target_float_convert (from, type,
-			to, builtin_type (gdbarch)->builtin_double);
-  put_frame_register (frame, regnum, to);
+  /* We have an IEEE 128-bit float -- need to change regnum mapping from
+     fpr to vsr.  */
+  regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
+
+  struct type *to_type = builtin_type (gdbarch)->builtin_double;
+  target_float_convert (from, type, to, to_type);
+  auto to_view = gdb::make_array_view (to, to_type->length ());
+  put_frame_register (get_next_frame_sentinel_okay (frame), regnum, to_view);
+}
+
+static value *
+rs6000_value_from_register (gdbarch *gdbarch, type *type, int regnum,
+			    const frame_info_ptr &this_frame)
+{
+  /* We have an IEEE 128-bit float -- need to change regnum mapping from
+     fpr to vsr.  */
+  regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
+
+  value *value
+    = value::allocate_register (get_next_frame_sentinel_okay (this_frame),
+				regnum, type);
+
+  /* Any structure stored in more than one register will always be
+     an integral number of registers.  Otherwise, you need to do
+     some fiddling with the last register copied here for little
+     endian machines.  */
+  if (type_byte_order (type) == BFD_ENDIAN_BIG
+      && type->length () < register_size (gdbarch, regnum))
+    /* Big-endian, and we want less than full size.  */
+    value->set_offset (register_size (gdbarch, regnum) - type->length ());
+  else
+    value->set_offset (0);
+
+  return value;
 }
 
  /* The type of a function that moves the value of REG between CACHE
@@ -2744,7 +2806,7 @@ e500_move_ev_register (move_ev_register_func move,
 		       struct regcache *regcache, int ev_reg, void *buffer)
 {
   struct gdbarch *arch = regcache->arch ();
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (arch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (arch);
   int reg_index;
   gdb_byte *byte_buffer = (gdb_byte *) buffer;
   enum register_status status;
@@ -2785,7 +2847,7 @@ e500_pseudo_register_read (struct gdbarch *gdbarch, readable_regcache *regcache,
 			   int ev_reg, gdb_byte *buffer)
 {
   struct gdbarch *arch = regcache->arch ();
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index;
   enum register_status status;
 
@@ -2826,7 +2888,7 @@ static enum register_status
 dfp_pseudo_register_read (struct gdbarch *gdbarch, readable_regcache *regcache,
 			   int reg_nr, gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, fp0;
   enum register_status status;
 
@@ -2866,7 +2928,7 @@ static void
 dfp_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 			    int reg_nr, const gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, fp0;
 
   if (IS_DFP_PSEUDOREG (tdep, reg_nr))
@@ -2903,7 +2965,7 @@ v_alias_pseudo_register_read (struct gdbarch *gdbarch,
 			      readable_regcache *regcache, int reg_nr,
 			      gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   gdb_assert (IS_V_ALIAS_PSEUDOREG (tdep, reg_nr));
 
   return regcache->raw_read (tdep->ppc_vr0_regnum
@@ -2918,7 +2980,7 @@ v_alias_pseudo_register_write (struct gdbarch *gdbarch,
 			       struct regcache *regcache,
 			       int reg_nr, const gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   gdb_assert (IS_V_ALIAS_PSEUDOREG (tdep, reg_nr));
 
   regcache->raw_write (tdep->ppc_vr0_regnum
@@ -2930,7 +2992,7 @@ static enum register_status
 vsx_pseudo_register_read (struct gdbarch *gdbarch, readable_regcache *regcache,
 			   int reg_nr, gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, vr0, fp0, vsr0_upper;
   enum register_status status;
 
@@ -2978,7 +3040,7 @@ static void
 vsx_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 			    int reg_nr, const gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, vr0, fp0, vsr0_upper;
 
   if (IS_VSX_PSEUDOREG (tdep, reg_nr))
@@ -3020,7 +3082,7 @@ static enum register_status
 efp_pseudo_register_read (struct gdbarch *gdbarch, readable_regcache *regcache,
 			   int reg_nr, gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, vr0;
 
   if (IS_EFP_PSEUDOREG (tdep, reg_nr))
@@ -3049,7 +3111,7 @@ static void
 efp_pseudo_register_write (struct gdbarch *gdbarch, struct regcache *regcache,
 			    int reg_nr, const gdb_byte *buffer)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, vr0;
   int offset = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG ? 0 : 8;
 
@@ -3085,7 +3147,7 @@ rs6000_pseudo_register_read (struct gdbarch *gdbarch,
 			     int reg_nr, gdb_byte *buffer)
 {
   struct gdbarch *regcache_arch = regcache->arch ();
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   gdb_assert (regcache_arch == gdbarch);
 
@@ -3104,8 +3166,7 @@ rs6000_pseudo_register_read (struct gdbarch *gdbarch,
 	   || IS_CEFP_PSEUDOREG (tdep, reg_nr))
     return efp_pseudo_register_read (gdbarch, regcache, reg_nr, buffer);
   else
-    internal_error (__FILE__, __LINE__,
-		    _("rs6000_pseudo_register_read: "
+    internal_error (_("rs6000_pseudo_register_read: "
 		    "called on unexpected register '%s' (%d)"),
 		    gdbarch_register_name (gdbarch, reg_nr), reg_nr);
 }
@@ -3116,7 +3177,7 @@ rs6000_pseudo_register_write (struct gdbarch *gdbarch,
 			      int reg_nr, const gdb_byte *buffer)
 {
   struct gdbarch *regcache_arch = regcache->arch ();
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   gdb_assert (regcache_arch == gdbarch);
 
@@ -3134,8 +3195,7 @@ rs6000_pseudo_register_write (struct gdbarch *gdbarch,
 	   || IS_CEFP_PSEUDOREG (tdep, reg_nr))
     efp_pseudo_register_write (gdbarch, regcache, reg_nr, buffer);
   else
-    internal_error (__FILE__, __LINE__,
-		    _("rs6000_pseudo_register_write: "
+    internal_error (_("rs6000_pseudo_register_write: "
 		    "called on unexpected register '%s' (%d)"),
 		    gdbarch_register_name (gdbarch, reg_nr), reg_nr);
 }
@@ -3147,7 +3207,7 @@ static void
 dfp_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				struct agent_expr *ax, int reg_nr)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, fp0;
 
   if (IS_DFP_PSEUDOREG (tdep, reg_nr))
@@ -3174,7 +3234,7 @@ static void
 v_alias_pseudo_register_collect (struct gdbarch *gdbarch,
 				 struct agent_expr *ax, int reg_nr)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   gdb_assert (IS_V_ALIAS_PSEUDOREG (tdep, reg_nr));
 
   ax_reg_mask (ax, tdep->ppc_vr0_regnum
@@ -3188,7 +3248,7 @@ static void
 vsx_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				struct agent_expr *ax, int reg_nr)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, vr0, fp0, vsr0_upper;
 
   if (IS_VSX_PSEUDOREG (tdep, reg_nr))
@@ -3226,7 +3286,7 @@ static void
 efp_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				struct agent_expr *ax, int reg_nr)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int reg_index, vr0;
 
   if (IS_EFP_PSEUDOREG (tdep, reg_nr))
@@ -3249,7 +3309,7 @@ static int
 rs6000_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 				   struct agent_expr *ax, int reg_nr)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   if (IS_SPE_PSEUDOREG (tdep, reg_nr))
     {
       int reg_index = reg_nr - tdep->ppc_ev0_regnum;
@@ -3276,8 +3336,7 @@ rs6000_ax_pseudo_register_collect (struct gdbarch *gdbarch,
       efp_ax_pseudo_register_collect (gdbarch, ax, reg_nr);
     }
   else
-    internal_error (__FILE__, __LINE__,
-		    _("rs6000_pseudo_register_collect: "
+    internal_error (_("rs6000_pseudo_register_collect: "
 		    "called on unexpected register '%s' (%d)"),
 		    gdbarch_register_name (gdbarch, reg_nr), reg_nr);
   return 0;
@@ -3289,7 +3348,7 @@ rs6000_gen_return_address (struct gdbarch *gdbarch,
 			   struct agent_expr *ax, struct axs_value *value,
 			   CORE_ADDR scope)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   value->type = register_type (gdbarch, tdep->ppc_lr_regnum);
   value->kind = axs_lvalue_register;
   value->u.reg = tdep->ppc_lr_regnum;
@@ -3300,7 +3359,7 @@ rs6000_gen_return_address (struct gdbarch *gdbarch,
 static int
 rs6000_stab_reg_to_regnum (struct gdbarch *gdbarch, int num)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (0 <= num && num <= 31)
     return tdep->ppc_gp0_regnum + num;
@@ -3342,7 +3401,7 @@ rs6000_stab_reg_to_regnum (struct gdbarch *gdbarch, int num)
 static int
 rs6000_dwarf2_reg_to_regnum (struct gdbarch *gdbarch, int num)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (0 <= num && num <= 31)
     return tdep->ppc_gp0_regnum + num;
@@ -3466,10 +3525,10 @@ struct ppc_variant
     unsigned long mach;
 
     /* Target description for this variant.  */
-    struct target_desc **tdesc;
+    const struct target_desc **tdesc;
   };
 
-static struct ppc_variant variants[] =
+static const ppc_variant variants[] =
 {
   {"powerpc", "PowerPC user-level", bfd_arch_powerpc,
    bfd_mach_ppc, &tdesc_powerpc_altivec32},
@@ -3557,11 +3616,11 @@ struct rs6000_frame_cache
 };
 
 static struct rs6000_frame_cache *
-rs6000_frame_cache (struct frame_info *this_frame, void **this_cache)
+rs6000_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct rs6000_frame_cache *cache;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct rs6000_framedata fdata;
   int wordsize = tdep->wordsize;
@@ -3750,7 +3809,7 @@ rs6000_frame_cache (struct frame_info *this_frame, void **this_cache)
 }
 
 static void
-rs6000_frame_this_id (struct frame_info *this_frame, void **this_cache,
+rs6000_frame_this_id (const frame_info_ptr &this_frame, void **this_cache,
 		      struct frame_id *this_id)
 {
   struct rs6000_frame_cache *info = rs6000_frame_cache (this_frame,
@@ -3770,7 +3829,7 @@ rs6000_frame_this_id (struct frame_info *this_frame, void **this_cache,
 }
 
 static struct value *
-rs6000_frame_prev_register (struct frame_info *this_frame,
+rs6000_frame_prev_register (const frame_info_ptr &this_frame,
 			    void **this_cache, int regnum)
 {
   struct rs6000_frame_cache *info = rs6000_frame_cache (this_frame,
@@ -3778,26 +3837,28 @@ rs6000_frame_prev_register (struct frame_info *this_frame,
   return trad_frame_get_prev_register (this_frame, info->saved_regs, regnum);
 }
 
-static const struct frame_unwind rs6000_frame_unwind =
-{
+static const struct frame_unwind_legacy rs6000_frame_unwind (
   "rs6000 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   rs6000_frame_this_id,
   rs6000_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 /* Allocate and initialize a frame cache for an epilogue frame.
    SP is restored and prev-PC is stored in LR.  */
 
 static struct rs6000_frame_cache *
-rs6000_epilogue_frame_cache (struct frame_info *this_frame, void **this_cache)
+rs6000_epilogue_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct rs6000_frame_cache *cache;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
+  struct rs6000_framedata fdata;
+  int wordsize = tdep->wordsize;
 
   if (*this_cache)
     return (struct rs6000_frame_cache *) *this_cache;
@@ -3808,17 +3869,56 @@ rs6000_epilogue_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   try
     {
-      /* At this point the stack looks as if we just entered the
-	 function, and the return address is stored in LR.  */
-      CORE_ADDR sp, lr;
+      /* At this point the stack looks as if we just entered the function.
+	 The SP (r1) has been restored but the LR and r31 may not have been
+	 restored yet.  Need to update the register unrolling information in
+	 the cache for the LR and the saved gprs.  */
+      CORE_ADDR sp;
+      CORE_ADDR func = 0, pc = 0;
 
-      sp = get_frame_register_unsigned (this_frame, gdbarch_sp_regnum (gdbarch));
-      lr = get_frame_register_unsigned (this_frame, tdep->ppc_lr_regnum);
+      func = get_frame_func (this_frame);
+      cache->pc = func;
+      pc = get_frame_pc (this_frame);
+      skip_prologue (gdbarch, func, pc, &fdata);
+
+      /* SP is in r1 and it has been restored.  Get the current value.  */
+      sp = get_frame_register_unsigned (this_frame,
+					gdbarch_sp_regnum (gdbarch));
 
       cache->base = sp;
       cache->initial_sp = sp;
 
-      cache->saved_regs[gdbarch_pc_regnum (gdbarch)].set_value (lr);
+      /* Store the unwinding rules for the gpr registers that have not been
+	 restored yet, specifically r31.
+
+	 if != -1, fdata.saved_gpr is the smallest number of saved_gpr.
+	 All gpr's from saved_gpr to gpr31 are saved (except during the
+	 prologue).  */
+
+      if (fdata.saved_gpr >= 0)
+	{
+	  int i;
+	  CORE_ADDR gpr_addr = cache->base + fdata.gpr_offset;
+
+	  for(i = fdata.saved_gpr; i < ppc_num_gprs; i++)
+	    {
+	      if (fdata.gpr_mask & (1U << i))
+		cache->saved_regs[tdep->ppc_gp0_regnum + i].set_addr (gpr_addr);
+	      gpr_addr += wordsize;
+	    }
+	}
+
+      /* Store the lr unwinding rules.  */
+      if (fdata.lr_offset != 0)
+	cache->saved_regs[tdep->ppc_lr_regnum].set_addr (cache->base
+							 + fdata.lr_offset);
+
+      else if (fdata.lr_register != -1)
+	cache->saved_regs[tdep->ppc_lr_regnum].set_realreg (fdata.lr_register);
+
+      /* The PC is found in the link register.  */
+      cache->saved_regs[gdbarch_pc_regnum (gdbarch)]
+	= cache->saved_regs[tdep->ppc_lr_regnum];
     }
   catch (const gdb_exception_error &ex)
     {
@@ -3833,7 +3933,7 @@ rs6000_epilogue_frame_cache (struct frame_info *this_frame, void **this_cache)
    Return the frame ID of an epilogue frame.  */
 
 static void
-rs6000_epilogue_frame_this_id (struct frame_info *this_frame,
+rs6000_epilogue_frame_this_id (const frame_info_ptr &this_frame,
 			       void **this_cache, struct frame_id *this_id)
 {
   CORE_ADDR pc;
@@ -3851,7 +3951,7 @@ rs6000_epilogue_frame_this_id (struct frame_info *this_frame,
    Return the register value of REGNUM in previous frame.  */
 
 static struct value *
-rs6000_epilogue_frame_prev_register (struct frame_info *this_frame,
+rs6000_epilogue_frame_prev_register (const frame_info_ptr &this_frame,
 				     void **this_cache, int regnum)
 {
   struct rs6000_frame_cache *info =
@@ -3864,7 +3964,7 @@ rs6000_epilogue_frame_prev_register (struct frame_info *this_frame,
 
 static int
 rs6000_epilogue_frame_sniffer (const struct frame_unwind *self,
-			       struct frame_info *this_frame,
+			       const frame_info_ptr &this_frame,
 			       void **this_prologue_cache)
 {
   if (frame_relative_level (this_frame) == 0)
@@ -3878,19 +3978,19 @@ rs6000_epilogue_frame_sniffer (const struct frame_unwind *self,
 /* Frame unwinder for epilogue frame.  This is required for reverse step-over
    a function without debug information.  */
 
-static const struct frame_unwind rs6000_epilogue_frame_unwind =
-{
+static const struct frame_unwind_legacy rs6000_epilogue_frame_unwind (
   "rs6000 epilogue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   rs6000_epilogue_frame_this_id, rs6000_epilogue_frame_prev_register,
   NULL,
   rs6000_epilogue_frame_sniffer
-};
+);
 
 
 static CORE_ADDR
-rs6000_frame_base_address (struct frame_info *this_frame, void **this_cache)
+rs6000_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct rs6000_frame_cache *info = rs6000_frame_cache (this_frame,
 							this_cache);
@@ -3905,7 +4005,7 @@ static const struct frame_base rs6000_frame_base = {
 };
 
 static const struct frame_base *
-rs6000_frame_base_sniffer (struct frame_info *this_frame)
+rs6000_frame_base_sniffer (const frame_info_ptr &this_frame)
 {
   return &rs6000_frame_base;
 }
@@ -3916,9 +4016,9 @@ rs6000_frame_base_sniffer (struct frame_info *this_frame)
 static void
 ppc_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 			    struct dwarf2_frame_state_reg *reg,
-			    struct frame_info *this_frame)
+			    const frame_info_ptr &this_frame)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   /* PPC32 and PPC64 ABI's are the same regarding volatile and
      non-volatile registers.  We will use the same code for both.  */
@@ -4187,18 +4287,18 @@ ppc_record_ACC_fpscr (struct regcache *regcache, ppc_gdbarch_tdep *tdep,
      entry consist of four 128-bit rows.
 
      The ACC rows map to specific VSR registers.
-         ACC[0][0] -> VSR[0]
-         ACC[0][1] -> VSR[1]
-         ACC[0][2] -> VSR[2]
-         ACC[0][3] -> VSR[3]
-              ...
-         ACC[7][0] -> VSR[28]
-         ACC[7][1] -> VSR[29]
-         ACC[7][2] -> VSR[30]
-         ACC[7][3] -> VSR[31]
+	 ACC[0][0] -> VSR[0]
+	 ACC[0][1] -> VSR[1]
+	 ACC[0][2] -> VSR[2]
+	 ACC[0][3] -> VSR[3]
+	      ...
+	 ACC[7][0] -> VSR[28]
+	 ACC[7][1] -> VSR[29]
+	 ACC[7][2] -> VSR[30]
+	 ACC[7][3] -> VSR[31]
 
      NOTE:
-     In ISA 3.1 the ACC is mapped on top of VSR[0] thru VSR[31].
+     In ISA 3.1 the ACC is mapped on top of VSR[0] through VSR[31].
 
      In the future, the ACC may be implemented as an independent register file
      rather than mapping on top of the VSRs.  This will then require the ACC to
@@ -4229,7 +4329,7 @@ static int
 ppc_process_record_op4 (struct gdbarch *gdbarch, struct regcache *regcache,
 			CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int ext = PPC_FIELD (insn, 21, 11);
   int vra = PPC_FIELD (insn, 11, 5);
 
@@ -4240,7 +4340,7 @@ ppc_process_record_op4 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 39:		/* Vector Multiply-Sum Unsigned Halfword Saturate */
     case 41:		/* Vector Multiply-Sum Signed Halfword Saturate */
       record_full_arch_list_add_reg (regcache, PPC_VSCR_REGNUM);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 20:		/* Move To VSR Byte Mask Immediate opcode, b2 = 0,
 			   ignore bit 31 */
     case 21:		/* Move To VSR Byte Mask Immediate opcode, b2 = 1,
@@ -4306,7 +4406,7 @@ ppc_process_record_op4 (struct gdbarch *gdbarch, struct regcache *regcache,
 	  && vra != 7	/* Decimal Convert From National */
 	  && vra != 31)	/* Decimal Set Sign */
 	break;
-      /* Fall through.  */
+      [[fallthrough]];
 			/* 5.16 Decimal Integer Arithmetic Instructions */
     case 1:		/* Decimal Add Modulo */
     case 65:		/* Decimal Subtract Modulo */
@@ -4495,7 +4595,7 @@ ppc_process_record_op4 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 970:		/* Vector Convert To Signed Fixed-Point Word Saturate */
     case 906:		/* Vector Convert To Unsigned Fixed-Point Word Saturate */
       record_full_arch_list_add_reg (regcache, PPC_VSCR_REGNUM);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 12:		/* Vector Merge High Byte */
     case 14:		/* Vector Pack Unsigned Halfword Unsigned Modulo */
     case 76:		/* Vector Merge High Halfword */
@@ -4771,7 +4871,7 @@ static int
 ppc_process_record_op6 (struct gdbarch *gdbarch, struct regcache *regcache,
 			CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int subtype = PPC_FIELD (insn, 28, 4);
   CORE_ADDR ea = 0;
 
@@ -4799,7 +4899,7 @@ static int
 ppc_process_record_op19 (struct gdbarch *gdbarch, struct regcache *regcache,
 			   CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int ext = PPC_EXTOP (insn);
 
   switch (ext & 0x01f)
@@ -4828,7 +4928,7 @@ ppc_process_record_op19 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 560:		/* Branch Conditional to Branch Target Address Register */
       if ((PPC_BO (insn) & 0x4) == 0)
 	record_full_arch_list_add_reg (regcache, tdep->ppc_ctr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 528:		/* Branch Conditional to Count Register */
       if (PPC_LK (insn))
 	record_full_arch_list_add_reg (regcache, tdep->ppc_lr_regnum);
@@ -4855,7 +4955,7 @@ ppc_process_record_op31_177 (struct gdbarch *gdbarch,
 {
   int RA_opcode = PPC_RA(insn);
   int as = PPC_FIELD (insn, 6, 3);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   switch (RA_opcode)
     {
@@ -4875,7 +4975,7 @@ static int
 ppc_process_record_op31 (struct gdbarch *gdbarch, struct regcache *regcache,
 			   CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int ext = PPC_EXTOP (insn);
   int tmp, nr, nb = 0, i;
   CORE_ADDR at_dcsz, ea = 0;
@@ -4919,7 +5019,7 @@ ppc_process_record_op31 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 491:		/* Divide Word */
       if (PPC_OE (insn))
 	record_full_arch_list_add_reg (regcache, tdep->ppc_xer_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 9:		/* Multiply High Doubleword Unsigned */
     case 11:		/* Multiply High Word Unsigned */
     case 73:		/* Multiply High Doubleword */
@@ -5011,7 +5111,7 @@ ppc_process_record_op31 (struct gdbarch *gdbarch, struct regcache *regcache,
       record_full_arch_list_add_reg (regcache, tdep->ppc_xer_regnum);
       record_full_arch_list_add_reg (regcache,
 				     tdep->ppc_gp0_regnum + PPC_RA (insn));
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 0:		/* Compare */
     case 32:		/* Compare logical */
     case 144:		/* Move To Condition Register Fields */
@@ -5034,7 +5134,7 @@ ppc_process_record_op31 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 373:		/* Load Word Algebraic with Update Indexed */
       record_full_arch_list_add_reg (regcache,
 				     tdep->ppc_gp0_regnum + PPC_RA (insn));
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 21:		/* Load Doubleword Indexed */
     case 52:		/* Load Byte And Reserve Indexed */
     case 116:		/* Load Halfword And Reserve Indexed */
@@ -5107,7 +5207,7 @@ ppc_process_record_op31 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 631:		/* Load Floating-Point Double with Update Indexed */
       record_full_arch_list_add_reg (regcache,
 				     tdep->ppc_gp0_regnum + PPC_RA (insn));
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 535:		/* Load Floating-Point Single Indexed */
     case 599:		/* Load Floating-Point Double Indexed */
     case 855:		/* Load Floating-Point as Integer Word Algebraic Indexed */
@@ -5203,7 +5303,7 @@ ppc_process_record_op31 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 759:		/* Store Floating-Point Double with Update Indexed */
       record_full_arch_list_add_reg (regcache,
 				     tdep->ppc_gp0_regnum + PPC_RA (insn));
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 135:		/* Store Vector Element Byte Indexed */
     case 167:		/* Store Vector Element Halfword Indexed */
     case 199:		/* Store Vector Element Word Indexed */
@@ -5497,14 +5597,13 @@ ppc_process_record_op31 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 878:		/* Transaction Abort Doubleword Conditional Immediate */
     case 910:		/* Transaction Abort */
       record_full_arch_list_add_reg (regcache, tdep->ppc_ps_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 718:		/* Transaction Check */
       record_full_arch_list_add_reg (regcache, tdep->ppc_cr_regnum);
       return 0;
 
     case 1014:		/* Data Cache Block set to Zero */
-      if (target_auxv_search (current_inferior ()->top_target (),
-			      AT_DCACHEBSIZE, &at_dcsz) <= 0
+      if (target_auxv_search (AT_DCACHEBSIZE, &at_dcsz) <= 0
 	  || at_dcsz == 0)
 	at_dcsz = 128; /* Assume 128-byte cache line size (POWER8)  */
 
@@ -5536,9 +5635,13 @@ static int
 ppc_process_record_op59 (struct gdbarch *gdbarch, struct regcache *regcache,
 			 CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int ext = PPC_EXTOP (insn);
   int at = PPC_FIELD (insn, 6, 3);
+
+  /* Note the mnemonics for the pmxvf64ger* instructions were officially
+     changed to pmdmxvf64ger*.  The old mnemonics are still supported as
+     extended mnemonics.  */
 
   switch (ext & 0x1f)
     {
@@ -5608,7 +5711,8 @@ ppc_process_record_op59 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 218:	/* VSX Vector 32-bit Floating-Point GER Negative multiply,
 		   Negative accumulate, xvf32gernn */
 
-    case 59:	/* VSX Vector 64-bit Floating-Point GER, pmxvf64ger */
+    case 59:	/* VSX Vector 64-bit Floating-Point GER, pmdmxvf64ger
+		   (pmxvf64ger)  */
     case 58:	/* VSX Vector 64-bit Floating-Point GER Positive multiply,
 		   Positive accumulate, xvf64gerpp */
     case 186:	/* VSX Vector 64-bit Floating-Point GER Positive multiply,
@@ -5616,7 +5720,7 @@ ppc_process_record_op59 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 122:	/* VSX Vector 64-bit Floating-Point GER Negative multiply,
 		   Positive accumulate, xvf64gernp */
     case 250:	/* VSX Vector 64-bit Floating-Point GER Negative multiply,
-		   Negative accumulate, pmxvf64gernn */
+		   Negative accumulate, pmdmxvf64gernn (pmxvf64gernn)  */
 
     case 51:	/* VSX Vector bfloat16 GER, xvbf16ger2 */
     case 50:	/* VSX Vector bfloat16 GER Positive multiply,
@@ -5701,7 +5805,7 @@ ppc_process_record_op60_XX2 (struct gdbarch *gdbarch,
 			     struct regcache *regcache,
 			     CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int RA_opcode = PPC_RA(insn);
 
   switch (RA_opcode)
@@ -5717,7 +5821,7 @@ ppc_process_record_op60_XX2 (struct gdbarch *gdbarch,
     case 24:	/* VSX Vector Convert Half-Precision format to
 		   Single-Precision format */
       record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-      /* Fall-through */
+      [[fallthrough]];
     case 0:	/* VSX Vector Extract Exponent Double-Precision */
     case 1:	/* VSX Vector Extract Significand Double-Precision */
     case 7:	/* VSX Vector Byte-Reverse Halfword */
@@ -5742,7 +5846,7 @@ static int
 ppc_process_record_op60 (struct gdbarch *gdbarch, struct regcache *regcache,
 			   CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int ext = PPC_EXTOP (insn);
 
   switch (ext >> 2)
@@ -5811,7 +5915,7 @@ ppc_process_record_op60 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 19:		/* VSX Scalar Compare Greater Than or Equal
 			   Double-Precision */
       record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 240:		/* VSX Vector Copy Sign Double-Precision */
     case 208:		/* VSX Vector Copy Sign Single-Precision */
     case 130:		/* VSX Logical AND */
@@ -5998,7 +6102,7 @@ ppc_process_record_op60 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 203:		/* VSX Vector Square Root Double-Precision */
     case 139:		/* VSX Vector Square Root Single-Precision */
       record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 345:		/* VSX Scalar Absolute Value Double-Precision */
     case 267:		/* VSX Scalar Convert Scalar Single-Precision to
 			   Vector Single-Precision format Non-signalling */
@@ -6021,7 +6125,7 @@ ppc_process_record_op60 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 298:		/* VSX Scalar Test Data Class Single-Precision */
     case 362:		/* VSX Scalar Test Data Class Double-Precision */
       record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 106:		/* VSX Scalar Test for software Square Root
 			   Double-Precision */
     case 234:		/* VSX Vector Test for software Square Root
@@ -6097,7 +6201,7 @@ static int
 ppc_process_record_op61 (struct gdbarch *gdbarch, struct regcache *regcache,
 			   CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   ULONGEST ea = 0;
   int size;
 
@@ -6156,7 +6260,7 @@ static int
 ppc_process_record_op63 (struct gdbarch *gdbarch, struct regcache *regcache,
 			   CORE_ADDR addr, uint32_t insn)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int ext = PPC_EXTOP (insn);
   int tmp;
 
@@ -6293,7 +6397,7 @@ ppc_process_record_op63 (struct gdbarch *gdbarch, struct regcache *regcache,
 	  case 22:	/* Move From FPSCR Control & set RN */
 	  case 23:	/* Move From FPSCR Control & set RN Immediate */
 	    record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-	    /* Fall through.  */
+	    [[fallthrough]];
 	  case 0:	/* Move From FPSCR */
 	  case 24:	/* Move From FPSCR Lightweight */
 	    if (PPC_FIELD (insn, 11, 5) == 0 && PPC_RC (insn))
@@ -6339,7 +6443,7 @@ ppc_process_record_op63 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 644:		/* VSX Scalar Compare Unordered Quad-Precision */
     case 708:		/* VSX Scalar Test Data Class Quad-Precision */
       record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 128:		/* Floating Test for software Divide */
     case 160:		/* Floating Test for software Square Root */
       record_full_arch_list_add_reg (regcache, tdep->ppc_cr_regnum);
@@ -6376,7 +6480,7 @@ ppc_process_record_op63 (struct gdbarch *gdbarch, struct regcache *regcache,
       }
 
       record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 68:		/* VSX Scalar Compare Equal Quad-Precision */
     case 196:		/* VSX Scalar Compare Greater Than or Equal
 			   Quad-Precision */
@@ -6384,7 +6488,7 @@ ppc_process_record_op63 (struct gdbarch *gdbarch, struct regcache *regcache,
     case 676:		/* VSX Scalar Maximum Type-C Quad-Precision */
     case 740:		/* VSX Scalar Minimum Type-C Quad-Precision */
       record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 100:		/* VSX Scalar Copy Sign Quad-Precision */
     case 868:		/* VSX Scalar Insert Exponent Quad-Precision */
       ppc_record_vsr (regcache, tdep, PPC_VRT (insn) + 32);
@@ -6395,7 +6499,7 @@ ppc_process_record_op63 (struct gdbarch *gdbarch, struct regcache *regcache,
 	{
 	case 27:	/* VSX Scalar Square Root Quad-Precision */
 	  record_full_arch_list_add_reg (regcache, tdep->ppc_fpscr_regnum);
-	  /* FALL-THROUGH */
+	  [[fallthrough]];
 	case 0:		/* VSX Scalar Absolute Quad-Precision */
 	case 2:		/* VSX Scalar Extract Exponent Quad-Precision */
 	case 8:		/* VSX Scalar Negative Absolute Quad-Precision */
@@ -6453,7 +6557,7 @@ ppc_process_record_prefix_op42 (struct gdbarch *gdbarch,
 				struct regcache *regcache,
 				uint32_t insn_prefix, uint32_t insn_suffix)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int type = PPC_FIELD (insn_prefix, 6, 2);
   int ST1 = PPC_FIELD (insn_prefix, 8, 1);
 
@@ -6489,100 +6593,108 @@ ppc_process_record_prefix_op59_XX3 (struct gdbarch *gdbarch,
   int type = PPC_FIELD (insn_prefix, 6, 2);
   int ST4 = PPC_FIELD (insn_prefix, 8, 4);
   int at = PPC_FIELD (insn_suffix, 6, 3);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
+  /* Note, the mnemonics for the pmxvf16ger*, pmxvf32ger*,pmxvf64ger*,
+     pmxvi4ger8*, pmxvi8ger4* pmxvi16ger2* instructions were officially
+     changed to pmdmxbf16ger*, pmdmxvf32ger*, pmdmxvf64ger*, pmdmxvi4ger8*,
+     pmdmxvi8ger4*, pmdmxvi16ger* respectively.  The old mnemonics are still
+     supported by the assembler as extended mnemonics.  The disassembler
+     generates the new mnemonics.  */
   if (type == 3)
     {
       if (ST4 == 9)
 	switch (opcode)
 	  {
 	  case 35:	/* Prefixed Masked VSX Vector 4-bit Signed Integer GER
-			   MMIRR, pmxvi4ger8 */
+			   MMIRR, pmdmxvi4ger8 (pmxvi4ger8) */
 	  case 34:	/* Prefixed Masked VSX Vector 4-bit Signed Integer GER
-			   MMIRR, pmxvi4ger8pp */
+			   MMIRR, pmdmxvi4ger8pp (pmxvi4ger8pp) */
 
 	  case 99:	/* Prefixed Masked VSX Vector 8-bit Signed/Unsigned
 			   Integer GER with Saturate Positive multiply,
 			   Positive accumulate, xvi8ger4spp */
 
 	  case 3:	/* Prefixed Masked VSX Vector 8-bit Signed/Unsigned
-			   Integer GER MMIRR, pmxvi8ger4 */
+			   Integer GER MMIRR, pmdmxvi8ger4 (pmxvi8ger4)  */
 	  case 2:	/* Prefixed Masked VSX Vector 8-bit Signed/Unsigned
 			   Integer GER Positive multiply, Positive accumulate
-			   MMIRR, pmxvi8ger4pp */
+			   MMIRR, pmdmxvi8ger4pp (pmxvi8ger4pp)  */
 
 	  case 75:	/* Prefixed Masked VSX Vector 16-bit Signed Integer
-			   GER MMIRR, pmxvi16ger2 */
+			   GER MMIRR, pmdmxvi16ger2 (pmxvi16ger2)  */
 	  case 107:	/* Prefixed Masked VSX Vector 16-bit Signed Integer
 			   GER  Positive multiply, Positive accumulate,
-			   pmxvi16ger2pp */
+			   pmdmxvi16ger2pp (pmxvi16ger2pp)  */
 
 	  case 43:	/* Prefixed Masked VSX Vector 16-bit Signed Integer
-			   GER with Saturation MMIRR, pmxvi16ger2s */
+			   GER with Saturation MMIRR, pmdmxvi16ger2s
+			   (pmxvi16ger2s)  */
 	  case 42:	/* Prefixed Masked VSX Vector 16-bit Signed Integer
 			   GER with Saturation Positive multiply, Positive
-			   accumulate MMIRR, pmxvi16ger2spp */
+			   accumulate MMIRR, pmdmxvi16ger2spp (pmxvi16ger2spp)
+			*/
 	    ppc_record_ACC_fpscr (regcache, tdep, at, false);
 	    return 0;
 
 	  case 19:	/* Prefixed Masked VSX Vector 16-bit Floating-Point
-			   GER MMIRR, pmxvf16ger2 */
+			   GER MMIRR, pmdmxvf16ger2 (pmxvf16ger2)  */
 	  case 18:	/* Prefixed Masked VSX Vector 16-bit Floating-Point
 			   GER Positive multiply, Positive accumulate MMIRR,
-			   pmxvf16ger2pp */
+			   pmdmxvf16ger2pp (pmxvf16ger2pp)  */
 	  case 146:	/* Prefixed Masked VSX Vector 16-bit Floating-Point
 			   GER Positive multiply, Negative accumulate MMIRR,
-			   pmxvf16ger2pn */
+			   pmdmxvf16ger2pn (pmxvf16ger2pn)  */
 	  case 82:	/* Prefixed Masked VSX Vector 16-bit Floating-Point
 			   GER Negative multiply, Positive accumulate MMIRR,
-			   pmxvf16ger2np */
+			   pmdmxvf16ger2np (pmxvf16ger2np)  */
 	  case 210:	/* Prefixed Masked VSX Vector 16-bit Floating-Point
 			   GER Negative multiply, Negative accumulate MMIRR,
-			   pmxvf16ger2nn */
+			   pmdmxvf16ger2nn (pmxvf16ger2nn)  */
 
 	  case 27:	/* Prefixed Masked VSX Vector 32-bit Floating-Point
-			   GER MMIRR, pmxvf32ger */
+			   GER MMIRR, pmdmxvf32ger (pmxvf32ger)  */
 	  case 26:	/* Prefixed Masked VSX Vector 32-bit Floating-Point
 			   GER Positive multiply, Positive accumulate MMIRR,
-			   pmxvf32gerpp */
+			   pmdmxvf32gerpp (pmxvf32gerpp)  */
 	  case 154:	/* Prefixed Masked VSX Vector 32-bit Floating-Point
 			   GER Positive multiply, Negative accumulate MMIRR,
-			   pmxvf32gerpn */
+			   pmdmxvf32gerpn (pmxvf32gerpn)  */
 	  case 90:	/* Prefixed Masked VSX Vector 32-bit Floating-Point
 			   GER Negative multiply, Positive accumulate MMIRR,
-			   pmxvf32gernp */
+			   pmdmxvf32gernp (pmxvf32gernp )*/
 	  case 218:	/* Prefixed Masked VSX Vector 32-bit Floating-Point
 			   GER Negative multiply, Negative accumulate MMIRR,
-			   pmxvf32gernn */
+			   pmdmxvf32gernn (pmxvf32gernn)  */
 
 	  case 59:	/* Prefixed Masked VSX Vector 64-bit Floating-Point
-			   GER MMIRR, pmxvf64ger */
+			   GER MMIRR, pmdmxvf64ger (pmxvf64ger)  */
 	  case 58:	/* Floating-Point GER Positive multiply, Positive
-			   accumulate MMIRR, pmxvf64gerpp */
+			   accumulate MMIRR, pmdmxvf64gerpp (pmxvf64gerpp)  */
 	  case 186:	/* Prefixed Masked VSX Vector 64-bit Floating-Point
 			   GER Positive multiply, Negative accumulate MMIRR,
-			   pmxvf64gerpn */
+			   pmdmxvf64gerpn (pmxvf64gerpn)  */
 	  case 122:	/* Prefixed Masked VSX Vector 64-bit Floating-Point
 			   GER Negative multiply, Positive accumulate MMIRR,
-			   pmxvf64gernp */
+			   pmdmxvf64gernp (pmxvf64gernp)  */
 	  case 250:	/* Prefixed Masked VSX Vector 64-bit Floating-Point
 			   GER Negative multiply, Negative accumulate MMIRR,
-			   pmxvf64gernn */
+			   pmdmxvf64gernn (pmxvf64gernn)  */
 
 	  case 51:	/* Prefixed Masked VSX Vector bfloat16 GER MMIRR,
-			   pmxvbf16ger2 */
+			   pmdmxvbf16ger2 (pmxvbf16ger2)  */
 	  case 50:	/* Prefixed Masked VSX Vector bfloat16 GER Positive
 			   multiply, Positive accumulate MMIRR,
-			   pmxvbf16ger2pp */
+			   pmdmxvbf16ger2pp (pmxvbf16ger2pp)  */
 	  case 178:	/* Prefixed Masked VSX Vector bfloat16 GER Positive
 			   multiply, Negative accumulate MMIRR,
-			   pmxvbf16ger2pn */
+			   pmdmxvbf16ger2pn (pmxvbf16ger2pn)  */
 	  case 114:	/* Prefixed Masked VSX Vector bfloat16 GER Negative
 			   multiply, Positive accumulate MMIRR,
-			   pmxvbf16ger2np */
+			   pmdmxvbf16ger2np (pmxvbf16ger2np)  */
 	  case 242:	/* Prefixed Masked VSX Vector bfloat16 GER Negative
 			   multiply, Negative accumulate MMIRR,
-			   pmxvbf16ger2nn */
+			   pmdmxvbf16ger2nn (pmxvbf16ger2nn)  */
 	    ppc_record_ACC_fpscr (regcache, tdep, at, true);
 	    return 0;
 	  }
@@ -6603,7 +6715,7 @@ ppc_process_record_prefix_store (struct gdbarch *gdbarch,
 				 CORE_ADDR addr, uint32_t insn_prefix,
 				 uint32_t insn_suffix)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   ULONGEST iaddr = 0;
   int size;
   int R = PPC_BIT (insn_prefix, 11);
@@ -6659,7 +6771,7 @@ ppc_process_record_prefix_op32 (struct gdbarch *gdbarch,
   int type = PPC_FIELD (insn_prefix, 6, 2);
   int ST1 = PPC_FIELD (insn_prefix, 8, 1);
   int ST4 = PPC_FIELD (insn_prefix, 8, 4);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (type == 1)
     {
@@ -6713,7 +6825,7 @@ ppc_process_record_prefix_op33 (struct gdbarch *gdbarch,
 {
   int type = PPC_FIELD (insn_prefix, 6, 2);
   int ST4 = PPC_FIELD (insn_prefix, 8, 4);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (type == 1)
     {
@@ -6751,7 +6863,7 @@ ppc_process_record_prefix_op34 (struct gdbarch *gdbarch,
   int type = PPC_FIELD (insn_prefix, 6, 2);
   int ST1 = PPC_FIELD (insn_prefix, 8, 1);
   int ST4 = PPC_FIELD (insn_prefix, 8, 4);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (type == 1)
     {
@@ -6797,7 +6909,7 @@ ppc_process_record_prefix_store_vsx_ds_form (struct gdbarch *gdbarch,
 					     uint32_t insn_prefix,
 					     uint32_t insn_suffix)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   ULONGEST ea = 0;
   int size;
   int R = PPC_BIT (insn_prefix, 11);
@@ -6850,7 +6962,7 @@ ppc_process_record_prefix_vsx_d_form (struct gdbarch *gdbarch,
 				      uint32_t insn_prefix,
 				      uint32_t insn_suffix)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   ULONGEST ea = 0;
   int size;
   int R = PPC_BIT (insn_prefix, 11);
@@ -6907,7 +7019,7 @@ ppc_process_prefix_instruction (int insn_prefix, int insn_suffix,
 {
   int type = PPC_FIELD (insn_prefix, 6, 2);
   int ST1 = PPC_FIELD (insn_prefix, 8, 1);
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int op6;
 
   /* D-form has uses a 5-bit opcode in the instruction suffix */
@@ -7086,7 +7198,7 @@ int
 ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 		      CORE_ADDR addr)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   uint32_t insn, insn_suffix;
   int op6, tmp, i;
@@ -7152,10 +7264,10 @@ ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
     case 13:		/* Add Immediate Carrying and Record */
       record_full_arch_list_add_reg (regcache, tdep->ppc_cr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 12:		/* Add Immediate Carrying */
       record_full_arch_list_add_reg (regcache, tdep->ppc_xer_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 14:		/* Add Immediate */
     case 15:		/* Add Immediate Shifted */
       record_full_arch_list_add_reg (regcache,
@@ -7165,7 +7277,7 @@ ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 16:		/* Branch Conditional */
       if ((PPC_BO (insn) & 0x4) == 0)
 	record_full_arch_list_add_reg (regcache, tdep->ppc_ctr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 18:		/* Branch */
       if (PPC_LK (insn))
 	record_full_arch_list_add_reg (regcache, tdep->ppc_lr_regnum);
@@ -7194,7 +7306,7 @@ ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 28:		/* AND Immediate */
     case 29:		/* AND Immediate Shifted */
       record_full_arch_list_add_reg (regcache, tdep->ppc_cr_regnum);
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 24:		/* OR Immediate */
     case 25:		/* OR Immediate Shifted */
     case 26:		/* XOR Immediate */
@@ -7214,7 +7326,7 @@ ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 43:		/* Load Halfword Algebraic with Update */
       record_full_arch_list_add_reg (regcache,
 				     tdep->ppc_gp0_regnum + PPC_RA (insn));
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 32:		/* Load Word and Zero */
     case 34:		/* Load Byte and Zero */
     case 40:		/* Load Halfword and Zero */
@@ -7238,7 +7350,7 @@ ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 51:		/* Load Floating-Point Double with Update */
       record_full_arch_list_add_reg (regcache,
 				     tdep->ppc_gp0_regnum + PPC_RA (insn));
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 48:		/* Load Floating-Point Single */
     case 50:		/* Load Floating-Point Double */
       record_full_arch_list_add_reg (regcache,
@@ -7266,7 +7378,7 @@ ppc_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 55:		/* Store Floating-Point Double with Update */
       record_full_arch_list_add_reg (regcache,
 				     tdep->ppc_gp0_regnum + PPC_RA (insn));
-      /* FALL-THROUGH */
+      [[fallthrough]];
     case 36:		/* Store Word */
     case 38:		/* Store Byte */
     case 44:		/* Store Halfword */
@@ -7440,17 +7552,35 @@ rs6000_program_breakpoint_here_p (gdbarch *gdbarch, CORE_ADDR address)
   if (target_read_memory (address, target_mem, PPC_INSN_SIZE) == 0)
     {
       uint32_t insn = (uint32_t) extract_unsigned_integer
-        (target_mem, PPC_INSN_SIZE, gdbarch_byte_order_for_code (gdbarch));
+	(target_mem, PPC_INSN_SIZE, gdbarch_byte_order_for_code (gdbarch));
 
       /* Check if INSN is a TW, TWI, TD or TDI instruction.  There
-         are multiple choices of such instructions with different registers
-         and / or immediate values but they all cause a break. */
+	 are multiple choices of such instructions with different registers
+	 and / or immediate values but they all cause a break. */
       if (is_tw_insn (insn) || is_twi_insn (insn) || is_td_insn (insn)
-          || is_tdi_insn (insn))
-        return true;
+	  || is_tdi_insn (insn))
+	return true;
     }
 
   return false;
+}
+
+/* Implement the update_call_site_pc arch hook.  */
+
+static CORE_ADDR
+ppc64_update_call_site_pc (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  /* Some versions of GCC emit:
+
+     .  bl function
+     .  nop
+     .  ...
+
+     but emit DWARF where the DW_AT_call_return_pc points to
+     instruction after the 'nop'.  Note that while the compiler emits
+     a 'nop', the linker might put some other instruction there -- so
+     we just unconditionally check the next instruction.  */
+  return pc + 4;
 }
 
 /* Initialize the current architecture based on INFO.  If possible, re-use an
@@ -7463,7 +7593,6 @@ rs6000_program_breakpoint_here_p (gdbarch *gdbarch, CORE_ADDR address)
 static struct gdbarch *
 rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
-  struct gdbarch *gdbarch;
   int wordsize, from_xcoff_exec, from_elf_exec;
   enum bfd_architecture arch;
   unsigned long mach;
@@ -7587,7 +7716,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       valid_p &= tdesc_numbered_register (feature, tdesc_data.get (),
 					  PPC_XER_REGNUM, "xer");
 
-      /* Allow alternate names for these registers, to accomodate GDB's
+      /* Allow alternate names for these registers, to accommodate GDB's
 	 historic naming.  */
       valid_p &= tdesc_numbered_register_choices (feature, tdesc_data.get (),
 						  PPC_MSR_REGNUM, msr_names);
@@ -8150,7 +8279,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	 meaningful, because 64-bit CPUs can run in 32-bit mode.  So, perform
 	 separate word size check.  */
       ppc_gdbarch_tdep *tdep
-	= (ppc_gdbarch_tdep *) gdbarch_tdep (arches->gdbarch);
+	= gdbarch_tdep<ppc_gdbarch_tdep> (arches->gdbarch);
       if (tdep && tdep->elf_abi != elf_abi)
 	continue;
       if (tdep && tdep->soft_float != soft_float)
@@ -8171,14 +8300,15 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
        - "set arch"		trust blindly
        - GDB startup		useless but harmless */
 
-  ppc_gdbarch_tdep *tdep = new ppc_gdbarch_tdep;
+  gdbarch *gdbarch
+    = gdbarch_alloc (&info, gdbarch_tdep_up (new ppc_gdbarch_tdep));
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
+
   tdep->wordsize = wordsize;
   tdep->elf_abi = elf_abi;
   tdep->soft_float = soft_float;
   tdep->long_double_abi = long_double_abi;
   tdep->vector_abi = vector_abi;
-
-  gdbarch = gdbarch_alloc (&info, tdep);
 
   tdep->ppc_gp0_regnum = PPC_R0_REGNUM;
   tdep->ppc_toc_regnum = PPC_R0_REGNUM + 2;
@@ -8235,9 +8365,13 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_ps_regnum (gdbarch, tdep->ppc_ps_regnum);
 
   if (wordsize == 8)
-    set_gdbarch_return_value (gdbarch, ppc64_sysv_abi_return_value);
+    {
+      set_gdbarch_return_value (gdbarch, ppc64_sysv_abi_return_value);
+      set_gdbarch_update_call_site_pc (gdbarch, ppc64_update_call_site_pc);
+    }
   else
     set_gdbarch_return_value (gdbarch, ppc_sysv_abi_return_value);
+  set_gdbarch_get_return_buf_addr (gdbarch, ppc_sysv_get_return_buf_addr);
 
   /* Set lr_frame_offset.  */
   if (wordsize == 8)
@@ -8249,8 +8383,8 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       || have_vsx || have_htm_fpu || have_htm_vsx)
     {
       set_gdbarch_pseudo_register_read (gdbarch, rs6000_pseudo_register_read);
-      set_gdbarch_pseudo_register_write (gdbarch,
-					 rs6000_pseudo_register_write);
+      set_gdbarch_deprecated_pseudo_register_write
+	(gdbarch, rs6000_pseudo_register_write);
       set_gdbarch_ax_pseudo_register_collect (gdbarch,
 	      rs6000_ax_pseudo_register_collect);
     }
@@ -8296,6 +8430,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_convert_register_p (gdbarch, rs6000_convert_register_p);
   set_gdbarch_register_to_value (gdbarch, rs6000_register_to_value);
   set_gdbarch_value_to_register (gdbarch, rs6000_value_to_register);
+  set_gdbarch_value_from_register (gdbarch, rs6000_value_from_register);
 
   set_gdbarch_stab_reg_to_regnum (gdbarch, rs6000_stab_reg_to_regnum);
   set_gdbarch_dwarf2_reg_to_regnum (gdbarch, rs6000_dwarf2_reg_to_regnum);
@@ -8316,7 +8451,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sw_breakpoint_from_kind (gdbarch,
 				       rs6000_breakpoint::bp_from_kind);
   set_gdbarch_program_breakpoint_here_p (gdbarch,
-                                         rs6000_program_breakpoint_here_p);
+					 rs6000_program_breakpoint_here_p);
 
   /* The value of symbols of type N_SO and N_FUN maybe null when
      it shouldn't be.  */
@@ -8353,8 +8488,9 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_displaced_step_finish (gdbarch, ppc_displaced_step_finish);
   set_gdbarch_displaced_step_restore_all_in_ptid
     (gdbarch, ppc_displaced_step_restore_all_in_ptid);
+  set_gdbarch_displaced_step_buffer_length (gdbarch, 2 * PPC_INSN_SIZE);
 
-  set_gdbarch_max_insn_length (gdbarch, 2 * PPC_INSN_SIZE);
+  set_gdbarch_max_insn_length (gdbarch, PPC_INSN_SIZE);
 
   /* Hook in ABI-specific overrides, if they have been registered.  */
   info.target_desc = tdesc;
@@ -8452,7 +8588,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 static void
 rs6000_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   if (tdep == NULL)
     return;
@@ -8467,8 +8603,8 @@ powerpc_set_soft_float (const char *args, int from_tty,
   struct gdbarch_info info;
 
   /* Update the architecture.  */
-  if (!gdbarch_update_p (info))
-    internal_error (__FILE__, __LINE__, _("could not update architecture"));
+  if (!gdbarch_update_p (current_inferior (), info))
+    internal_error (_("could not update architecture"));
 }
 
 static void
@@ -8488,13 +8624,13 @@ powerpc_set_vector_abi (const char *args, int from_tty,
       }
 
   if (vector_abi == POWERPC_VEC_LAST)
-    internal_error (__FILE__, __LINE__, _("Invalid vector ABI accepted: %s."),
+    internal_error (_("Invalid vector ABI accepted: %s."),
 		    powerpc_vector_abi_string);
 
   /* Update the architecture.  */
   gdbarch_info info;
-  if (!gdbarch_update_p (info))
-    internal_error (__FILE__, __LINE__, _("could not update architecture"));
+  if (!gdbarch_update_p (current_inferior (), info))
+    internal_error (_("could not update architecture"));
 }
 
 /* Show the current setting of the exact watchpoints flag.  */
@@ -8510,7 +8646,7 @@ show_powerpc_exact_watchpoints (struct ui_file *file, int from_tty,
 /* Read a PPC instruction from memory.  */
 
 static unsigned int
-read_insn (struct frame_info *frame, CORE_ADDR pc)
+read_insn (const frame_info_ptr &frame, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -8532,7 +8668,7 @@ read_insn (struct frame_info *frame, CORE_ADDR pc)
    necessarily the i'th instruction in memory.  */
 
 int
-ppc_insns_match_pattern (struct frame_info *frame, CORE_ADDR pc,
+ppc_insns_match_pattern (const frame_info_ptr &frame, CORE_ADDR pc,
 			 const struct ppc_insn_pattern *pattern,
 			 unsigned int *insns)
 {

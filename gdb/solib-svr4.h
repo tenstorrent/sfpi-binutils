@@ -1,6 +1,6 @@
 /* Handle shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2000-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,19 +17,19 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef SOLIB_SVR4_H
-#define SOLIB_SVR4_H
+#ifndef GDB_SOLIB_SVR4_H
+#define GDB_SOLIB_SVR4_H
 
 #include "solist.h"
 
 struct objfile;
-struct target_so_ops;
+struct solib_ops;
 
-extern struct target_so_ops svr4_so_ops;
+extern const solib_ops svr4_so_ops;
 
 /* Link map info to include in an allocated so_list entry.  */
 
-struct lm_info_svr4 : public lm_info_base
+struct lm_info_svr4 final : public lm_info
 {
   /* Amount by which addresses in the binary should be relocated to
      match the inferior.  The direct inferior value is L_ADDR_INFERIOR.
@@ -48,6 +48,8 @@ struct lm_info_svr4 : public lm_info_base
   CORE_ADDR l_ld = 0, l_next = 0, l_prev = 0, l_name = 0;
 };
 
+using lm_info_svr4_up = std::unique_ptr<lm_info_svr4>;
+
 /* Critical offsets and sizes which describe struct r_debug and
    struct link_map on SVR4-like targets.  All offsets and sizes are
    in bytes unless otherwise specified.  */
@@ -65,6 +67,9 @@ struct link_map_offsets
 
     /* Offset of r_debug.r_ldsomap.  */
     int r_ldsomap_offset;
+
+    /* Offset of r_debug_extended.r_next.  */
+    int r_next_offset;
 
     /* Size of struct link_map (or equivalent), or at least enough of it
        to be able to obtain the fields below.  */
@@ -107,4 +112,4 @@ extern struct link_map_offsets *svr4_lp64_fetch_link_map_offsets (void);
    SVR4 run time loader.  */
 int svr4_in_dynsym_resolve_code (CORE_ADDR pc);
 
-#endif /* solib-svr4.h */
+#endif /* GDB_SOLIB_SVR4_H */

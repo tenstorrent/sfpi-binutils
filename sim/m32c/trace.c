@@ -1,6 +1,6 @@
 /* trace.c --- tracing output for the M32C simulator.
 
-Copyright (C) 2005-2022 Free Software Foundation, Inc.
+Copyright (C) 2005-2024 Free Software Foundation, Inc.
 Contributed by Red Hat, Inc.
 
 This file is part of the GNU simulators.
@@ -31,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "bfd.h"
 #include "dis-asm.h"
-#include "m32c-desc.h"
+#include "opcodes/m32c-desc.h"
 
 #include "cpu.h"
 #include "mem.h"
@@ -89,7 +89,7 @@ compare_symbols (const void *ap, const void *bp)
 
 static char opbuf[1000];
 
-static int
+static int ATTRIBUTE_PRINTF (2, 3)
 op_printf (char *buf, char *fmt, ...)
 {
   int ret;
@@ -101,7 +101,7 @@ op_printf (char *buf, char *fmt, ...)
   return ret;
 }
 
-static int
+static int ATTRIBUTE_PRINTF (3, 4)
 op_styled_printf (char *buf, enum disassembler_style style, char *fmt, ...)
 {
   int ret;

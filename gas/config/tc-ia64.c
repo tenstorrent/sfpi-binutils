@@ -1,5 +1,5 @@
 /* tc-ia64.c -- Assembler for the HP/Intel IA-64 architecture.
-   Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
    Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
 
    This file is part of GAS, the GNU Assembler.
@@ -68,8 +68,7 @@
 enum special_section
   {
     /* IA-64 ABI section pseudo-ops.  */
-    SPECIAL_SECTION_BSS = 0,
-    SPECIAL_SECTION_SBSS,
+    SPECIAL_SECTION_SBSS = 0,
     SPECIAL_SECTION_SDATA,
     SPECIAL_SECTION_RODATA,
     SPECIAL_SECTION_COMMENT,
@@ -211,9 +210,9 @@ const char FLT_CHARS[] = "rRsSfFdDxXpP";
 
 /* ia64-specific option processing:  */
 
-const char *md_shortopts = "m:N:x::";
+const char md_shortopts[] = "m:N:x::";
 
-struct option md_longopts[] =
+const struct option md_longopts[] =
   {
 #define OPTION_MCONSTANT_GP (OPTION_MD_BASE + 1)
     {"mconstant-gp", no_argument, NULL, OPTION_MCONSTANT_GP},
@@ -221,7 +220,7 @@ struct option md_longopts[] =
     {"mauto-pic", no_argument, NULL, OPTION_MAUTO_PIC}
   };
 
-size_t md_longopts_size = sizeof (md_longopts);
+const size_t md_longopts_size = sizeof (md_longopts);
 
 static struct
   {
@@ -645,7 +644,7 @@ static const bfd_vma nop[IA64_NUM_UNITS] =
    habit of setting temporary sentinels.  */
 static char special_section_name[][20] =
   {
-    {".bss"}, {".sbss"}, {".sdata"}, {".rodata"}, {".comment"},
+    {".sbss"}, {".sdata"}, {".rodata"}, {".comment"},
     {".IA_64.unwind"}, {".IA_64.unwind_info"},
     {".init_array"}, {".fini_array"}
   };
@@ -1139,7 +1138,7 @@ obj_elf_vms_common (int ignore ATTRIBUTE_UNUSED)
   obj_elf_change_section
     (sec_name, SHT_NOBITS,
      SHF_ALLOC | SHF_WRITE | SHF_IA_64_VMS_OVERLAID | SHF_IA_64_VMS_GLOBAL,
-     0, NULL, 1, 0);
+     0, NULL, true);
 
   S_SET_VALUE (symbolP, 0);
   S_SET_SIZE (symbolP, size);
@@ -3172,7 +3171,7 @@ dot_loc (int x)
   dwarf2_directive_loc (x);
 }
 
-/* .sbss, .bss etc. are macros that expand into ".section SECNAME".  */
+/* .sbss, .srodata etc. are macros that expand into ".section SECNAME".  */
 static void
 dot_special_section (int which)
 {
@@ -4200,24 +4199,23 @@ dot_unwabi (int dummy ATTRIBUTE_UNUSED)
 static void
 dot_personality (int dummy ATTRIBUTE_UNUSED)
 {
-  char *name, *p, c;
+  char *name, c;
 
   if (!in_procedure ("personality"))
     return;
   SKIP_WHITESPACE ();
   c = get_symbol_name (&name);
-  p = input_line_pointer;
   unwind.personality_routine = symbol_find_or_make (name);
   unwind.force_unwind_entry = 1;
-  *p = c;
-  SKIP_WHITESPACE_AFTER_NAME ();
+  restore_line_pointer (c);
+  SKIP_WHITESPACE ();
   demand_empty_rest_of_line ();
 }
 
 static void
 dot_proc (int dummy ATTRIBUTE_UNUSED)
 {
-  char *name, *p, c;
+  char *name, c;
   symbolS *sym;
   proc_pending *pending, *last_pending;
 
@@ -4241,7 +4239,6 @@ dot_proc (int dummy ATTRIBUTE_UNUSED)
     {
       SKIP_WHITESPACE ();
       c = get_symbol_name (&name);
-      p = input_line_pointer;
       if (!*name)
 	as_bad (_("Empty argument of .proc"));
       else
@@ -4262,8 +4259,8 @@ dot_proc (int dummy ATTRIBUTE_UNUSED)
 	    }
 	  symbol_get_bfdsym (sym)->flags |= BSF_FUNCTION;
 	}
-      *p = c;
-      SKIP_WHITESPACE_AFTER_NAME ();
+      restore_line_pointer (c);
+      SKIP_WHITESPACE ();
       if (*input_line_pointer != ',')
 	break;
       ++input_line_pointer;
@@ -4495,11 +4492,10 @@ dot_endp (int dummy ATTRIBUTE_UNUSED)
   /* Parse names of main and alternate entry points.  */
   while (1)
     {
-      char *name, *p, c;
+      char *name, c;
 
       SKIP_WHITESPACE ();
       c = get_symbol_name (&name);
-      p = input_line_pointer;
       if (!*name)
 	(md.unwind_check == unwind_check_warning
 	 ? as_warn
@@ -4519,8 +4515,8 @@ dot_endp (int dummy ATTRIBUTE_UNUSED)
 	  if (!sym || !pending)
 	    as_warn (_("`%s' was not specified with previous .proc"), name);
 	}
-      *p = c;
-      SKIP_WHITESPACE_AFTER_NAME ();
+      restore_line_pointer (c);
+      SKIP_WHITESPACE ();
       if (*input_line_pointer != ',')
 	break;
       ++input_line_pointer;
@@ -4608,9 +4604,9 @@ dot_rot (int type)
     {
       ch = get_symbol_name (&start);
       len = strlen (ia64_canonicalize_symbol_name (start));
-      *input_line_pointer = ch;
+      restore_line_pointer (ch);
 
-      SKIP_WHITESPACE_AFTER_NAME ();
+      SKIP_WHITESPACE ();
       if (*input_line_pointer != '[')
 	{
 	  as_bad (_("Expected '['"));
@@ -4663,14 +4659,9 @@ dot_rot (int type)
 	}
 
       if (!*drpp)
-	{
-	  *drpp = XOBNEW (&notes, struct dynreg);
-	  memset (*drpp, 0, sizeof (*dr));
-	}
+	*drpp = notes_calloc (1, sizeof (**drpp));
 
-      name = XOBNEWVEC (&notes, char, len + 1);
-      memcpy (name, start, len);
-      name[len] = '\0';
+      name = notes_memdup (start, len, len + 1);
 
       dr = *drpp;
       dr->name = name;
@@ -4682,7 +4673,6 @@ dot_rot (int type)
       if (str_hash_insert (md.dynreg_hash, name, dr, 0) != NULL)
 	{
 	  as_bad (_("Attempt to redefine register set `%s'"), name);
-	  obstack_free (&notes, name);
 	  goto err;
 	}
 
@@ -4747,9 +4737,9 @@ dot_psr (int dummy ATTRIBUTE_UNUSED)
 	md.flags |= EF_IA_64_ABI64;
       else
 	as_bad (_("Unknown psr option `%s'"), option);
-      *input_line_pointer = ch;
+      restore_line_pointer (ch);
 
-      SKIP_WHITESPACE_AFTER_NAME ();
+      SKIP_WHITESPACE ();
       if (*input_line_pointer != ',')
 	break;
 
@@ -5007,7 +4997,7 @@ dot_pred_rel (int type)
 	    type = 'c';
 	  else if (strcmp (form, "imply") == 0)
 	    type = 'i';
-	  obstack_free (&notes, form);
+	  notes_free (form);
 	}
       else if (*input_line_pointer == '@')
 	{
@@ -5166,8 +5156,8 @@ dot_entry (int dummy ATTRIBUTE_UNUSED)
       if (str_hash_insert (md.entry_hash, S_GET_NAME (symbolP), symbolP, 0))
 	as_bad (_("duplicate entry hint %s"), name);
 
-      *input_line_pointer = c;
-      SKIP_WHITESPACE_AFTER_NAME ();
+      restore_line_pointer (c);
+      SKIP_WHITESPACE ();
       c = *input_line_pointer;
       if (c == ',')
 	{
@@ -5207,7 +5197,6 @@ const pseudo_typeS md_pseudo_table[] =
     { "radix", dot_radix, 0 },
     { "lcomm", s_lcomm_bytes, 1 },
     { "loc", dot_loc, 0 },
-    { "bss", dot_special_section, SPECIAL_SECTION_BSS },
     { "sbss", dot_special_section, SPECIAL_SECTION_SBSS },
     { "sdata", dot_special_section, SPECIAL_SECTION_SDATA },
     { "rodata", dot_special_section, SPECIAL_SECTION_RODATA },
@@ -5993,6 +5982,7 @@ parse_operand (expressionS *e, int more)
   e->X_op = O_absent;
   SKIP_WHITESPACE ();
   expression (e);
+  resolve_register (e);
   sep = *input_line_pointer;
   if (more && (sep == ',' || sep == more))
     ++input_line_pointer;
@@ -7566,7 +7556,7 @@ ia64_target_format (void)
 }
 
 void
-ia64_end_of_source (void)
+ia64_md_finish (void)
 {
   /* terminate insn group upon reaching end of file:  */
   insn_group_break (1, 0, 0);
@@ -9960,11 +9950,8 @@ note_register_values (struct ia64_opcode *idesc)
 	  gr_values[regno].value = CURR_SLOT.opnd[1].X_add_number;
 	  gr_values[regno].path = md.path;
 	  if (md.debug_dv)
-	    {
-	      fprintf (stderr, "  Know gr%d = ", regno);
-	      fprintf_vma (stderr, gr_values[regno].value);
-	      fputs ("\n", stderr);
-	    }
+	    fprintf (stderr, "  Know gr%d = %" PRIx64 "\n",
+		     regno, gr_values[regno].value);
 	}
     }
   /* Look for dep.z imm insns.  */
@@ -9984,11 +9971,8 @@ note_register_values (struct ia64_opcode *idesc)
 	  gr_values[regno].value = value;
 	  gr_values[regno].path = md.path;
 	  if (md.debug_dv)
-	    {
-	      fprintf (stderr, "  Know gr%d = ", regno);
-	      fprintf_vma (stderr, gr_values[regno].value);
-	      fputs ("\n", stderr);
-	    }
+	    fprintf (stderr, "  Know gr%d = %" PRIx64 "\n",
+		     regno, gr_values[regno].value);
 	}
     }
   else
@@ -10202,12 +10186,9 @@ print_dependency (const char *action, int depind)
       if (regdeps[depind].specific && regdeps[depind].index >= 0)
 	fprintf (stderr, " (%d)", regdeps[depind].index);
       if (regdeps[depind].mem_offset.hint)
-	{
-	  fputs (" ", stderr);
-	  fprintf_vma (stderr, regdeps[depind].mem_offset.base);
-	  fputs ("+", stderr);
-	  fprintf_vma (stderr, regdeps[depind].mem_offset.offset);
-	}
+	fprintf (stderr, " %" PRIx64 "+%" PRIx64,
+		 regdeps[depind].mem_offset.base,
+		 regdeps[depind].mem_offset.offset);
       fprintf (stderr, "\n");
     }
 }
@@ -11534,8 +11515,8 @@ tc_gen_reloc (asection *sec ATTRIBUTE_UNUSED, fixS *fixp)
 {
   arelent *reloc;
 
-  reloc = XNEW (arelent);
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc->addend = fixp->fx_offset;
@@ -11546,7 +11527,6 @@ tc_gen_reloc (asection *sec ATTRIBUTE_UNUSED, fixS *fixp)
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    _("Cannot represent %s relocation in object file"),
 		    bfd_get_reloc_code_name (fixp->fx_r_type));
-      free (reloc);
       return NULL;
     }
   return reloc;
@@ -11747,7 +11727,7 @@ dot_alias (int section)
 
   delim = get_symbol_name (&name);
   end_name = input_line_pointer;
-  *end_name = delim;
+  restore_line_pointer (delim);
 
   if (name == end_name)
     {
@@ -11756,7 +11736,7 @@ dot_alias (int section)
       return;
     }
 
-  SKIP_WHITESPACE_AFTER_NAME ();
+  SKIP_WHITESPACE ();
 
   if (*input_line_pointer != ',')
     {
@@ -11781,9 +11761,7 @@ dot_alias (int section)
     }
 
   /* Make a copy of name string.  */
-  len = strlen (name) + 1;
-  obstack_grow (&notes, name, len);
-  name = obstack_finish (&notes);
+  name = notes_strdup (name);
 
   if (section)
     {
@@ -11806,8 +11784,7 @@ dot_alias (int section)
       if (strcmp (h->name, name))
 	as_bad (_("`%s' is already the alias of %s `%s'"),
 		alias, kind, h->name);
-      obstack_free (&notes, name);
-      obstack_free (&notes, alias);
+      notes_free (alias);
       goto out;
     }
 
@@ -11817,12 +11794,11 @@ dot_alias (int section)
     {
       if (strcmp (a, alias))
 	as_bad (_("%s `%s' already has an alias `%s'"), kind, name, a);
-      obstack_free (&notes, name);
-      obstack_free (&notes, alias);
+      notes_free (alias);
       goto out;
     }
 
-  h = XNEW (struct alias);
+  h = notes_alloc (sizeof (*h));
   h->file = as_where (&h->line);
   h->name = name;
 
@@ -11863,7 +11839,7 @@ do_alias (void **slot, void *arg ATTRIBUTE_UNUSED)
 void
 ia64_adjust_symtab (void)
 {
-  htab_traverse (alias_hash, do_alias, NULL);
+  htab_traverse_noresize (alias_hash, do_alias, NULL);
 }
 
 /* It renames the original section name to its alias.  */
@@ -11888,7 +11864,7 @@ do_secalias (void **slot, void *arg ATTRIBUTE_UNUSED)
 void
 ia64_frob_file (void)
 {
-  htab_traverse (secalias_hash, do_secalias, NULL);
+  htab_traverse_noresize (secalias_hash, do_secalias, NULL);
 }
 
 #ifdef TE_VMS

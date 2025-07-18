@@ -1,5 +1,5 @@
 /* tc-sparc.c -- Assemble for the SPARC
-   Copyright (C) 1989-2022 Free Software Foundation, Inc.
+   Copyright (C) 1989-2025 Free Software Foundation, Inc.
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
@@ -401,8 +401,8 @@ sparc_target_format (void)
  *		error.  For example, from sparclite to v9.
  */
 
-const char *md_shortopts = "A:K:VQ:sq";
-struct option md_longopts[] = {
+const char md_shortopts[] = "A:K:VQ:sq";
+const struct option md_longopts[] = {
 #define OPTION_BUMP (OPTION_MD_BASE)
   {"bump", no_argument, NULL, OPTION_BUMP},
 #define OPTION_SPARC (OPTION_MD_BASE + 1)
@@ -442,7 +442,7 @@ struct option md_longopts[] = {
   {NULL, no_argument, NULL, 0}
 };
 
-size_t md_longopts_size = sizeof (md_longopts);
+const size_t md_longopts_size = sizeof (md_longopts);
 
 int
 md_parse_option (int c, const char *arg)
@@ -1081,7 +1081,7 @@ md_begin (void)
 /* Called after all assembly has been done.  */
 
 void
-sparc_md_end (void)
+sparc_md_finish (void)
 {
   unsigned long mach;
 #ifndef TE_SOLARIS
@@ -1125,10 +1125,14 @@ sparc_md_end (void)
   hwcaps = hwcap_seen & U0xffffffff;
   hwcaps2 = hwcap_seen >> 32;
 
-  if (hwcaps)
-    bfd_elf_add_obj_attr_int (stdoutput, OBJ_ATTR_GNU, Tag_GNU_Sparc_HWCAPS, hwcaps);
-  if (hwcaps2)
-    bfd_elf_add_obj_attr_int (stdoutput, OBJ_ATTR_GNU, Tag_GNU_Sparc_HWCAPS2, hwcaps2);
+  if ((hwcaps
+       && !bfd_elf_add_obj_attr_int (stdoutput, OBJ_ATTR_GNU,
+				     Tag_GNU_Sparc_HWCAPS, hwcaps))
+      || (hwcaps2
+	  && !bfd_elf_add_obj_attr_int (stdoutput, OBJ_ATTR_GNU,
+					Tag_GNU_Sparc_HWCAPS2, hwcaps2)))
+    as_fatal (_("error adding attribute: %s"),
+	      bfd_errmsg (bfd_get_error ()));
 #endif
 }
 
@@ -1201,7 +1205,7 @@ BSR (bfd_vma val, int amount)
 }
 
 /* For communication between sparc_ip and get_expression.  */
-static char *expr_end;
+static char *expr_parse_end;
 
 /* Values for `special_case'.
    Instructions that require weird handling because they're longer than
@@ -2589,13 +2593,6 @@ sparc_ip (char *str, const struct sparc_opcode **pinsn)
 		    break;
 		  }	/* if not an 'f' register.  */
 
-		if (*args == '}' && mask != RS2 (opcode))
-		  {
-		    error_message
-		      = _(": Instruction requires frs2 and frsd must be the same register");
-		    goto error;
-		  }
-
 		switch (*args)
 		  {
 		  case 'v':
@@ -2624,9 +2621,17 @@ sparc_ip (char *str, const struct sparc_opcode **pinsn)
 		  case 'g':
 		  case 'H':
 		  case 'J':
-		  case '}':
                   case '^':
 		    opcode |= RD (mask);
+		    continue;
+
+		  case '}':
+		    if (RD (mask) != (opcode & RD (0x1f)))
+		      {
+			error_message = _(": Instruction requires frs2 and "
+					  "frsd must be the same register");
+			goto error;
+		      }
 		    continue;
 		  }		/* Pack it in.  */
 
@@ -2741,7 +2746,7 @@ sparc_ip (char *str, const struct sparc_opcode **pinsn)
 		    *s1 = '\0';
 		    (void) get_expression (s);
 		    *s1 = ')';
-		    if (expr_end != s1)
+		    if (expr_parse_end != s1)
 		      {
 			as_bad (_("Expression inside %%%s could not be parsed"), op_arg);
 			return special_case;
@@ -2794,7 +2799,7 @@ sparc_ip (char *str, const struct sparc_opcode **pinsn)
 		    (void) get_expression (s);
 		    if (op_arg)
 		      *s = ')';
-		    s = expr_end;
+		    s = expr_parse_end;
 		  }
 
 		if (op_arg)
@@ -3373,11 +3378,11 @@ get_expression (char *str)
       && seg != undefined_section)
     {
       the_insn.error = _("bad segment");
-      expr_end = input_line_pointer;
+      expr_parse_end = input_line_pointer;
       input_line_pointer = save_in;
       return 1;
     }
-  expr_end = input_line_pointer;
+  expr_parse_end = input_line_pointer;
   input_line_pointer = save_in;
   return 0;
 }
@@ -3829,10 +3834,10 @@ tc_gen_reloc (asection *section, fixS *fixp)
   arelent *reloc;
   bfd_reloc_code_real_type code;
 
-  relocs[0] = reloc = XNEW (arelent);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
+  relocs[0] = reloc;
   relocs[1] = NULL;
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 
@@ -4009,7 +4014,6 @@ tc_gen_reloc (asection *section, fixS *fixp)
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    _("internal error: can't export reloc type %d (`%s')"),
 		    fixp->fx_r_type, bfd_get_reloc_code_name (code));
-      xfree (reloc);
       relocs[0] = NULL;
       return relocs;
     }
@@ -4035,10 +4039,10 @@ tc_gen_reloc (asection *section, fixS *fixp)
      on the same location.  */
   if (code == BFD_RELOC_SPARC_OLO10)
     {
-      relocs[1] = reloc = XNEW (arelent);
+      reloc = notes_alloc (sizeof (arelent));
+      reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
+      relocs[1] = reloc;
       relocs[2] = NULL;
-
-      reloc->sym_ptr_ptr = XNEW (asymbol *);
       *reloc->sym_ptr_ptr
 	= symbol_get_bfdsym (section_symbol (absolute_section));
       reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
@@ -4114,8 +4118,8 @@ s_reserve (int ignore ATTRIBUTE_UNUSED)
 
   c = get_symbol_name (&name);
   p = input_line_pointer;
-  *p = c;
-  SKIP_WHITESPACE_AFTER_NAME ();
+  restore_line_pointer (c);
+  SKIP_WHITESPACE ();
 
   if (*input_line_pointer != ',')
     {
@@ -4241,8 +4245,8 @@ s_common (int ignore ATTRIBUTE_UNUSED)
   c = get_symbol_name (&name);
   /* Just after name is now '\0'.  */
   p = input_line_pointer;
-  *p = c;
-  SKIP_WHITESPACE_AFTER_NAME ();
+  restore_line_pointer (c);
+  SKIP_WHITESPACE ();
   if (*input_line_pointer != ',')
     {
       as_bad (_("Expected comma after symbol-name"));
@@ -4992,3 +4996,4 @@ sparc_cfi_emit_pcrel_expr (expressionS *exp, unsigned int nbytes)
   emit_expr_with_reloc (exp, nbytes, "disp");
   sparc_no_align_cons = 0;
 }
+

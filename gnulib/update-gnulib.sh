@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Copyright (C) 2011-2022 Free Software Foundation, Inc.
+# Copyright (C) 2011-2024 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -49,7 +49,7 @@ IMPORTED_GNULIB_MODULES="\
     gettimeofday \
     gitlog-to-changelog \
     glob \
-    inet_ntop
+    inet_ntop \
     inttypes \
     lstat \
     limits-h \
@@ -188,6 +188,7 @@ apply_patches ()
 }
 
 apply_patches "patches/0001-use-windows-stat"
+apply_patches "patches/0002-no-solaris-_gl_attribute_dealloc"
 
 # Regenerate all necessary files...
 aclocal &&

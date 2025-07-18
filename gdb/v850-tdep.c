@@ -1,6 +1,6 @@
 /* Target-dependent code for the NEC V850 for GDB, the GNU debugger.
 
-   Copyright (C) 1996-2022 Free Software Foundation, Inc.
+   Copyright (C) 1996-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
+#include "extract-store-integer.h"
 #include "frame.h"
 #include "frame-base.h"
 #include "trad-frame.h"
@@ -201,7 +201,7 @@ enum
     E_R149_REGNUM,
     E_NUM_OF_V850E2_REGS,
 
-    /* v850e3v5 system registers, selID 1 thru 7.  */
+    /* v850e3v5 system registers, selID 1 through 7.  */
     E_SELID_1_R0_REGNUM = E_NUM_OF_V850E2_REGS,
     E_SELID_1_R31_REGNUM = E_SELID_1_R0_REGNUM + 31,
 
@@ -265,7 +265,7 @@ enum v850_abi
 
 /* Architecture specific data.  */
 
-struct v850_gdbarch_tdep : gdbarch_tdep
+struct v850_gdbarch_tdep : gdbarch_tdep_base
 {
   /* Fields from the ELF header.  */
   int e_flags = 0;
@@ -312,8 +312,7 @@ v850_register_name (struct gdbarch *gdbarch, int regnum)
     "sr24", "sr25", "sr26", "sr27", "sr28", "sr29", "sr30", "sr31",
     "pc", "fp"
   };
-  if (regnum < 0 || regnum > E_NUM_OF_V850_REGS)
-    return NULL;
+  static_assert (E_NUM_OF_V850_REGS == ARRAY_SIZE (v850_reg_names));
   return v850_reg_names[regnum];
 }
 
@@ -332,8 +331,7 @@ v850e_register_name (struct gdbarch *gdbarch, int regnum)
     "sr24", "sr25", "sr26", "sr27", "sr28", "sr29", "sr30", "sr31",
     "pc", "fp"
   };
-  if (regnum < 0 || regnum > E_NUM_OF_V850E_REGS)
-    return NULL;
+  static_assert (E_NUM_OF_V850E_REGS == ARRAY_SIZE (v850e_reg_names));
   return v850e_reg_names[regnum];
 }
 
@@ -376,8 +374,8 @@ v850e2_register_name (struct gdbarch *gdbarch, int regnum)
     "", "", "", "", "", "", "", "",
     "", "", "", "fpspc"
   };
-  if (regnum < 0 || regnum >= E_NUM_OF_V850E2_REGS)
-    return NULL;
+  if (regnum >= E_NUM_OF_V850E2_REGS)
+    return "";
   return v850e2_reg_names[regnum];
 }
 
@@ -479,8 +477,8 @@ v850e3v5_register_name (struct gdbarch *gdbarch, int regnum)
     "vr24", "vr25", "vr26", "vr27", "vr28", "vr29", "vr30", "vr31",
   };
 
-  if (regnum < 0 || regnum >= E_NUM_OF_V850E3V5_REGS)
-    return NULL;
+  static_assert (E_NUM_OF_V850E3V5_REGS
+		     == ARRAY_SIZE (v850e3v5_reg_names));
   return v850e3v5_reg_names[regnum];
 }
 
@@ -511,18 +509,18 @@ v850_use_struct_convention (struct gdbarch *gdbarch, struct type *type)
 {
   int i;
   struct type *fld_type, *tgt_type;
-  v850_gdbarch_tdep *tdep = (v850_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  v850_gdbarch_tdep *tdep = gdbarch_tdep<v850_gdbarch_tdep> (gdbarch);
 
   if (tdep->abi == V850_ABI_RH850)
     {
-      if (v850_type_is_scalar (type) && TYPE_LENGTH(type) <= 8)
+      if (v850_type_is_scalar (type) && type->length () <= 8)
 	return 0;
 
       /* Structs are never returned in registers for this ABI.  */
       return 1;
     }
   /* 1. The value is greater than 8 bytes -> returned by copying.  */
-  if (TYPE_LENGTH (type) > 8)
+  if (type->length () > 8)
     return 1;
 
   /* 2. The value is a single basic type -> returned in register.  */
@@ -537,13 +535,13 @@ v850_use_struct_convention (struct gdbarch *gdbarch, struct type *type)
        && type->num_fields () == 1)
     {
       fld_type = type->field (0).type ();
-      if (v850_type_is_scalar (fld_type) && TYPE_LENGTH (fld_type) >= 4)
+      if (v850_type_is_scalar (fld_type) && fld_type->length () >= 4)
 	return 0;
 
       if (fld_type->code () == TYPE_CODE_ARRAY)
 	{
-	  tgt_type = TYPE_TARGET_TYPE (fld_type);
-	  if (v850_type_is_scalar (tgt_type) && TYPE_LENGTH (tgt_type) >= 4)
+	  tgt_type = fld_type->target_type ();
+	  if (v850_type_is_scalar (tgt_type) && tgt_type->length () >= 4)
 	    return 0;
 	}
     }
@@ -553,16 +551,16 @@ v850_use_struct_convention (struct gdbarch *gdbarch, struct type *type)
      register.  */
   if (type->code () == TYPE_CODE_STRUCT
       && v850_type_is_scalar (type->field (0).type ())
-      && TYPE_LENGTH (type->field (0).type ()) == 4)
+      && type->field (0).type ()->length () == 4)
     {
       for (i = 1; i < type->num_fields (); ++i)
 	{
 	  fld_type = type->field (0).type ();
 	  if (fld_type->code () == TYPE_CODE_ARRAY)
 	    {
-	      tgt_type = TYPE_TARGET_TYPE (fld_type);
-	      if (TYPE_LENGTH (tgt_type) > 0
-		  && TYPE_LENGTH (fld_type) / TYPE_LENGTH (tgt_type) > 2)
+	      tgt_type = fld_type->target_type ();
+	      if (tgt_type->length () > 0
+		  && fld_type->length () / tgt_type->length () > 2)
 		return 1;
 	    }
 	}
@@ -978,7 +976,7 @@ v850_eight_byte_align_p (struct type *type)
   type = check_typedef (type);
 
   if (v850_type_is_scalar (type))
-    return (TYPE_LENGTH (type) == 8);
+    return (type->length () == 8);
   else
     {
       int i;
@@ -1023,7 +1021,7 @@ v850_push_dummy_call (struct gdbarch *gdbarch,
   int argnum;
   int arg_space = 0;
   int stack_offset;
-  v850_gdbarch_tdep *tdep = (v850_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  v850_gdbarch_tdep *tdep = gdbarch_tdep<v850_gdbarch_tdep> (gdbarch);
 
   if (tdep->abi == V850_ABI_RH850)
     stack_offset = 0;
@@ -1039,7 +1037,7 @@ v850_push_dummy_call (struct gdbarch *gdbarch,
 
   /* Now make space on the stack for the args.  */
   for (argnum = 0; argnum < nargs; argnum++)
-    arg_space += ((TYPE_LENGTH (value_type (args[argnum])) + 3) & ~3);
+    arg_space += ((args[argnum]->type ()->length () + 3) & ~3);
   sp -= arg_space + stack_offset;
 
   argreg = E_ARG0_REGNUM;
@@ -1049,30 +1047,30 @@ v850_push_dummy_call (struct gdbarch *gdbarch,
 
   /* Now load as many as possible of the first arguments into
      registers, and push the rest onto the stack.  There are 16 bytes
-     in four registers available.  Loop thru args from first to last.  */
+     in four registers available.  Loop through args from first to last.  */
   for (argnum = 0; argnum < nargs; argnum++)
     {
       int len;
       gdb_byte *val;
       gdb_byte valbuf[v850_reg_size];
 
-      if (!v850_type_is_scalar (value_type (*args))
+      if (!v850_type_is_scalar ((*args)->type ())
 	  && tdep->abi == V850_ABI_GCC
-	  && TYPE_LENGTH (value_type (*args)) > E_MAX_RETTYPE_SIZE_IN_REGS)
+	  && (*args)->type ()->length () > E_MAX_RETTYPE_SIZE_IN_REGS)
 	{
 	  store_unsigned_integer (valbuf, 4, byte_order,
-				  value_address (*args));
+				  (*args)->address ());
 	  len = 4;
 	  val = valbuf;
 	}
       else
 	{
-	  len = TYPE_LENGTH (value_type (*args));
-	  val = (gdb_byte *) value_contents (*args).data ();
+	  len = (*args)->type ()->length ();
+	  val = (gdb_byte *) (*args)->contents ().data ();
 	}
 
       if (tdep->eight_byte_align
-	  && v850_eight_byte_align_p (value_type (*args)))
+	  && v850_eight_byte_align_p ((*args)->type ()))
 	{
 	  if (argreg <= E_ARGLAST_REGNUM && (argreg & 1))
 	    argreg++;
@@ -1118,7 +1116,7 @@ v850_extract_return_value (struct type *type, struct regcache *regcache,
 {
   struct gdbarch *gdbarch = regcache->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  int len = TYPE_LENGTH (type);
+  int len = type->length ();
 
   if (len <= v850_reg_size)
     {
@@ -1145,7 +1143,7 @@ v850_store_return_value (struct type *type, struct regcache *regcache,
 {
   struct gdbarch *gdbarch = regcache->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  int len = TYPE_LENGTH (type);
+  int len = type->length ();
 
   if (len <= v850_reg_size)
       regcache_cooked_write_unsigned
@@ -1214,7 +1212,7 @@ v850_sw_breakpoint_from_kind (struct gdbarch *gdbarch, int kind, int *size)
 }
 
 static struct v850_frame_cache *
-v850_alloc_frame_cache (struct frame_info *this_frame)
+v850_alloc_frame_cache (const frame_info_ptr &this_frame)
 {
   struct v850_frame_cache *cache;
 
@@ -1233,7 +1231,7 @@ v850_alloc_frame_cache (struct frame_info *this_frame)
 }
 
 static struct v850_frame_cache *
-v850_frame_cache (struct frame_info *this_frame, void **this_cache)
+v850_frame_cache (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   struct v850_frame_cache *cache;
@@ -1299,7 +1297,7 @@ v850_frame_cache (struct frame_info *this_frame, void **this_cache)
 
 
 static struct value *
-v850_frame_prev_register (struct frame_info *this_frame,
+v850_frame_prev_register (const frame_info_ptr &this_frame,
 			  void **this_cache, int regnum)
 {
   struct v850_frame_cache *cache = v850_frame_cache (this_frame, this_cache);
@@ -1310,7 +1308,7 @@ v850_frame_prev_register (struct frame_info *this_frame,
 }
 
 static void
-v850_frame_this_id (struct frame_info *this_frame, void **this_cache,
+v850_frame_this_id (const frame_info_ptr &this_frame, void **this_cache,
 		    struct frame_id *this_id)
 {
   struct v850_frame_cache *cache = v850_frame_cache (this_frame, this_cache);
@@ -1322,18 +1320,19 @@ v850_frame_this_id (struct frame_info *this_frame, void **this_cache,
   *this_id = frame_id_build (cache->saved_regs[E_SP_REGNUM].addr (), cache->pc);
 }
 
-static const struct frame_unwind v850_frame_unwind = {
+static const struct frame_unwind_legacy v850_frame_unwind (
   "v850 prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   v850_frame_this_id,
   v850_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
-v850_frame_base_address (struct frame_info *this_frame, void **this_cache)
+v850_frame_base_address (const frame_info_ptr &this_frame, void **this_cache)
 {
   struct v850_frame_cache *cache = v850_frame_cache (this_frame, this_cache);
 
@@ -1350,7 +1349,6 @@ static const struct frame_base v850_frame_base = {
 static struct gdbarch *
 v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
-  struct gdbarch *gdbarch;
   int e_flags, e_machine;
 
   /* Extract the elf_flags if available.  */
@@ -1374,7 +1372,7 @@ v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
        arches = gdbarch_list_lookup_by_info (arches->next, &info))
     {
       v850_gdbarch_tdep *tdep
-	= (v850_gdbarch_tdep *) gdbarch_tdep (arches->gdbarch);
+	= gdbarch_tdep<v850_gdbarch_tdep> (arches->gdbarch);
 
       if (tdep->e_flags != e_flags || tdep->e_machine != e_machine)
 	continue;
@@ -1382,7 +1380,10 @@ v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       return arches->gdbarch;
     }
 
-  v850_gdbarch_tdep *tdep = new v850_gdbarch_tdep;
+  gdbarch *gdbarch
+    = gdbarch_alloc (&info, gdbarch_tdep_up (new v850_gdbarch_tdep));
+  v850_gdbarch_tdep *tdep = gdbarch_tdep<v850_gdbarch_tdep> (gdbarch);
+
   tdep->e_flags = e_flags;
   tdep->e_machine = e_machine;
 
@@ -1397,7 +1398,6 @@ v850_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     }
 
   tdep->eight_byte_align = (tdep->e_flags & EF_RH850_DATA_ALIGN8) ? 1 : 0;
-  gdbarch = gdbarch_alloc (&info, tdep);
 
   switch (info.bfd_arch_info->mach)
     {
@@ -1465,6 +1465,6 @@ void _initialize_v850_tdep ();
 void
 _initialize_v850_tdep ()
 {
-  register_gdbarch_init (bfd_arch_v850, v850_gdbarch_init);
-  register_gdbarch_init (bfd_arch_v850_rh850, v850_gdbarch_init);
+  gdbarch_register (bfd_arch_v850, v850_gdbarch_init);
+  gdbarch_register (bfd_arch_v850_rh850, v850_gdbarch_init);
 }

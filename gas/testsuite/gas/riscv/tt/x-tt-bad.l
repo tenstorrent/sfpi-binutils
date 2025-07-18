@@ -1,2 +1,2 @@
 .*: Assembler messages:
-.*: Error: unrecognized opcode `th.dcache.call x1'
+.*: Error: unrecognized opcode `th.dcache.call x1'.*

@@ -1,6 +1,6 @@
 /* IBM RS/6000 native-dependent code for GDB, the GNU debugger.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "inferior.h"
 #include "target.h"
 #include "gdbcore.h"
@@ -43,6 +42,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include "gdbsupport/eintr.h"
 
 #include <a.out.h>
 #include <sys/file.h>
@@ -53,6 +53,13 @@
 #define __LDINFO_PTRACE64__	/* for __ld_info64 */
 #include <sys/ldr.h>
 #include <sys/systemcfg.h>
+
+/* Header files for getting ppid in AIX of a child process.  */
+#include <procinfo.h>
+#include <sys/types.h>
+
+/* Header files for alti-vec reg.  */
+#include <sys/context.h>
 
 /* On AIX4.3+, sys/ldr.h provides different versions of struct ld_info for
    debugging 32-bit and 64-bit processes.  Define a typedef and macros for
@@ -70,7 +77,7 @@
 #ifndef ARCH3264
 # define ARCH64() 0
 #else
-# define ARCH64() (register_size (target_gdbarch (), 0) == 8)
+# define ARCH64() (register_size (current_inferior ()->arch (), 0) == 8)
 #endif
 
 class rs6000_nat_target final : public inf_ptrace_target
@@ -91,10 +98,18 @@ public:
 
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
 
+  /* Fork detection related functions, For adding multi process debugging
+     support.  */
+  void follow_fork (inferior *, ptid_t, target_waitkind, bool, bool) override;
+
+  const struct target_desc *read_description ()  override;
+
+  int insert_fork_catchpoint (int) override;
+  int remove_fork_catchpoint (int) override;
+
 protected:
 
-  void post_startup_inferior (ptid_t ptid) override
-  { /* Nothing.  */ }
+  void post_startup_inferior (ptid_t ptid) override;
 
 private:
   enum target_xfer_status
@@ -107,6 +122,84 @@ private:
 
 static rs6000_nat_target the_rs6000_nat_target;
 
+/* The below declaration is to track number of times, parent has
+   reported fork event before its children.  */
+
+static std::list<pid_t> aix_pending_parent;
+
+/* The below declaration is for a child process event that
+   is reported before its corresponding parent process in
+   the event of a fork ().  */
+
+static std::list<pid_t> aix_pending_children;
+
+static void
+aix_remember_child (pid_t pid)
+{
+  aix_pending_children.push_front (pid);
+}
+
+static void
+aix_remember_parent (pid_t pid)
+{
+  aix_pending_parent.push_front (pid);
+}
+
+/* This function returns a parent of a child process.  */
+
+static pid_t
+find_my_aix_parent (pid_t child_pid)
+{
+  struct procsinfo ProcessBuffer1;
+
+  if (getprocs (&ProcessBuffer1, sizeof (ProcessBuffer1),
+		NULL, 0, &child_pid, 1) != 1)
+    return 0;
+  else
+    return ProcessBuffer1.pi_ppid;
+}
+
+/* In the below function we check if there was any child
+   process pending.  If it exists we return it from the
+   list, otherwise we return a null.  */
+
+static pid_t
+has_my_aix_child_reported (pid_t parent_pid)
+{
+  pid_t child = 0;
+  auto it = std::find_if (aix_pending_children.begin (),
+			  aix_pending_children.end (),
+			  [=] (pid_t child_pid)
+			  {
+			    return find_my_aix_parent (child_pid) == parent_pid;
+			  });
+  if (it != aix_pending_children.end ())
+    {
+      child = *it;
+      aix_pending_children.erase (it);
+    }
+  return child;
+}
+
+/* In the below function we check if there was any parent
+   process pending.  If it exists we return it from the
+   list, otherwise we return a null.  */
+
+static pid_t
+has_my_aix_parent_reported (pid_t child_pid)
+{
+  pid_t my_parent = find_my_aix_parent (child_pid);
+  auto it = std::find (aix_pending_parent.begin (),
+		       aix_pending_parent.end (),
+		       my_parent);
+  if (it != aix_pending_parent.end ())
+    {
+      aix_pending_parent.erase (it);
+      return my_parent;
+    }
+  return 0;
+}
+
 /* Given REGNO, a gdb register number, return the corresponding
    number suitable for use as a ptrace() parameter.  Return -1 if
    there's no suitable mapping.  Also, set the int pointed to by
@@ -115,7 +208,7 @@ static rs6000_nat_target the_rs6000_nat_target;
 static int
 regmap (struct gdbarch *gdbarch, int regno, int *isfloat)
 {
-  ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
   *isfloat = 0;
   if (tdep->ppc_gp0_regnum <= regno
@@ -187,6 +280,219 @@ rs6000_ptrace64 (int req, int id, long long addr, int data, void *buf)
   return ret;
 }
 
+/* Store the vsx registers.  */
+
+static void
+store_vsx_register_aix (struct regcache *regcache, int regno)
+{
+  int ret;
+  struct gdbarch *gdbarch = regcache->arch ();
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
+  struct thrdentry64 thrdentry;
+  __vsx_context_t vsx;
+  pid_t pid = inferior_ptid.pid ();
+  tid64_t thrd_i = 0;
+
+  if (getthrds64(pid, &thrdentry, sizeof(struct thrdentry64),
+		 &thrd_i, 1) == 1)
+    thrd_i = thrdentry.ti_tid;
+
+  memset(&vsx, 0, sizeof(__vsx_context_t));
+  if (__power_vsx() && thrd_i > 0)
+    {
+      if (ARCH64 ())
+	ret = rs6000_ptrace64 (PTT_READ_VSX, thrd_i, (long long) &vsx, 0, 0);
+      else
+	ret = rs6000_ptrace32 (PTT_READ_VSX, thrd_i, (int *)&vsx, 0, 0);
+      if (ret < 0)
+	return;
+
+      regcache->raw_collect (regno, &(vsx.__vsr_dw1[0])+
+			     regno - tdep->ppc_vsr0_upper_regnum);
+
+      if (ARCH64 ())
+	ret = rs6000_ptrace64 (PTT_WRITE_VSX, thrd_i, (long long) &vsx, 0, 0);
+      else
+	ret = rs6000_ptrace32 (PTT_WRITE_VSX, thrd_i, (int *) &vsx, 0, 0);
+
+      if (ret < 0)
+	perror_with_name (_("Unable to write VSX registers after reading it"));
+    }
+}
+
+/* Store Altivec registers.  */
+
+static void
+store_altivec_register_aix (struct regcache *regcache, int regno)
+{
+  int ret;
+  struct gdbarch *gdbarch = regcache->arch ();
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
+  struct thrdentry64 thrdentry;
+  __vmx_context_t vmx;
+  pid_t pid = inferior_ptid.pid ();
+  tid64_t  thrd_i = 0;
+
+  if (getthrds64(pid, &thrdentry, sizeof(struct thrdentry64),
+		 &thrd_i, 1) == 1)
+    thrd_i = thrdentry.ti_tid;
+
+  memset(&vmx, 0, sizeof(__vmx_context_t));
+  if (__power_vmx() && thrd_i > 0)
+    {
+      if (ARCH64 ())
+	ret = rs6000_ptrace64 (PTT_READ_VEC, thrd_i, (long long) &vmx, 0, 0);
+      else
+	ret = rs6000_ptrace32 (PTT_READ_VEC, thrd_i, (int *) &vmx, 0, 0);
+      if (ret < 0)
+	return;
+
+      regcache->raw_collect (regno, &(vmx.__vr[0]) + regno
+			     - tdep->ppc_vr0_regnum);
+
+      if (ARCH64 ())
+	ret = rs6000_ptrace64 (PTT_WRITE_VEC, thrd_i, (long long) &vmx, 0, 0);
+      else
+	ret = rs6000_ptrace32 (PTT_WRITE_VEC, thrd_i, (int *) &vmx, 0, 0);
+      if (ret < 0)
+	perror_with_name (_("Unable to store AltiVec register after reading it"));
+    }
+}
+
+/* Supply altivec registers.  */
+
+static void
+supply_vrregset_aix (struct regcache *regcache, __vmx_context_t *vmx)
+{
+  int i;
+  struct gdbarch *gdbarch = regcache->arch ();
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
+  int num_of_vrregs = tdep->ppc_vrsave_regnum - tdep->ppc_vr0_regnum + 1;
+
+  for (i = 0; i < num_of_vrregs; i++)
+    regcache->raw_supply (tdep->ppc_vr0_regnum + i,
+			  &(vmx->__vr[i]));
+  regcache->raw_supply (tdep->ppc_vrsave_regnum, &(vmx->__vrsave));
+  regcache->raw_supply (tdep->ppc_vrsave_regnum - 1, &(vmx->__vscr));
+}
+
+/* Fetch altivec register.  */
+
+static void
+fetch_altivec_registers_aix (struct regcache *regcache)
+{
+  struct thrdentry64 thrdentry;
+  __vmx_context_t vmx;
+  pid_t pid = current_inferior ()->pid;
+  tid64_t  thrd_i = 0;
+
+  if (getthrds64(pid, &thrdentry, sizeof(struct thrdentry64),
+		 &thrd_i, 1) == 1)
+    thrd_i = thrdentry.ti_tid;
+
+  memset(&vmx, 0, sizeof(__vmx_context_t));
+  if (__power_vmx() && thrd_i > 0)
+    {
+      if (ARCH64 ())
+	rs6000_ptrace64 (PTT_READ_VEC, thrd_i, (long long) &vmx, 0, 0);
+      else
+	rs6000_ptrace32 (PTT_READ_VEC, thrd_i, (int *) &vmx, 0, 0);
+      supply_vrregset_aix (regcache, &vmx);
+    }
+}
+
+/* supply vsx register.  */
+
+static void
+supply_vsxregset_aix (struct regcache *regcache, __vsx_context_t *vsx)
+{
+  int i;
+  struct gdbarch *gdbarch = regcache->arch ();
+  ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
+
+  for (i = 0; i < ppc_num_vshrs; i++)
+   regcache->raw_supply (tdep->ppc_vsr0_upper_regnum + i,
+			 &(vsx->__vsr_dw1[i]));
+}
+
+/* Fetch vsx registers.  */
+static void
+fetch_vsx_registers_aix (struct regcache *regcache)
+{
+  struct thrdentry64 thrdentry;
+  __vsx_context_t vsx;
+  pid_t pid = current_inferior ()->pid;
+  tid64_t  thrd_i = 0;
+
+  if (getthrds64(pid, &thrdentry, sizeof(struct thrdentry64),
+		 &thrd_i, 1) == 1)
+    thrd_i = thrdentry.ti_tid;
+
+  memset(&vsx, 0, sizeof(__vsx_context_t));
+  if (__power_vsx() && thrd_i > 0)
+    {
+      if (ARCH64 ())
+	rs6000_ptrace64 (PTT_READ_VSX, thrd_i, (long long) &vsx, 0, 0);
+      else
+	rs6000_ptrace32 (PTT_READ_VSX, thrd_i, (int *) &vsx, 0, 0);
+      supply_vsxregset_aix (regcache, &vsx);
+    }
+}
+
+void rs6000_nat_target::post_startup_inferior (ptid_t ptid)
+{
+
+  /* In AIX to turn on multi process debugging in ptrace
+     PT_MULTI is the option to be passed,
+     with the process ID which can fork () and
+     the data parameter [fourth parameter] must be 1.  */
+
+  if (!ARCH64 ())
+    rs6000_ptrace32 (PT_MULTI, ptid.pid(), 0, 1, 0);
+  else
+    rs6000_ptrace64 (PT_MULTI, ptid.pid(), 0, 1, 0);
+}
+
+void
+rs6000_nat_target::follow_fork (inferior *child_inf, ptid_t child_ptid,
+				target_waitkind fork_kind, bool follow_child,
+				bool detach_fork)
+{
+
+  /* Once the fork event is detected the infrun.c code
+     calls the target_follow_fork to take care of
+     follow child and detach the child activity which is
+     done using the function below.  */
+
+  inf_ptrace_target::follow_fork (child_inf, child_ptid, fork_kind,
+				  follow_child, detach_fork);
+
+  /* If we detach fork and follow child we do not want the child
+     process to generate events that ptrace can trace.  Hence we
+     detach it.  */
+
+  if (detach_fork && !follow_child)
+  {
+    if (ARCH64 ())
+      rs6000_ptrace64 (PT_DETACH, child_ptid.pid (), 0, 0, 0);
+    else
+      rs6000_ptrace32 (PT_DETACH, child_ptid.pid (), 0, 0, 0);
+  }
+}
+
+/* Functions for catchpoint in AIX.  */
+int
+rs6000_nat_target::insert_fork_catchpoint (int pid)
+{
+  return 0;
+}
+
+int
+rs6000_nat_target::remove_fork_catchpoint (int pid)
+{
+  return 0;
+}
+
 /* Fetch register REGNO from the inferior.  */
 
 static void
@@ -199,6 +505,20 @@ fetch_register (struct regcache *regcache, int regno)
 
   /* Retrieved values may be -1, so infer errors from errno.  */
   errno = 0;
+
+  /* Alti-vec register.  */
+  if (altivec_register_p (gdbarch, regno))
+    {
+      fetch_altivec_registers_aix (regcache);
+      return;
+    }
+
+  /* VSX register.  */
+  if (vsx_register_p (gdbarch, regno))
+    {
+      fetch_vsx_registers_aix (regcache);
+      return;
+    }
 
   nr = regmap (gdbarch, regno, &isfloat);
 
@@ -262,6 +582,18 @@ store_register (struct regcache *regcache, int regno)
   /* -1 can be a successful return value, so infer errors from errno.  */
   errno = 0;
 
+  if (altivec_register_p (gdbarch, regno))
+    {
+      store_altivec_register_aix (regcache, regno);
+      return;
+    }
+
+  if (vsx_register_p (gdbarch, regno))
+    {
+      store_vsx_register_aix (regcache, regno);
+      return;
+    }
+
   nr = regmap (gdbarch, regno, &isfloat);
 
   /* Floating-point registers.  */
@@ -317,7 +649,7 @@ rs6000_nat_target::fetch_registers (struct regcache *regcache, int regno)
 
   else
     {
-      ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+      ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
       /* Read 32 general purpose registers.  */
       for (regno = tdep->ppc_gp0_regnum;
@@ -331,6 +663,12 @@ rs6000_nat_target::fetch_registers (struct regcache *regcache, int regno)
       if (tdep->ppc_fp0_regnum >= 0)
 	for (regno = 0; regno < ppc_num_fprs; regno++)
 	  fetch_register (regcache, tdep->ppc_fp0_regnum + regno);
+
+      if (tdep->ppc_vr0_regnum != -1 && tdep->ppc_vrsave_regnum != -1)
+	fetch_altivec_registers_aix (regcache);
+
+      if (tdep->ppc_vsr0_upper_regnum != -1)
+	fetch_vsx_registers_aix (regcache);
 
       /* Read special registers.  */
       fetch_register (regcache, gdbarch_pc_regnum (gdbarch));
@@ -346,6 +684,26 @@ rs6000_nat_target::fetch_registers (struct regcache *regcache, int regno)
     }
 }
 
+const struct target_desc *
+rs6000_nat_target::read_description ()
+{
+   if (ARCH64())
+     {
+       if (__power_vsx ())
+	 return tdesc_powerpc_vsx64;
+       else if (__power_vmx ())
+	 return tdesc_powerpc_altivec64;
+     }
+   else
+     {
+       if (__power_vsx ())
+	 return tdesc_powerpc_vsx32;
+       else if (__power_vmx ())
+	 return tdesc_powerpc_altivec32;
+     }
+   return NULL;
+}
+
 /* Store our register values back into the inferior.
    If REGNO is -1, do this for all registers.
    Otherwise, REGNO specifies which register (so we can save time).  */
@@ -359,7 +717,7 @@ rs6000_nat_target::store_registers (struct regcache *regcache, int regno)
 
   else
     {
-      ppc_gdbarch_tdep *tdep = (ppc_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+      ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
 
       /* Write general purpose registers first.  */
       for (regno = tdep->ppc_gp0_regnum;
@@ -504,16 +862,12 @@ rs6000_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
   pid_t pid;
   int status, save_errno;
 
-  do
+  while (1)
     {
       set_sigint_trap ();
 
-      do
-	{
-	  pid = waitpid (ptid.pid (), &status, 0);
-	  save_errno = errno;
-	}
-      while (pid == -1 && errno == EINTR);
+      pid = gdb::waitpid (ptid.pid (), &status, 0);
+      save_errno = errno;
 
       clear_sigint_trap ();
 
@@ -529,16 +883,54 @@ rs6000_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 
       /* Ignore terminated detached child processes.  */
       if (!WIFSTOPPED (status) && find_inferior_pid (this, pid) == nullptr)
-	pid = -1;
+	continue;
+
+      /* Check for a fork () event.  */
+      if ((status & 0xff) == W_SFWTED)
+	{
+	  /* Checking whether it is a parent or a child event.  */
+
+	  /* If the event is a child we check if there was a parent
+	     event recorded before.  If yes we got the parent child
+	     relationship.  If not we push this child and wait for
+	     the next fork () event.  */
+	  if (find_inferior_pid (this, pid) == nullptr)
+	    {
+	      pid_t parent_pid = has_my_aix_parent_reported (pid);
+	      if (parent_pid > 0)
+		{
+		  ourstatus->set_forked (ptid_t (pid));
+		  return ptid_t (parent_pid);
+		}
+	      aix_remember_child (pid);
+	    }
+
+	  /* If the event is a parent we check if there was a child
+	     event recorded before.  If yes we got the parent child
+	     relationship.  If not we push this parent and wait for
+	     the next fork () event.  */
+	  else
+	    {
+	      pid_t child_pid = has_my_aix_child_reported (pid);
+	      if (child_pid > 0)
+		{
+		  ourstatus->set_forked (ptid_t (child_pid));
+		  return ptid_t (pid);
+		}
+	      aix_remember_parent (pid);
+	    }
+	  continue;
+	}
+
+      break;
     }
-  while (pid == -1);
 
   /* AIX has a couple of strange returns from wait().  */
 
   /* stop after load" status.  */
   if (status == 0x57c)
     ourstatus->set_loaded ();
-  /* signal 0.  I have no idea why wait(2) returns with this status word.  */
+  /* 0x7f is signal 0.  */
   else if (status == 0x7f)
     ourstatus->set_spurious ();
   /* A normal waitstatus.  Let the usual macros deal with it.  */
@@ -598,9 +990,8 @@ rs6000_nat_target::create_inferior (const char *exec_file,
   info.bfd_arch_info = bfd_get_arch_info (&abfd);
   info.abfd = current_program_space->exec_bfd ();
 
-  if (!gdbarch_update_p (info))
-    internal_error (__FILE__, __LINE__,
-		    _("rs6000_create_inferior: failed "
+  if (!gdbarch_update_p (current_inferior (), info))
+    internal_error (_("rs6000_create_inferior: failed "
 		      "to select architecture"));
 }
 
@@ -658,7 +1049,8 @@ rs6000_nat_target::xfer_shared_libraries
     return TARGET_XFER_E_IO;
 
   gdb::byte_vector ldi_buf = rs6000_ptrace_ldinfo (inferior_ptid);
-  result = rs6000_aix_ld_info_to_xml (target_gdbarch (), ldi_buf.data (),
+  result = rs6000_aix_ld_info_to_xml (current_inferior ()->arch (),
+				      ldi_buf.data (),
 				      readbuf, offset, len, 1);
 
   if (result == 0)

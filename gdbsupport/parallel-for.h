@@ -1,6 +1,6 @@
 /* Parallel for loops
 
-   Copyright (C) 2019-2022 Free Software Foundation, Inc.
+   Copyright (C) 2019-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -23,95 +23,10 @@
 #include <algorithm>
 #include <type_traits>
 #include "gdbsupport/thread-pool.h"
+#include "gdbsupport/function-view.h"
 
 namespace gdb
 {
-
-namespace detail
-{
-
-/* This is a helper class that is used to accumulate results for
-   parallel_for.  There is a specialization for 'void', below.  */
-template<typename T>
-struct par_for_accumulator
-{
-public:
-
-  explicit par_for_accumulator (size_t n_threads)
-    : m_futures (n_threads)
-  {
-  }
-
-  /* The result type that is accumulated.  */
-  typedef std::vector<T> result_type;
-
-  /* Post the Ith task to a background thread, and store a future for
-     later.  */
-  void post (size_t i, std::function<T ()> task)
-  {
-    m_futures[i]
-      = gdb::thread_pool::g_thread_pool->post_task (std::move (task));
-  }
-
-  /* Invoke TASK in the current thread, then compute all the results
-     from all background tasks and put them into a result vector,
-     which is returned.  */
-  result_type finish (gdb::function_view<T ()> task)
-  {
-    result_type result (m_futures.size () + 1);
-
-    result.back () = task ();
-
-    for (size_t i = 0; i < m_futures.size (); ++i)
-      result[i] = m_futures[i].get ();
-
-    return result;
-  }
-
-private:
-  
-  /* A vector of futures coming from the tasks run in the
-     background.  */
-  std::vector<gdb::future<T>> m_futures;
-};
-
-/* See the generic template.  */
-template<>
-struct par_for_accumulator<void>
-{
-public:
-
-  explicit par_for_accumulator (size_t n_threads)
-    : m_futures (n_threads)
-  {
-  }
-
-  /* This specialization does not compute results.  */
-  typedef void result_type;
-
-  void post (size_t i, std::function<void ()> task)
-  {
-    m_futures[i]
-      = gdb::thread_pool::g_thread_pool->post_task (std::move (task));
-  }
-
-  result_type finish (gdb::function_view<void ()> task)
-  {
-    task ();
-
-    for (auto &future : m_futures)
-      {
-	/* Use 'get' and not 'wait', to propagate any exception.  */
-	future.get ();
-      }
-  }
-
-private:
-
-  std::vector<gdb::future<void>> m_futures;
-};
-
-}
 
 /* A very simple "parallel for".  This splits the range of iterators
    into subranges, and then passes each subrange to the callback.  The
@@ -123,25 +38,23 @@ private:
 
    The parameter N says how batching ought to be done -- there will be
    at least N elements processed per thread.  Setting N to 0 is not
-   allowed.
-
-   If the function returns a non-void type, then a vector of the
-   results is returned.  The size of the resulting vector depends on
-   the number of threads that were used.  */
+   allowed.  */
 
 template<class RandomIt, class RangeFunction>
-typename gdb::detail::par_for_accumulator<
-    typename std::result_of<RangeFunction (RandomIt, RandomIt)>::type
-  >::result_type
+void
 parallel_for_each (unsigned n, RandomIt first, RandomIt last,
 		   RangeFunction callback)
 {
-  using result_type
-    = typename std::result_of<RangeFunction (RandomIt, RandomIt)>::type;
+  /* If enabled, print debug info about how the work is distributed across
+     the threads.  */
+  const bool parallel_for_each_debug = false;
 
-  size_t n_threads = thread_pool::g_thread_pool->thread_count ();
+  size_t n_worker_threads = thread_pool::g_thread_pool->thread_count ();
+  size_t n_threads = n_worker_threads;
   size_t n_elements = last - first;
   size_t elts_per_thread = 0;
+  size_t elts_left_over = 0;
+
   if (n_threads > 1)
     {
       /* Require that there should be at least N elements in a
@@ -150,26 +63,88 @@ parallel_for_each (unsigned n, RandomIt first, RandomIt last,
       if (n_elements / n_threads < n)
 	n_threads = std::max (n_elements / n, (size_t) 1);
       elts_per_thread = n_elements / n_threads;
+      elts_left_over = n_elements % n_threads;
+      /* n_elements == n_threads * elts_per_thread + elts_left_over. */
     }
 
   size_t count = n_threads == 0 ? 0 : n_threads - 1;
-  gdb::detail::par_for_accumulator<result_type> results (count);
+  std::vector<gdb::future<void>> results;
+
+  if (parallel_for_each_debug)
+    {
+      debug_printf (_("Parallel for: n_elements: %zu\n"), n_elements);
+      debug_printf (_("Parallel for: minimum elements per thread: %u\n"), n);
+      debug_printf (_("Parallel for: elts_per_thread: %zu\n"), elts_per_thread);
+    }
 
   for (int i = 0; i < count; ++i)
     {
-      RandomIt end = first + elts_per_thread;
-      results.post (i, [=] ()
+      RandomIt end;
+      end = first + elts_per_thread;
+      if (i < elts_left_over)
+	/* Distribute the leftovers over the worker threads, to avoid having
+	   to handle all of them in a single thread.  */
+	end++;
+
+      /* This case means we don't have enough elements to really
+	 distribute them.  Rather than ever submit a task that does
+	 nothing, we short-circuit here.  */
+      if (first == end)
+	end = last;
+
+      if (end == last)
+	{
+	  /* We're about to dispatch the last batch of elements, which
+	     we normally process in the main thread.  So just truncate
+	     the result list here.  This avoids submitting empty tasks
+	     to the thread pool.  */
+	  count = i;
+	  break;
+	}
+
+      if (parallel_for_each_debug)
+	{
+	  debug_printf (_("Parallel for: elements on worker thread %i\t: %zu"),
+			i, (size_t)(end - first));
+	  debug_printf (_("\n"));
+	}
+      results.push_back (gdb::thread_pool::g_thread_pool->post_task ([=] ()
         {
 	  return callback (first, end);
-	});
+	}));
       first = end;
     }
 
+  for (int i = count; i < n_worker_threads; ++i)
+    if (parallel_for_each_debug)
+      {
+	debug_printf (_("Parallel for: elements on worker thread %i\t: 0"), i);
+	debug_printf (_("\n"));
+      }
+
   /* Process all the remaining elements in the main thread.  */
-  return results.finish ([=] ()
+  if (parallel_for_each_debug)
     {
-      return callback (first, last);
-    });
+      debug_printf (_("Parallel for: elements on main thread\t\t: %zu"),
+		    (size_t)(last - first));
+      debug_printf (_("\n"));
+    }
+  callback (first, last);
+
+  for (auto &fut : results)
+    fut.get ();
+}
+
+/* A sequential drop-in replacement of parallel_for_each.  This can be useful
+   when debugging multi-threading behavior, and you want to limit
+   multi-threading in a fine-grained way.  */
+
+template<class RandomIt, class RangeFunction>
+void
+sequential_for_each (unsigned n, RandomIt first, RandomIt last,
+		     RangeFunction callback)
+{
+  callback (first, last);
 }
 
 }

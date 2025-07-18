@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2022 Free Software Foundation, Inc.
+# Copyright (C) 2007-2024 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -46,7 +46,6 @@
 # List of .dat files to create in ../regformats/
 WHICH = mips-linux mips-dsp-linux \
 	mips64-linux mips64-dsp-linux \
-	nios2-linux \
 	or1k-linux \
 	rs6000/powerpc-32 \
 	rs6000/powerpc-32l rs6000/powerpc-altivec32l rs6000/powerpc-e500l \
@@ -73,7 +72,7 @@ mips-expedite = r29,pc
 mips-dsp-expedite = r29,pc
 mips64-expedite = r29,pc
 mips64-dsp-expedite = r29,pc
-nios2-linux-expedite = sp,pc
+or1k-expedite = r1,npc
 powerpc-expedite = r1,pc
 s390-linux32-expedite = r14,r15,pswa
 s390-linux32v1-expedite = r14,r15,pswa
@@ -106,8 +105,8 @@ XMLTOC = \
 	mips64-dsp-linux.xml \
 	mips64-linux.xml \
 	nds32.xml \
-	nios2.xml \
 	or1k.xml \
+	or1k-linux.xml \
 	rs6000/powerpc-32.xml \
 	rs6000/powerpc-32l.xml \
 	rs6000/powerpc-403.xml \
@@ -164,6 +163,8 @@ XMLTOC = \
 	s390x-vx-linux64.xml \
 	s390-gs-linux64.xml \
 	s390x-gs-linux64.xml \
+	sparc/sparc32-solaris.xml \
+	sparc/sparc64-solaris.xml \
 	z80.xml
 
 TDESC_CFILES = $(patsubst %.xml,%.c,$(XMLTOC))
@@ -187,6 +188,8 @@ $(outdir)/%.dat: %.xml number-regs.xsl sort-regs.xsl gdbserver-regs.xsl
 	echo "xmltarget:$(<F)" >> $(outdir)/$*.tmp
 	echo "expedite:$(if $($*-expedite),$($*-expedite),$($(firstword $(subst -, ,$(notdir $*)))-expedite))" \
 	  >> $(outdir)/$*.tmp
+	$(XSLTPROC) --path "$(PWD)" --xinclude print-osabi.xsl $< \
+	  >> $(outdir)/$*.tmp
 	$(XSLTPROC) --path "$(PWD)" --xinclude number-regs.xsl $< | \
 	  $(XSLTPROC) sort-regs.xsl - | \
 	  $(XSLTPROC) gdbserver-regs.xsl - >> $(outdir)/$*.tmp
@@ -198,7 +201,6 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	aarch64-fpu.xml \
 	aarch64-pauth.xml \
 	aarch64-mte.xml \
-	aarch64-tls.xml \
 	arc/v1-core.xml \
 	arc/v1-aux.xml \
 	arc/v2-core.xml \
@@ -209,20 +211,20 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	arm/arm-m-profile-mve.xml \
 	arm/arm-m-system.xml \
 	arm/arm-m-profile-with-fpa.xml \
+	arm/arm-secext.xml \
 	arm/arm-tls.xml \
 	arm/arm-vfpv2.xml \
 	arm/arm-vfpv3.xml \
 	arm/xscale-iwmmxt.xml \
+	cskyv2-linux.xml \
 	i386/32bit-core.xml \
 	i386/32bit-sse.xml \
 	i386/32bit-linux.xml \
 	i386/32bit-avx.xml \
-	i386/32bit-mpx.xml \
 	i386/32bit-avx512.xml \
 	i386/32bit-segments.xml \
 	i386/64bit-avx512.xml \
 	i386/64bit-core.xml \
-	i386/64bit-mpx.xml \
 	i386/64bit-segments.xml \
 	i386/64bit-avx.xml \
 	i386/64bit-linux.xml \
@@ -231,6 +233,10 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	i386/x32-core.xml \
 	loongarch/base32.xml \
 	loongarch/base64.xml \
+	loongarch/fpu.xml \
+	loongarch/lsx.xml \
+	loongarch/lasx.xml \
+	loongarch/lbt.xml \
 	riscv/rv32e-xregs.xml \
 	riscv/32bit-cpu.xml \
 	riscv/32bit-fpu.xml \

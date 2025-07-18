@@ -1,6 +1,6 @@
 /* FreeBSD/arm target support, prototypes.
 
-   Copyright (C) 2017-2022 Free Software Foundation, Inc.
+   Copyright (C) 2017-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef ARM_FBSD_TDEP_H
-#define ARM_FBSD_TDEP_H
+#ifndef GDB_ARM_FBSD_TDEP_H
+#define GDB_ARM_FBSD_TDEP_H
 
 #include "regset.h"
 
@@ -35,6 +35,7 @@
 
 extern const struct regset arm_fbsd_gregset;
 extern const struct regset arm_fbsd_vfpregset;
+extern const struct regset arm_fbsd_tls_regset;
 
 /* Flags passed in AT_HWCAP. */
 #define	HWCAP_VFP		0x00000040
@@ -42,7 +43,17 @@ extern const struct regset arm_fbsd_vfpregset;
 #define	HWCAP_VFPv3		0x00002000
 #define	HWCAP_VFPD32		0x00080000
 
-extern const struct target_desc *
-arm_fbsd_read_description_auxv (struct target_ops *target, bool tls);
+/* Lookup a target description based on the AT_HWCAP value in the auxv data
+   AUXV.  */
 
-#endif /* ARM_FBSD_TDEP_H */
+extern const struct target_desc *
+  arm_fbsd_read_description_auxv (const std::optional<gdb::byte_vector> &auxv,
+				  target_ops *target, gdbarch *gdbarch,
+				  bool tls);
+
+/* Same as the above, but read the auxv data from the current inferior.  */
+
+extern const struct target_desc *
+  arm_fbsd_read_description_auxv (bool tls);
+
+#endif /* GDB_ARM_FBSD_TDEP_H */

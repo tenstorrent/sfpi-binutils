@@ -1,6 +1,6 @@
 /* Target-dependent code for Xilinx MicroBlaze.
 
-   Copyright (C) 2009-2022 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,14 +17,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "arch-utils.h"
 #include "dis-asm.h"
+#include "extract-store-integer.h"
 #include "frame.h"
 #include "trad-frame.h"
 #include "symtab.h"
 #include "value.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "breakpoint.h"
 #include "inferior.h"
 #include "regcache.h"
@@ -92,9 +92,9 @@ static unsigned int microblaze_debug_flag = 0;
 static const char *
 microblaze_register_name (struct gdbarch *gdbarch, int regnum)
 {
-  if (regnum >= 0 && regnum < MICROBLAZE_NUM_REGS)
-    return microblaze_register_names[regnum];
-  return NULL;
+  static_assert (ARRAY_SIZE (microblaze_register_names)
+		     == MICROBLAZE_NUM_REGS);
+  return microblaze_register_names[regnum];
 }
 
 static struct type *
@@ -115,7 +115,7 @@ microblaze_register_type (struct gdbarch *gdbarch, int regnum)
 static unsigned long
 microblaze_fetch_instruction (CORE_ADDR pc)
 {
-  enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
+  bfd_endian byte_order = gdbarch_byte_order (current_inferior ()->arch ());
   gdb_byte buf[4];
 
   /* If we can't read the instruction at PC, return zero.  */
@@ -160,7 +160,7 @@ microblaze_alloc_frame_cache (void)
 /* The base of the current frame is in a frame pointer register.
    This register is noted in frame_extra_info->fp_regnum.
 
-   Note that the existance of an FP might also indicate that the
+   Note that the existence of an FP might also indicate that the
    function has called alloca.  */
 #define MICROBLAZE_MY_FRAME_IN_FP 0x2
 
@@ -247,7 +247,7 @@ microblaze_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 	 only instructions in the prologue.  */
       if (IS_UPDATE_SP(op, rd, ra))
 	{
-	  microblaze_debug ("got addi r1,r1,%d; contnuing\n", imm);
+	  microblaze_debug ("got addi r1,r1,%d; continuing\n", imm);
 	  if (cache->framesize)
 	    break;	/* break if framesize already computed.  */
 	  cache->framesize = -imm; /* stack grows towards low memory.  */
@@ -368,7 +368,7 @@ microblaze_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 }
 
 static CORE_ADDR
-microblaze_unwind_pc (struct gdbarch *gdbarch, struct frame_info *next_frame)
+microblaze_unwind_pc (struct gdbarch *gdbarch, const frame_info_ptr &next_frame)
 {
   gdb_byte buf[4];
   CORE_ADDR pc;
@@ -417,7 +417,7 @@ microblaze_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 /* Normal frames.  */
 
 static struct microblaze_frame_cache *
-microblaze_frame_cache (struct frame_info *next_frame, void **this_cache)
+microblaze_frame_cache (const frame_info_ptr &next_frame, void **this_cache)
 {
   struct microblaze_frame_cache *cache;
   struct gdbarch *gdbarch = get_frame_arch (next_frame);
@@ -443,7 +443,7 @@ microblaze_frame_cache (struct frame_info *next_frame, void **this_cache)
 }
 
 static void
-microblaze_frame_this_id (struct frame_info *next_frame, void **this_cache,
+microblaze_frame_this_id (const frame_info_ptr &next_frame, void **this_cache,
 		       struct frame_id *this_id)
 {
   struct microblaze_frame_cache *cache =
@@ -457,7 +457,7 @@ microblaze_frame_this_id (struct frame_info *next_frame, void **this_cache,
 }
 
 static struct value *
-microblaze_frame_prev_register (struct frame_info *this_frame,
+microblaze_frame_prev_register (const frame_info_ptr &this_frame,
 				 void **this_cache, int regnum)
 {
   struct microblaze_frame_cache *cache =
@@ -478,19 +478,19 @@ microblaze_frame_prev_register (struct frame_info *this_frame,
 
 }
 
-static const struct frame_unwind microblaze_frame_unwind =
-{
+static const struct frame_unwind_legacy microblaze_frame_unwind (
   "microblaze prologue",
   NORMAL_FRAME,
+  FRAME_UNWIND_ARCH,
   default_frame_unwind_stop_reason,
   microblaze_frame_this_id,
   microblaze_frame_prev_register,
   NULL,
   default_frame_sniffer
-};
+);
 
 static CORE_ADDR
-microblaze_frame_base_address (struct frame_info *next_frame,
+microblaze_frame_base_address (const frame_info_ptr &next_frame,
 			       void **this_cache)
 {
   struct microblaze_frame_cache *cache =
@@ -516,7 +516,7 @@ microblaze_extract_return_value (struct type *type, struct regcache *regcache,
   gdb_byte buf[8];
 
   /* Copy the return value (starting) in RETVAL_REGNUM to VALBUF.  */
-  switch (TYPE_LENGTH (type))
+  switch (type->length ())
     {
       case 1:	/* return last byte in the register.  */
 	regcache->cooked_read (MICROBLAZE_RETVAL_REGNUM, buf);
@@ -530,11 +530,10 @@ microblaze_extract_return_value (struct type *type, struct regcache *regcache,
       case 8:
 	regcache->cooked_read (MICROBLAZE_RETVAL_REGNUM, buf);
 	regcache->cooked_read (MICROBLAZE_RETVAL_REGNUM + 1, buf+4);
-	memcpy (valbuf, buf, TYPE_LENGTH (type));
+	memcpy (valbuf, buf, type->length ());
 	return;
       default:
-	internal_error (__FILE__, __LINE__, 
-			_("Unsupported return value size requested"));
+	internal_error (_("Unsupported return value size requested"));
     }
 }
 
@@ -552,7 +551,7 @@ static void
 microblaze_store_return_value (struct type *type, struct regcache *regcache,
 			       const gdb_byte *valbuf)
 {
-  int len = TYPE_LENGTH (type);
+  int len = type->length ();
   gdb_byte buf[8];
 
   memset (buf, 0, sizeof(buf));
@@ -588,7 +587,7 @@ microblaze_return_value (struct gdbarch *gdbarch, struct value *function,
 static int
 microblaze_stabs_argument_has_addr (struct gdbarch *gdbarch, struct type *type)
 {
-  return (TYPE_LENGTH (type) == 16);
+  return (type->length () == 16);
 }
 
 
@@ -638,7 +637,6 @@ microblaze_register_g_packet_guesses (struct gdbarch *gdbarch)
 static struct gdbarch *
 microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
-  struct gdbarch *gdbarch;
   tdesc_arch_data_up tdesc_data;
   const struct target_desc *tdesc = info.target_desc;
 
@@ -684,8 +682,8 @@ microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     }
 
   /* Allocate space for the new architecture.  */
-  microblaze_gdbarch_tdep *tdep = new microblaze_gdbarch_tdep;
-  gdbarch = gdbarch_alloc (&info, tdep);
+  gdbarch *gdbarch
+    = gdbarch_alloc (&info, gdbarch_tdep_up (new microblaze_gdbarch_tdep));
 
   set_gdbarch_long_double_bit (gdbarch, 128);
 
@@ -742,7 +740,7 @@ void _initialize_microblaze_tdep ();
 void
 _initialize_microblaze_tdep ()
 {
-  register_gdbarch_init (bfd_arch_microblaze, microblaze_gdbarch_init);
+  gdbarch_register (bfd_arch_microblaze, microblaze_gdbarch_init);
 
   initialize_tdesc_microblaze_with_stack_protect ();
   initialize_tdesc_microblaze ();

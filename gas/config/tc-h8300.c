@@ -1,5 +1,5 @@
 /* tc-h8300.c -- Assemble code for the Renesas H8/300
-   Copyright (C) 1991-2022 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -146,8 +146,10 @@ pint (int arg ATTRIBUTE_UNUSED)
 static void
 h8300_elf_section (int push)
 {
-  static const char * known_data_sections [] = { ".rodata", ".tdata", ".tbss" };
-  static const char * known_data_prefixes [] = { ".debug", ".zdebug", ".gnu.warning" };
+  static const char * known_data_sections []
+    = { ".rodata", ".tdata", ".tbss", ".gnu_object_only" };
+  static const char * known_data_prefixes []
+    = { ".debug", ".zdebug", ".gnu.warning" };
   char * saved_ilp = input_line_pointer;
   const char * name;
 
@@ -235,14 +237,12 @@ md_begin (void)
   unsigned int nopcodes;
   struct h8_opcode *p, *p1;
   struct h8_instruction *pi;
-  char prev_buffer[100];
   int idx = 0;
 
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, default_mach))
     as_warn (_("could not set architecture and machine"));
 
   opcode_hash_control = str_htab_create ();
-  prev_buffer[0] = 0;
 
   nopcodes = sizeof (h8_opcodes) / sizeof (struct h8_opcode);
 
@@ -266,7 +266,7 @@ md_begin (void)
 	break;
       /* Strip off any . part when inserting the opcode and only enter
 	 unique codes into the hash table.  */
-      dst = buffer = XNEWVEC (char, strlen (src) + 1);
+      dst = buffer = notes_alloc (strlen (src) + 1);
       while (*src)
 	{
 	  if (*src == '.')
@@ -283,7 +283,6 @@ md_begin (void)
       if (cmplen == 0)
 	cmplen = len;
       str_hash_insert (opcode_hash_control, buffer, pi, 0);
-      strcpy (prev_buffer, buffer);
       idx++;
 
       for (p = p1; p->name; p++)
@@ -2079,15 +2078,15 @@ md_atof (int type, char *litP, int *sizeP)
 #define OPTION_H_TICK_HEX      (OPTION_MD_BASE)
 #define OPTION_MACH            (OPTION_MD_BASE+1)
 
-const char *md_shortopts = "";
-struct option md_longopts[] =
+const char md_shortopts[] = "";
+const struct option md_longopts[] =
 {
   { "h-tick-hex", no_argument,	      NULL, OPTION_H_TICK_HEX  },
   { "mach", required_argument, NULL, OPTION_MACH },
   {NULL, no_argument, NULL, 0}
 };
 
-size_t md_longopts_size = sizeof (md_longopts);
+const size_t md_longopts_size = sizeof (md_longopts);
 
 struct mach_func
 {
@@ -2303,8 +2302,8 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	}
     }
 
-  rel = XNEW (arelent);
-  rel->sym_ptr_ptr = XNEW (asymbol *);
+  rel = notes_alloc (sizeof (arelent));
+  rel->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *rel->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   rel->address = fixp->fx_frag->fr_address + fixp->fx_where;
   rel->addend = fixp->fx_offset;

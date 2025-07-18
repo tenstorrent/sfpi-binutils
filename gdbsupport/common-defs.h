@@ -1,6 +1,6 @@
 /* Common definitions.
 
-   Copyright (C) 1986-2022 Free Software Foundation, Inc.
+   Copyright (C) 1986-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,8 +17,15 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef COMMON_COMMON_DEFS_H
-#define COMMON_COMMON_DEFS_H
+#ifndef GDBSUPPORT_COMMON_DEFS_H
+#define GDBSUPPORT_COMMON_DEFS_H
+
+#if defined (__SANITIZE_THREAD__) && defined (__GNUC__) \
+  && !defined (__clang__) && __GNUC__ <= 13
+
+/* Work around PR gcc/110799.  */
+#pragma GCC optimize("-fno-hoist-adjacent-loads")
+#endif
 
 #include <gdbsupport/config.h>
 
@@ -70,7 +77,9 @@
 
 /* We don't support Windows versions before XP, so we define
    _WIN32_WINNT correspondingly to ensure the Windows API headers
-   expose the required symbols.  */
+   expose the required symbols.
+
+   NOTE: this must be kept in sync with common.m4.  */
 #if defined (__MINGW32__) || defined (__CYGWIN__)
 # ifdef _WIN32_WINNT
 #  if _WIN32_WINNT < 0x0501
@@ -94,7 +103,7 @@
 #include <stdint.h>
 #include <string.h>
 #ifdef HAVE_STRINGS_H
-#include <strings.h>	/* for strcasecmp and strncasecmp */
+#include <strings.h>
 #endif
 #include <errno.h>
 #if HAVE_ALLOCA_H
@@ -114,7 +123,7 @@
 
    Say a developer starts out with:
    ...
-   extern void foo (void *ptr) __atttribute__((nonnull (1)));
+   extern void foo (void *ptr) __attribute__((nonnull (1)));
    void foo (void *ptr) {}
    ...
    with the idea in mind to catch:
@@ -185,11 +194,8 @@
 #undef ATTRIBUTE_NONNULL
 #define ATTRIBUTE_NONNULL(m)
 
-#if GCC_VERSION >= 3004
 #define ATTRIBUTE_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
-#else
-#define ATTRIBUTE_UNUSED_RESULT
-#endif
+#define ATTRIBUTE_USED __attribute__ ((__used__))
 
 #include "libiberty.h"
 #include "pathmax.h"
@@ -206,10 +212,6 @@
 #include "common-exceptions.h"
 #include "gdbsupport/poison.h"
 
-#define EXTERN_C extern "C"
-#define EXTERN_C_PUSH extern "C" {
-#define EXTERN_C_POP }
-
 /* Pull in gdb::unique_xmalloc_ptr.  */
 #include "gdbsupport/gdb_unique_ptr.h"
 
@@ -222,4 +224,4 @@
 #define HAVE_USEFUL_SBRK 1
 #endif
 
-#endif /* COMMON_COMMON_DEFS_H */
+#endif /* GDBSUPPORT_COMMON_DEFS_H */

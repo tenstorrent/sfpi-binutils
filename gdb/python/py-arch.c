@@ -1,6 +1,6 @@
 /* Python interface to architecture
 
-   Copyright (C) 2013-2022 Free Software Foundation, Inc.
+   Copyright (C) 2013-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "gdbarch.h"
 #include "arch-utils.h"
 #include "disasm.h"
@@ -28,7 +27,8 @@ struct arch_object {
   struct gdbarch *gdbarch;
 };
 
-static struct gdbarch_data *arch_object_data = NULL;
+static const registry<gdbarch>::key<PyObject, gdb::noop_deleter<PyObject>>
+     arch_object_data;
 
 /* Require a valid Architecture.  */
 #define ARCHPY_REQUIRE_VALID(arch_obj, arch)			\
@@ -48,7 +48,7 @@ extern PyTypeObject arch_object_type
 /* Associates an arch_object with GDBARCH as gdbarch_data via the gdbarch
    post init registration mechanism (gdbarch_data_register_post_init).  */
 
-static void *
+static PyObject *
 arch_object_data_init (struct gdbarch *gdbarch)
 {
   arch_object *arch_obj = PyObject_New (arch_object, &arch_object_type);
@@ -58,7 +58,7 @@ arch_object_data_init (struct gdbarch *gdbarch)
 
   arch_obj->gdbarch = gdbarch;
 
-  return (void *) arch_obj;
+  return (PyObject *) arch_obj;
 }
 
 /* Returns the struct gdbarch value corresponding to the given Python
@@ -88,10 +88,14 @@ gdbpy_is_architecture (PyObject *obj)
 PyObject *
 gdbarch_to_arch_object (struct gdbarch *gdbarch)
 {
-  PyObject *new_ref = (PyObject *) gdbarch_data (gdbarch, arch_object_data);
+  PyObject *new_ref = arch_object_data.get (gdbarch);
+  if (new_ref == nullptr)
+    {
+      new_ref = arch_object_data_init (gdbarch);
+      arch_object_data.set (gdbarch, new_ref);
+    }
 
-  /* new_ref could be NULL if registration of arch_object with GDBARCH failed
-     in arch_object_data_init.  */
+  /* new_ref could be NULL if creation failed.  */
   Py_XINCREF (new_ref);
 
   return new_ref;
@@ -122,39 +126,26 @@ static PyObject *
 archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
 {
   static const char *keywords[] = { "start_pc", "end_pc", "count", NULL };
-  CORE_ADDR start, end = 0;
+  CORE_ADDR start = 0, end = 0;
   CORE_ADDR pc;
-  gdb_py_ulongest start_temp;
   long count = 0, i;
-  PyObject *end_obj = NULL, *count_obj = NULL;
+  PyObject *start_obj = nullptr, *end_obj = nullptr, *count_obj = nullptr;
   struct gdbarch *gdbarch = NULL;
 
   ARCHPY_REQUIRE_VALID (self, gdbarch);
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, GDB_PY_LLU_ARG "|OO",
-					keywords, &start_temp, &end_obj,
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O|OO",
+					keywords, &start_obj, &end_obj,
 					&count_obj))
     return NULL;
 
-  start = start_temp;
-  if (end_obj)
-    {
-      /* Make a long logic check first.  In Python 3.x, internally,
-	 all integers are represented as longs.  In Python 2.x, there
-	 is still a differentiation internally between a PyInt and a
-	 PyLong.  Explicitly do this long check conversion first. In
-	 GDB, for Python 3.x, we #ifdef PyInt = PyLong.  This check has
-	 to be done first to ensure we do not lose information in the
-	 conversion process.  */
-      if (PyLong_Check (end_obj))
-	end = PyLong_AsUnsignedLongLong (end_obj);
-      else
-	{
-	  PyErr_SetString (PyExc_TypeError,
-			   _("Argument 'end_pc' should be a (long) integer."));
+  if (get_addr_from_python (start_obj, &start) < 0)
+    return nullptr;
 
-	  return NULL;
-	}
+  if (end_obj != nullptr)
+    {
+      if (get_addr_from_python (end_obj, &end) < 0)
+	return nullptr;
 
       if (end < start)
 	{
@@ -208,8 +199,7 @@ archpy_disassemble (PyObject *self, PyObject *args, PyObject *kw)
 	}
       catch (const gdb_exception &except)
 	{
-	  gdbpy_convert_exception (except);
-	  return NULL;
+	  return gdbpy_handle_gdb_exception (nullptr, except);
 	}
 
       gdbpy_ref<> pc_obj = gdb_py_object_from_ulongest (pc);
@@ -279,15 +269,16 @@ archpy_integer_type (PyObject *self, PyObject *args, PyObject *kw)
 {
   static const char *keywords[] = { "size", "signed", NULL };
   int size;
-  PyObject *is_signed_obj = nullptr;
+  PyObject *is_signed_obj = Py_True;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "i|O", keywords,
-					&size, &is_signed_obj))
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "i|O!", keywords,
+					&size,
+					&PyBool_Type, &is_signed_obj))
     return nullptr;
 
   /* Assume signed by default.  */
-  bool is_signed = (is_signed_obj == nullptr
-		    || PyObject_IsTrue (is_signed_obj));
+  gdb_assert (PyBool_Check (is_signed_obj));
+  bool is_signed = is_signed_obj == Py_True;
 
   struct gdbarch *gdbarch;
   ARCHPY_REQUIRE_VALID (self, gdbarch);
@@ -327,6 +318,21 @@ archpy_integer_type (PyObject *self, PyObject *args, PyObject *kw)
   return type_to_type_object (type);
 }
 
+/* __repr__ implementation for gdb.Architecture.  */
+
+static PyObject *
+archpy_repr (PyObject *self)
+{
+  const auto gdbarch = arch_object_to_gdbarch (self);
+  if (gdbarch == nullptr)
+    return gdb_py_invalid_object_repr (self);
+
+  auto arch_info = gdbarch_bfd_arch_info (gdbarch);
+  return PyUnicode_FromFormat ("<%s arch_name=%s printable_name=%s>",
+			       Py_TYPE (self)->tp_name, arch_info->arch_name,
+			       arch_info->printable_name);
+}
+
 /* Implementation of gdb.architecture_names().  Return a list of all the
    BFD architecture names that GDB understands.  */
 
@@ -350,25 +356,18 @@ gdbpy_all_architecture_names (PyObject *self, PyObject *args)
  return list.release ();
 }
 
-void _initialize_py_arch ();
-void
-_initialize_py_arch ()
-{
-  arch_object_data = gdbarch_data_register_post_init (arch_object_data_init);
-}
-
 /* Initializes the Architecture class in the gdb module.  */
 
-int
+static int CPYCHECKER_NEGATIVE_RESULT_SETS_EXCEPTION
 gdbpy_initialize_arch (void)
 {
   arch_object_type.tp_new = PyType_GenericNew;
-  if (PyType_Ready (&arch_object_type) < 0)
-    return -1;
-
-  return gdb_pymodule_addobject (gdb_module, "Architecture",
-				 (PyObject *) &arch_object_type);
+  return gdbpy_type_ready (&arch_object_type);
 }
+
+GDBPY_INITIALIZE_FILE (gdbpy_initialize_arch);
+
+
 
 static PyMethodDef arch_object_methods [] = {
   { "name", archpy_name, METH_NOARGS,
@@ -406,7 +405,7 @@ PyTypeObject arch_object_type = {
   0,                                  /* tp_getattr */
   0,                                  /* tp_setattr */
   0,                                  /* tp_compare */
-  0,                                  /* tp_repr */
+  archpy_repr,                        /* tp_repr */
   0,                                  /* tp_as_number */
   0,                                  /* tp_as_sequence */
   0,                                  /* tp_as_mapping */

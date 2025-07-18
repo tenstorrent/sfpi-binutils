@@ -1,18 +1,17 @@
 /* THIS FILE IS GENERATED.  -*- buffer-read-only: t -*- vi:set ro:
   Original: or1k-linux.xml */
 
-#include "defs.h"
 #include "osabi.h"
 #include "target-descriptions.h"
 
-struct target_desc *tdesc_or1k_linux;
+const struct target_desc *tdesc_or1k_linux;
 static void
 initialize_tdesc_or1k_linux (void)
 {
   target_desc_up result = allocate_target_description ();
   set_tdesc_architecture (result.get (), bfd_scan_arch ("or1k"));
 
-  set_tdesc_osabi (result.get (), osabi_from_tdesc_string ("GNU/Linux"));
+  set_tdesc_osabi (result.get (), GDB_OSABI_LINUX);
 
   struct tdesc_feature *feature;
 

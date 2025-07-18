@@ -1,5 +1,5 @@
 /* ELF emulation code for targets using elf.em.
-   Copyright (C) 1991-2022 Free Software Foundation, Inc.
+   Copyright (C) 1991-2025 Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
 
@@ -63,6 +63,7 @@ static lang_input_statement_type *global_found;
 static struct stat global_stat;
 static struct bfd_link_needed_list *global_vercheck_needed;
 static bool global_vercheck_failed;
+static bool orphan_init_done;
 
 void
 ldelf_after_parse (void)
@@ -74,7 +75,7 @@ ldelf_after_parse (void)
       && link_info.nointerp)
     {
       if (link_info.dynamic_undefined_weak > 0)
-	einfo (_("%P: warning: -z dynamic-undefined-weak ignored\n"));
+	queue_unknown_cmdline_warning ("-z dynamic-undefined-weak");
       link_info.dynamic_undefined_weak = 0;
     }
 
@@ -524,10 +525,13 @@ ldelf_search_needed (const char *path, struct dt_needed *n, int force,
 		      else
 			{
 			  char * current_dir = getpwd ();
-
-			  freeme = xmalloc (strlen (replacement)
-					    + strlen (current_dir) + 2);
-			  sprintf (freeme, "%s/%s", current_dir, replacement);
+			  size_t cdir_len = strlen (current_dir);
+			  size_t rep_len = strlen (replacement);
+			  freeme = xmalloc (cdir_len + rep_len + 2);
+			  memcpy (freeme, current_dir, cdir_len);
+			  freeme[cdir_len] = '/';
+			  memcpy (freeme + cdir_len + 1,
+				  replacement, rep_len + 1);
 			}
 
 		      replacement = freeme;
@@ -611,7 +615,10 @@ ldelf_search_needed (const char *path, struct dt_needed *n, int force,
       needed.name = filename;
 
       if (ldelf_try_needed (&needed, force, is_linux))
-	return true;
+	{
+	  free (filename);
+	  return true;
+	}
 
       free (filename);
 
@@ -1215,7 +1222,8 @@ ldelf_before_plugin_all_symbols_read (int use_libpath, int native,
 {
   struct elf_link_hash_table *htab = elf_hash_table (&link_info);
 
-  if (!is_elf_hash_table (&htab->root))
+  if (!link_info.lto_plugin_active
+      || !is_elf_hash_table (&htab->root))
     return;
 
   htab->handling_dt_needed = true;
@@ -1450,14 +1458,12 @@ write_build_id (bfd *abfd)
     }
   i_shdr = &elf_section_data (asec->output_section)->this_hdr;
 
-  if (i_shdr->contents == NULL)
-    {
-      if (asec->contents == NULL)
-	asec->contents = (unsigned char *) xmalloc (asec->size);
-      contents = asec->contents;
-    }
-  else
+  if (i_shdr->contents != NULL)
     contents = i_shdr->contents + asec->output_offset;
+  else if (asec->contents != NULL)
+    contents = asec->contents;
+  else
+    contents = xmalloc (asec->size);
 
   e_note = (Elf_External_Note *) contents;
   size = offsetof (Elf_External_Note, name[sizeof "GNU"]);
@@ -1477,8 +1483,11 @@ write_build_id (bfd *abfd)
 
   position = i_shdr->sh_offset + asec->output_offset;
   size = asec->size;
-  return (bfd_seek (abfd, position, SEEK_SET) == 0
-	  && bfd_bwrite (contents, size, abfd) == size);
+  bool ret = (bfd_seek (abfd, position, SEEK_SET) == 0
+	      && bfd_write (contents, size, abfd) == size);
+  if (i_shdr->contents == NULL && asec->contents == NULL)
+    free (contents);
+  return ret;
 }
 
 /* Make .note.gnu.build-id section, and set up elf_tdata->build_id.  */
@@ -1539,14 +1548,12 @@ write_package_metadata (bfd *abfd)
     }
   i_shdr = &elf_section_data (asec->output_section)->this_hdr;
 
-  if (i_shdr->contents == NULL)
-    {
-      if (asec->contents == NULL)
-	asec->contents = (unsigned char *) xmalloc (asec->size);
-      contents = asec->contents;
-    }
-  else
+  if (i_shdr->contents != NULL)
     contents = i_shdr->contents + asec->output_offset;
+  else if (asec->contents != NULL)
+    contents = asec->contents;
+  else
+    contents = xmalloc (asec->size);
 
   e_note = (Elf_External_Note *) contents;
   size = offsetof (Elf_External_Note, name[sizeof "FDO"]);
@@ -1565,8 +1572,11 @@ write_package_metadata (bfd *abfd)
 
   position = i_shdr->sh_offset + asec->output_offset;
   size = asec->size;
-  return (bfd_seek (abfd, position, SEEK_SET) == 0
-	  && bfd_bwrite (contents, size, abfd) == size);
+  bool ret = (bfd_seek (abfd, position, SEEK_SET) == 0
+	      && bfd_write (contents, size, abfd) == size);
+  if (i_shdr->contents == NULL && asec->contents == NULL)
+    free (contents);
+  return ret;
 }
 
 /* Make .note.package section.
@@ -2076,9 +2086,14 @@ elf_orphan_compatible (asection *in, asection *out)
     return false;
   /* We can't merge with a member of an output section group or merge
      two sections with differing SHF_EXCLUDE or other processor and OS
-     specific flags when doing a relocatable link.  */
+     specific flags or with different SHF_LINK_ORDER when doing a
+     relocatable link.  */
   if (bfd_link_relocatable (&link_info)
       && (elf_next_in_group (out) != NULL
+	  || ((elf_section_flags (in) & SHF_LINK_ORDER) != 0
+	      && (elf_section_flags (out) & SHF_LINK_ORDER) != 0
+	      && (elf_linked_to_section (in)->output_section
+		  != elf_linked_to_section (out)->output_section))
 	  || ((elf_section_flags (out) ^ elf_section_flags (in))
 	      & (SHF_MASKPROC | SHF_MASKOS)) != 0))
     return false;
@@ -2092,7 +2107,7 @@ elf_orphan_compatible (asection *in, asection *out)
 lang_output_section_statement_type *
 ldelf_place_orphan (asection *s, const char *secname, int constraint)
 {
-  static struct orphan_save hold[] =
+  static struct orphan_save orig_hold[] =
     {
       { ".text",
 	SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_READONLY | SEC_CODE,
@@ -2109,7 +2124,7 @@ ldelf_place_orphan (asection *s, const char *secname, int constraint)
       { ".bss",
 	SEC_ALLOC,
 	0, 0, 0, 0 },
-      { 0,
+      { NULL,
 	SEC_HAS_CONTENTS | SEC_ALLOC | SEC_LOAD | SEC_READONLY | SEC_DATA,
 	0, 0, 0, 0 },
       { ".interp",
@@ -2122,6 +2137,7 @@ ldelf_place_orphan (asection *s, const char *secname, int constraint)
 	SEC_HAS_CONTENTS,
 	0, 0, 0, 0 },
     };
+  static struct orphan_save hold[ARRAY_SIZE (orig_hold)];
   enum orphan_save_index
     {
       orphan_text = 0,
@@ -2134,7 +2150,6 @@ ldelf_place_orphan (asection *s, const char *secname, int constraint)
       orphan_sdata,
       orphan_nonalloc
     };
-  static int orphan_init_done = 0;
   struct orphan_save *place;
   lang_output_section_statement_type *after;
   lang_output_section_statement_type *os;
@@ -2235,6 +2250,7 @@ ldelf_place_orphan (asection *s, const char *secname, int constraint)
 	   set, then it has been created by the linker, possibly as a
 	   result of a --section-start command line switch.  */
 	if (os->bfd_section != NULL
+	    && !bfd_is_abs_section (os->bfd_section)
 	    && (os->bfd_section->flags == 0
 		|| (((s->flags ^ os->bfd_section->flags)
 		     & (SEC_LOAD | SEC_ALLOC)) == 0
@@ -2262,16 +2278,21 @@ ldelf_place_orphan (asection *s, const char *secname, int constraint)
 
   if (!orphan_init_done)
     {
-      struct orphan_save *ho;
+      struct orphan_save *ho, *horig;
 
-      for (ho = hold; ho < hold + sizeof (hold) / sizeof (hold[0]); ++ho)
-	if (ho->name != NULL)
-	  {
-	    ho->os = lang_output_section_find (ho->name);
-	    if (ho->os != NULL && ho->os->flags == 0)
-	      ho->os->flags = ho->flags;
-	  }
-      orphan_init_done = 1;
+      for (ho = hold, horig = orig_hold;
+	   ho < hold + ARRAY_SIZE (hold);
+	   ++ho, ++horig)
+	{
+	  *ho = *horig;
+	  if (ho->name != NULL)
+	    {
+	      ho->os = lang_output_section_find (ho->name);
+	      if (ho->os != NULL && ho->os->flags == 0)
+		ho->os->flags = ho->flags;
+	    }
+	}
+      orphan_init_done = true;
     }
 
   /* If this is a final link, then always put .gnu.warning.SYMBOL
@@ -2318,7 +2339,18 @@ ldelf_place_orphan (asection *s, const char *secname, int constraint)
 	   && (elfinput
 	       ? sh_type == SHT_NOTE
 	       : startswith (secname, ".note")))
-    place = &hold[orphan_interp];
+    {
+      /* PR 32219: Check that the .interp section
+	 exists before attaching orphans to it.  */
+      if (lang_output_section_find (hold[orphan_interp].name))
+	place = &hold[orphan_interp];
+      /* Next best place: after .rodata.  */
+      else if (lang_output_section_find (hold[orphan_rodata].name))
+	place = &hold[orphan_rodata];
+      /* Last attempt: the .text section.  */
+      else
+	place = &hold[orphan_text];
+    }
   else if ((flags & (SEC_LOAD | SEC_HAS_CONTENTS | SEC_THREAD_LOCAL)) == 0)
     place = &hold[orphan_bss];
   else if ((flags & SEC_SMALL_DATA) != 0)
@@ -2406,4 +2438,14 @@ ldelf_set_output_arch (void)
   set_output_arch_default ();
   if (link_info.output_bfd->xvec->flavour == bfd_target_elf_flavour)
     elf_link_info (link_info.output_bfd) = &link_info;
+}
+
+void
+ldelf_finish (void)
+{
+  /* Support the object-only output.  */
+  if (config.emit_gnu_object_only)
+    orphan_init_done = false;
+
+  finish_default ();
 }

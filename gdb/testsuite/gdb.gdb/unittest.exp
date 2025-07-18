@@ -1,4 +1,4 @@
-# Copyright 2016-2022 Free Software Foundation, Inc.
+# Copyright 2016-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,14 +15,11 @@
 
 # Do not run if gdb debug is enabled as maintenance output will be
 # redirected to the log files.
-if [gdb_debug_enabled] {
-    untested "debug is enabled"
-    return 0
-}
+require !gdb_debug_enabled
 
 load_lib completion-support.exp
 
-set do_xml_test [expr ![gdb_skip_xml_test]]
+set do_xml_test [allow_xml_test]
 
 standard_testfile
 
@@ -30,17 +27,12 @@ if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
     return -1
 }
 
-proc run_selftests { binfile } {
+proc run_selftests_1 {} {
     global decimal gdb_prompt
 
-    if { $binfile == "" } {
-	gdb_exit
-	gdb_start
-    } else {
-	clean_restart ${binfile}
-    }
-
     set enabled 1
+    set num_ran 0
+
     set test "maintenance selftest"
     gdb_test_multiple $test $test {
 	-re ".*Running selftest \[^\n\r\]+\." {
@@ -66,12 +58,38 @@ proc run_selftests { binfile } {
     return [list $enabled $num_ran]
 }
 
+proc run_selftests { binfile } {
+    if { $binfile == "" } {
+	gdb_exit
+	gdb_start
+    } else {
+	clean_restart ${binfile}
+    }
+
+    if { [is_remote host] } {
+	return [run_selftests_1]
+    } else {
+	# Some of the selftests create temporary files in GDB's current
+	# directory.  So, while running the selftests, switch to the
+	# test's output directory to avoid leaving clutter in the
+	# gdb/testsuite root directory.
+	set dir [standard_output_file ""]
+	with_gdb_cwd $dir {
+	    return [run_selftests_1]
+	}
+    }
+}
+
 # Test completion of command "maintenance selftest".
 
 proc_with_prefix test_completion {} {
     global self_tests_enabled
 
     clean_restart
+
+    if { ![readline_is_used] } {
+	return
+    }
 
     if { $self_tests_enabled } {
 	test_gdb_complete_tab_multiple "maintenance selftest copy" "_" \

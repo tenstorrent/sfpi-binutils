@@ -1,6 +1,6 @@
 /* C language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2022 Free Software Foundation, Inc.
+   Copyright (C) 1992-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
+#include "extract-store-integer.h"
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "expression.h"
@@ -36,7 +36,6 @@
 #include <ctype.h>
 #include "gdbcore.h"
 #include "gdbarch.h"
-#include "compile/compile-internal.h"
 #include "c-exp.h"
 
 /* Given a C string type, STR_TYPE, return the corresponding target
@@ -64,7 +63,7 @@ charset_for_string_type (c_string_type str_type, struct gdbarch *gdbarch)
       else
 	return "UTF-32LE";
     }
-  internal_error (__FILE__, __LINE__, _("unhandled c_string_type"));
+  internal_error (_("unhandled c_string_type"));
 }
 
 /* Classify ELTTYPE according to what kind of character it is.  Return
@@ -118,8 +117,8 @@ classify_type (struct type *elttype, struct gdbarch *gdbarch,
       /* Call for side effects.  */
       check_typedef (elttype);
 
-      if (TYPE_TARGET_TYPE (elttype))
-	elttype = TYPE_TARGET_TYPE (elttype);
+      if (elttype->target_type ())
+	elttype = elttype->target_type ();
       else
 	{
 	  /* Perhaps check_typedef did not update the target type.  In
@@ -144,8 +143,8 @@ classify_type (struct type *elttype, struct gdbarch *gdbarch,
    for printing characters and strings is language specific.  */
 
 void
-c_emit_char (int c, struct type *type,
-	     struct ui_file *stream, int quoter)
+language_defn::emitchar (int c, struct type *type,
+			 struct ui_file *stream, int quoter) const
 {
   const char *encoding;
 
@@ -185,15 +184,15 @@ language_defn::printchar (int c, struct type *type,
 /* Print the character string STRING, printing at most LENGTH
    characters.  LENGTH is -1 if the string is nul terminated.  Each
    character is WIDTH bytes long.  Printing stops early if the number
-   hits print_max; repeat counts are printed as appropriate.  Print
-   ellipses at the end if we had to stop before printing LENGTH
+   hits print_max_chars; repeat counts are printed as appropriate.
+   Print ellipses at the end if we had to stop before printing LENGTH
    characters, or if FORCE_ELLIPSES.  */
 
 void
-c_printstr (struct ui_file *stream, struct type *type, 
-	    const gdb_byte *string, unsigned int length, 
-	    const char *user_encoding, int force_ellipses,
-	    const struct value_print_options *options)
+language_defn::printstr (struct ui_file *stream, struct type *type,
+			 const gdb_byte *string, unsigned int length,
+			 const char *user_encoding, int force_ellipses,
+			 const struct value_print_options *options) const
 {
   c_string_type str_type;
   const char *type_encoding;
@@ -246,8 +245,8 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
 {
   int err, width;
   unsigned int fetchlimit;
-  struct type *type = check_typedef (value_type (value));
-  struct type *element_type = TYPE_TARGET_TYPE (type);
+  struct type *type = check_typedef (value->type ());
+  struct type *element_type = type->target_type ();
   int req_length = *length;
   enum bfd_endian byte_order
     = type_byte_order (type);
@@ -280,7 +279,7 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
   if (! c_textual_element_type (element_type, 0))
     goto error;
   classify_type (element_type, element_type->arch (), charset);
-  width = TYPE_LENGTH (element_type);
+  width = element_type->length ();
 
   /* If the string lives in GDB's memory instead of the inferior's,
      then we just need to copy it to BUFFER.  Also, since such strings
@@ -295,14 +294,14 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
      C struct hack.  So, only do this if either no length was
      specified, or the length is within the existing bounds.  This
      avoids running off the end of the value's contents.  */
-  if ((VALUE_LVAL (value) == not_lval
-       || VALUE_LVAL (value) == lval_internalvar
+  if ((value->lval () == not_lval
+       || value->lval () == lval_internalvar
        || type->code () == TYPE_CODE_ARRAY)
       && fetchlimit != UINT_MAX
       && (*length < 0 || *length <= fetchlimit))
     {
       int i;
-      const gdb_byte *contents = value_contents (value).data ();
+      const gdb_byte *contents = value->contents ().data ();
 
       /* If a length is specified, use that.  */
       if (*length >= 0)
@@ -329,26 +328,26 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
       CORE_ADDR addr;
       if (type->code () == TYPE_CODE_ARRAY)
 	{
-	  if (VALUE_LVAL (value) != lval_memory)
+	  if (value->lval () != lval_memory)
 	    error (_("Attempt to take address of value "
 		     "not located in memory."));
-	  addr = value_address (value);
+	  addr = value->address ();
 	}
       else
 	addr = value_as_address (value);
 
       /* Prior to the fix for PR 16196 read_string would ignore fetchlimit
-	 if length > 0.  The old "broken" behaviour is the behaviour we want:
+	 if length > 0.  The old "broken" behavior is the behavior we want:
 	 The caller may want to fetch 100 bytes from a variable length array
 	 implemented using the common idiom of having an array of length 1 at
 	 the end of a struct.  In this case we want to ignore the declared
 	 size of the array.  However, it's counterintuitive to implement that
-	 behaviour in read_string: what does fetchlimit otherwise mean if
-	 length > 0.  Therefore we implement the behaviour we want here:
+	 behavior in read_string: what does fetchlimit otherwise mean if
+	 length > 0.  Therefore we implement the behavior we want here:
 	 If *length > 0, don't specify a fetchlimit.  This preserves the
-	 previous behaviour.  We could move this check above where we know
+	 previous behavior.  We could move this check above where we know
 	 whether the array is declared with a fixed size, but we only want
-	 to apply this behaviour when calling read_string.  PR 16286.  */
+	 to apply this behavior when calling read_string.  PR 16286.  */
       if (*length > 0)
 	fetchlimit = UINT_MAX;
 
@@ -433,9 +432,9 @@ emit_numeric_character (struct type *type, unsigned long value,
 {
   gdb_byte *buffer;
 
-  buffer = (gdb_byte *) alloca (TYPE_LENGTH (type));
+  buffer = (gdb_byte *) alloca (type->length ());
   pack_long (buffer, type, value);
-  obstack_grow (output, buffer, TYPE_LENGTH (type));
+  obstack_grow (output, buffer, type->length ());
 }
 
 /* Convert an octal escape sequence.  TYPE is the target character
@@ -613,11 +612,8 @@ c_string_operation::evaluate (struct type *expect_type,
       type = lookup_typename (exp->language_defn, "char32_t", NULL, 0);
       break;
     default:
-      internal_error (__FILE__, __LINE__, _("unhandled c_string_type"));
+      internal_error (_("unhandled c_string_type"));
     }
-
-  /* Ensure TYPE_LENGTH is valid for TYPE.  */
-  check_typedef (type);
 
   /* If the caller expects an array of some integral type,
      satisfy them.  If something odder is expected, rely on the
@@ -625,7 +621,7 @@ c_string_operation::evaluate (struct type *expect_type,
   if (expect_type && expect_type->code () == TYPE_CODE_ARRAY)
     {
       struct type *element_type
-	= check_typedef (TYPE_TARGET_TYPE (expect_type));
+	= check_typedef (expect_type->target_type ());
 
       if (element_type->code () == TYPE_CODE_INT
 	  || element_type->code () == TYPE_CODE_CHAR)
@@ -645,7 +641,7 @@ c_string_operation::evaluate (struct type *expect_type,
     {
       LONGEST value;
 
-      if (obstack_object_size (&output) != TYPE_LENGTH (type))
+      if (obstack_object_size (&output) != type->length ())
 	error (_("Could not convert character "
 		 "constant to target character set"));
       value = unpack_long (type, (gdb_byte *) obstack_base (&output));
@@ -653,34 +649,32 @@ c_string_operation::evaluate (struct type *expect_type,
     }
   else
     {
-      int i;
-
-      /* Write the terminating character.  */
-      for (i = 0; i < TYPE_LENGTH (type); ++i)
-	obstack_1grow (&output, 0);
+      int element_size = type->length ();
 
       if (satisfy_expected)
 	{
 	  LONGEST low_bound, high_bound;
-	  int element_size = TYPE_LENGTH (type);
 
 	  if (!get_discrete_bounds (expect_type->index_type (),
 				    &low_bound, &high_bound))
 	    {
 	      low_bound = 0;
-	      high_bound = (TYPE_LENGTH (expect_type) / element_size) - 1;
+	      high_bound = (expect_type->length () / element_size) - 1;
 	    }
 	  if (obstack_object_size (&output) / element_size
 	      > (high_bound - low_bound + 1))
 	    error (_("Too many array elements"));
 
-	  result = allocate_value (expect_type);
-	  memcpy (value_contents_raw (result).data (), obstack_base (&output),
+	  result = value::allocate (expect_type);
+	  memcpy (result->contents_raw ().data (), obstack_base (&output),
 		  obstack_object_size (&output));
+	  /* Write the terminating character.  */
+	  memset (result->contents_raw ().data () + obstack_object_size (&output),
+		  0, element_size);
 	}
       else
-	result = value_cstring ((const char *) obstack_base (&output),
-				obstack_object_size (&output),
+	result = value_cstring ((const gdb_byte *) obstack_base (&output),
+				obstack_object_size (&output) / element_size,
 				type);
     }
   return result;
@@ -697,7 +691,7 @@ c_is_string_type_p (struct type *type)
   type = check_typedef (type);
   while (type->code () == TYPE_CODE_REF)
     {
-      type = TYPE_TARGET_TYPE (type);
+      type = type->target_type ();
       type = check_typedef (type);
     }
 
@@ -706,16 +700,16 @@ c_is_string_type_p (struct type *type)
     case TYPE_CODE_ARRAY:
       {
 	/* See if target type looks like a string.  */
-	struct type *array_target_type = TYPE_TARGET_TYPE (type);
-	return (TYPE_LENGTH (type) > 0
-		&& TYPE_LENGTH (array_target_type) > 0
+	struct type *array_target_type = type->target_type ();
+	return (type->length () > 0
+		&& array_target_type->length () > 0
 		&& c_textual_element_type (array_target_type, 0));
       }
     case TYPE_CODE_STRING:
       return true;
     case TYPE_CODE_PTR:
       {
-	struct type *element_type = TYPE_TARGET_TYPE (type);
+	struct type *element_type = type->target_type ();
 	return c_textual_element_type (element_type, 0);
       }
     default:
@@ -723,6 +717,20 @@ c_is_string_type_p (struct type *type)
     }
 
   return false;
+}
+
+
+
+/* See c-lang.h.  */
+
+gdb::unique_xmalloc_ptr<char>
+c_canonicalize_name (const char *name)
+{
+  if (strchr (name, ' ') != nullptr
+      || streq (name, "signed")
+      || streq (name, "unsigned"))
+    return cp_canonicalize_string (name);
+  return nullptr;
 }
 
 
@@ -812,6 +820,13 @@ public:
 			       CORE_ADDR expr_pc) const override
   {
     return c_compute_program (inst, input, gdbarch, expr_block, expr_pc);
+  }
+
+  /* See language.h.  */
+
+  bool can_print_type_offsets () const override
+  {
+    return true;
   }
 
   /* See language.h.  */
@@ -920,9 +935,11 @@ public:
   }
 
   /* See language.h.  */
-  struct type *lookup_transparent_type (const char *name) const override
+  struct type *lookup_transparent_type (const char *name,
+					domain_search_flags flags)
+    const override
   {
-    return cp_lookup_transparent_type (name);
+    return cp_lookup_transparent_type (name, flags);
   }
 
   /* See language.h.  */
@@ -966,6 +983,13 @@ public:
 
   /* See language.h.  */
 
+  bool can_print_type_offsets () const override
+  {
+    return true;
+  }
+
+  /* See language.h.  */
+
   void print_type (struct type *type, const char *varstring,
 		   struct ui_file *stream, int show, int level,
 		   const struct type_print_options *flags) const override
@@ -975,7 +999,7 @@ public:
 
   /* See language.h.  */
 
-  CORE_ADDR skip_trampoline (struct frame_info *fi,
+  CORE_ADDR skip_trampoline (const frame_info_ptr &fi,
 			     CORE_ADDR pc) const override
   {
     return cplus_skip_trampoline (fi, pc);
@@ -990,9 +1014,20 @@ public:
 
   /* See language.h.  */
 
+  struct block_symbol lookup_symbol_local
+       (const char *scope,
+	const char *name,
+	const struct block *block,
+	const domain_search_flags domain) const override
+  {
+    return cp_lookup_symbol_imports (scope, name, block, domain);
+  }
+
+  /* See language.h.  */
+
   struct block_symbol lookup_symbol_nonlocal
 	(const char *name, const struct block *block,
-	 const domain_enum domain) const override
+	 const domain_search_flags domain) const override
   {
     return cp_lookup_symbol_nonlocal (this, name, block, domain);
   }
@@ -1066,6 +1101,13 @@ public:
 
   /* See language.h.  */
 
+  bool can_print_type_offsets () const override
+  {
+    return true;
+  }
+
+  /* See language.h.  */
+
   void print_type (struct type *type, const char *varstring,
 		   struct ui_file *stream, int show, int level,
 		   const struct type_print_options *flags) const override
@@ -1114,6 +1156,13 @@ public:
 			   struct language_arch_info *lai) const override
   {
     c_language_arch_info (gdbarch, lai);
+  }
+
+  /* See language.h.  */
+
+  bool can_print_type_offsets () const override
+  {
+    return true;
   }
 
   /* See language.h.  */

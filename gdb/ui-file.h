@@ -1,5 +1,5 @@
 /* UI_FILE - a generic STDIO like output stream.
-   Copyright (C) 1999-2022 Free Software Foundation, Inc.
+   Copyright (C) 1999-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -16,8 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef UI_FILE_H
-#define UI_FILE_H
+#ifndef GDB_UI_FILE_H
+#define GDB_UI_FILE_H
 
 #include <string>
 #include "ui-style.h"
@@ -29,6 +29,8 @@ class ui_file
 public:
   ui_file ();
   virtual ~ui_file () = 0;
+
+  ui_file (ui_file &&other) = default;
 
   /* Public non-virtual API.  */
 
@@ -80,10 +82,10 @@ public:
   virtual bool isatty ()
   { return false; }
 
-  /* true indicates terminal output behaviour such as cli_styling.
+  /* true indicates terminal output behavior such as cli_styling.
      This default implementation indicates to do terminal output
-     behaviour if the UI_FILE is a tty.  A derived class can override
-     TERM_OUT to have cli_styling behaviour without being a tty.  */
+     behavior if the UI_FILE is a tty.  A derived class can override
+     TERM_OUT to have cli_styling behavior without being a tty.  */
   virtual bool term_out ()
   { return isatty (); }
 
@@ -169,13 +171,15 @@ class string_file : public ui_file
 {
 public:
   /* Construct a string_file to collect 'raw' output, i.e. without
-     'terminal' behaviour such as cli_styling.  */
+     'terminal' behavior such as cli_styling.  */
   string_file () : m_term_out (false) {};
-  /* If TERM_OUT, construct a string_file with terminal output behaviour
+  /* If TERM_OUT, construct a string_file with terminal output behavior
      such as cli_styling)
      else collect 'raw' output like the previous constructor.  */
   explicit string_file (bool term_out) : m_term_out (term_out) {};
   ~string_file () override;
+
+  string_file (string_file &&other) = default;
 
   /* Override ui_file methods.  */
 
@@ -329,9 +333,9 @@ public:
 class tee_file : public ui_file
 {
 public:
-  /* Create a file which writes to both ONE and TWO.  ONE will remain
-     open when this object is destroyed; but TWO will be closed.  */
-  tee_file (ui_file *one, ui_file_up &&two);
+  /* Create a file which writes to both ONE and TWO.  Ownership of
+     both files is up to the user.  */
+  tee_file (ui_file *one, ui_file *two);
   ~tee_file () override;
 
   void write (const char *buf, long length_buf) override;
@@ -364,7 +368,7 @@ public:
 private:
   /* The two underlying ui_files.  */
   ui_file *m_one;
-  ui_file_up m_two;
+  ui_file *m_two;
 };
 
 /* A ui_file implementation that filters out terminal escape
@@ -463,4 +467,4 @@ private:
   bool m_needs_timestamp = true;
 };
 
-#endif
+#endif /* GDB_UI_FILE_H */

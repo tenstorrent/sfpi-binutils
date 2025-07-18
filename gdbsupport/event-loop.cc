@@ -1,5 +1,5 @@
 /* Event loop machinery for GDB, the GNU debugger.
-   Copyright (C) 1999-2022 Free Software Foundation, Inc.
+   Copyright (C) 1999-2024 Free Software Foundation, Inc.
    Written by Elena Zannoni <ezannoni@cygnus.com> of Cygnus Solutions.
 
    This file is part of GDB.
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "gdbsupport/common-defs.h"
 #include "gdbsupport/event-loop.h"
 
 #include <chrono>
@@ -33,6 +32,8 @@
 #include <sys/types.h>
 #include "gdbsupport/gdb_sys_time.h"
 #include "gdbsupport/gdb_select.h"
+#include <optional>
+#include "gdbsupport/scope-exit.h"
 
 /* See event-loop.h.  */
 
@@ -111,8 +112,8 @@ static struct
     file_handler *next_file_handler;
 
 #ifdef HAVE_POLL
-    /* Ptr to array of pollfd structures.  */
-    struct pollfd *poll_fds;
+    /* Descriptors to poll.  */
+    std::vector<struct pollfd> poll_fds;
 
     /* Next file descriptor to handle, for the poll variant.  To level
        the fairness across event sources, we poll the file descriptors
@@ -175,12 +176,17 @@ static int update_wait_timeout (void);
 static int poll_timers (void);
 
 /* Process one high level event.  If nothing is ready at this time,
-   wait for something to happen (via gdb_wait_for_event), then process
-   it.  Returns >0 if something was done otherwise returns <0 (this
-   can happen if there are no event sources to wait for).  */
+   wait at most MSTIMEOUT milliseconds for something to happen (via
+   gdb_wait_for_event), then process it.  Returns >0 if something was
+   done, <0 if there are no event sources to wait for, =0 if timeout occurred.
+   A timeout of 0 allows to serve an already pending event, but does not
+   wait if none found.
+   Setting the timeout to a negative value disables it.
+   The timeout is never used by gdb itself, it is however needed to
+   integrate gdb event handling within Insight's GUI event loop. */
 
 int
-gdb_do_one_event (void)
+gdb_do_one_event (int mstimeout)
 {
   static int event_source_head = 0;
   const int number_of_sources = 3;
@@ -214,8 +220,7 @@ gdb_do_one_event (void)
 	  res = check_async_event_handlers ();
 	  break;
 	default:
-	  internal_error (__FILE__, __LINE__,
-			  "unexpected event_source_head %d",
+	  internal_error ("unexpected event_source_head %d",
 			  event_source_head);
 	}
 
@@ -227,17 +232,35 @@ gdb_do_one_event (void)
 	return 1;
     }
 
+  if (mstimeout == 0)
+    return 0;	/* 0ms timeout: do not wait for an event. */
+
   /* Block waiting for a new event.  If gdb_wait_for_event returns -1,
      we should get out because this means that there are no event
      sources left.  This will make the event loop stop, and the
-     application exit.  */
+     application exit.
+     If a timeout has been given, a new timer is set accordingly
+     to abort event wait.  It is deleted upon gdb_wait_for_event
+     termination and thus should never be triggered.
+     When the timeout is reached, events are not monitored again:
+     they already have been checked in the loop above. */
 
-  if (gdb_wait_for_event (1) < 0)
-    return -1;
+  std::optional<int> timer_id;
 
-  /* If gdb_wait_for_event has returned 1, it means that one event has
-     been handled.  We break out of the loop.  */
-  return 1;
+  SCOPE_EXIT 
+    {
+      if (timer_id.has_value ())
+	delete_timer (*timer_id);
+    };
+
+  if (mstimeout > 0)
+    timer_id = create_timer (mstimeout,
+			     [] (gdb_client_data arg)
+			     {
+			       ((std::optional<int> *) arg)->reset ();
+			     },
+			     &timer_id);
+  return gdb_wait_for_event (1);
 }
 
 /* See event-loop.h  */
@@ -313,17 +336,11 @@ create_file_handler (int fd, int mask, handler_func * proc,
       if (use_poll)
 	{
 	  gdb_notifier.num_fds++;
-	  if (gdb_notifier.poll_fds)
-	    gdb_notifier.poll_fds =
-	      (struct pollfd *) xrealloc (gdb_notifier.poll_fds,
-					  (gdb_notifier.num_fds
-					   * sizeof (struct pollfd)));
-	  else
-	    gdb_notifier.poll_fds =
-	      XNEW (struct pollfd);
-	  (gdb_notifier.poll_fds + gdb_notifier.num_fds - 1)->fd = fd;
-	  (gdb_notifier.poll_fds + gdb_notifier.num_fds - 1)->events = mask;
-	  (gdb_notifier.poll_fds + gdb_notifier.num_fds - 1)->revents = 0;
+	  struct pollfd new_fd;
+	  new_fd.fd = fd;
+	  new_fd.events = mask;
+	  new_fd.revents = 0;
+	  gdb_notifier.poll_fds.push_back (new_fd);
 	}
       else
 #endif /* HAVE_POLL */
@@ -403,28 +420,13 @@ delete_file_handler (int fd)
 #ifdef HAVE_POLL
   if (use_poll)
     {
-      int j;
-      struct pollfd *new_poll_fds;
-
-      /* Create a new poll_fds array by copying every fd's information
-	 but the one we want to get rid of.  */
-
-      new_poll_fds = (struct pollfd *) 
-	xmalloc ((gdb_notifier.num_fds - 1) * sizeof (struct pollfd));
-
-      for (i = 0, j = 0; i < gdb_notifier.num_fds; i++)
-	{
-	  if ((gdb_notifier.poll_fds + i)->fd != fd)
-	    {
-	      (new_poll_fds + j)->fd = (gdb_notifier.poll_fds + i)->fd;
-	      (new_poll_fds + j)->events = (gdb_notifier.poll_fds + i)->events;
-	      (new_poll_fds + j)->revents
-		= (gdb_notifier.poll_fds + i)->revents;
-	      j++;
-	    }
-	}
-      xfree (gdb_notifier.poll_fds);
-      gdb_notifier.poll_fds = new_poll_fds;
+      auto iter = std::remove_if (gdb_notifier.poll_fds.begin (),
+				  gdb_notifier.poll_fds.end (),
+				  [=] (const pollfd &item)
+				  {
+				    return item.fd == fd;
+				  });
+      gdb_notifier.poll_fds.erase (iter, gdb_notifier.poll_fds.end());
       gdb_notifier.num_fds--;
     }
   else
@@ -582,7 +584,7 @@ gdb_wait_for_event (int block)
       else
 	timeout = 0;
 
-      num_found = poll (gdb_notifier.poll_fds,
+      num_found = poll (gdb_notifier.poll_fds.data (),
 			(unsigned long) gdb_notifier.num_fds, timeout);
 
       /* Don't print anything if we get out of poll because of a
@@ -653,7 +655,7 @@ gdb_wait_for_event (int block)
 	  i = gdb_notifier.next_poll_fds_index++;
 
 	  gdb_assert (i < gdb_notifier.num_fds);
-	  if ((gdb_notifier.poll_fds + i)->revents)
+	  if (gdb_notifier.poll_fds[i].revents)
 	    break;
 	}
 
@@ -661,12 +663,12 @@ gdb_wait_for_event (int block)
 	   file_ptr != NULL;
 	   file_ptr = file_ptr->next_file)
 	{
-	  if (file_ptr->fd == (gdb_notifier.poll_fds + i)->fd)
+	  if (file_ptr->fd == gdb_notifier.poll_fds[i].fd)
 	    break;
 	}
       gdb_assert (file_ptr != NULL);
 
-      mask = (gdb_notifier.poll_fds + i)->revents;
+      mask = gdb_notifier.poll_fds[i].revents;
       handle_file_event (file_ptr, mask);
       return 1;
     }

@@ -79,9 +79,9 @@ extern enum bfd_endian current_target_byte_order;
 #endif
 
 
-/* Word size of host/target:
+/* Word size of target:
 
-   Set these according to your host and target requirements.  At this
+   Set these according to your target requirements.  At this
    point in time, I've only compiled (not run) for a 64bit and never
    built for a 64bit host.  This will always remain a compile time
    option */
@@ -90,8 +90,12 @@ extern enum bfd_endian current_target_byte_order;
 #define WITH_TARGET_WORD_BITSIZE        32 /* compiled only */
 #endif
 
-#ifndef WITH_HOST_WORD_BITSIZE
-#define WITH_HOST_WORD_BITSIZE		32 /* 64bit ready? */
+#ifndef WITH_TARGET_ADDRESS_BITSIZE
+#define WITH_TARGET_ADDRESS_BITSIZE	WITH_TARGET_WORD_BITSIZE
+#endif
+
+#ifndef WITH_TARGET_CELL_BITSIZE
+#define WITH_TARGET_CELL_BITSIZE	WITH_TARGET_WORD_BITSIZE
 #endif
 
 
@@ -102,7 +106,7 @@ extern enum bfd_endian current_target_byte_order;
    expect to see (VEA includes things like coherency and the time
    base) while OEA is what an operating system expects to see.  By
    setting these to specific values, the build process is able to
-   eliminate non relevent environment code
+   eliminate non relevant environment code
 
    CURRENT_ENVIRONMENT specifies which of vea or oea is required for
    the current runtime. */
@@ -127,7 +131,7 @@ extern int current_environment;
 
 /* Events.  Devices modeling real H/W need to be able to efficiently
    schedule things to do at known times in the future.  The event
-   queue implements this.  Unfortunatly this adds the need to check
+   queue implements this.  Unfortunately this adds the need to check
    for any events once each full instruction cycle. */
 
 #define WITH_EVENTS                     (WITH_ENVIRONMENT != USER_ENVIRONMENT)
@@ -280,7 +284,7 @@ extern int current_stdio;
    speed improvement (x3-x5).  In the case of RISC (sparc) while the
    performance gain isn't as great it is still significant.
 
-   Each module is controled by the macro <module>_INLINE which can
+   Each module is controlled by the macro <module>_INLINE which can
    have the values described below
 
        0  Do not inline any thing for the given module
@@ -380,7 +384,7 @@ extern int current_stdio;
        Prefix to any declaration of a global object (function or
        variable) that should not be inlined and should have only one
        definition.  The #ifndef wrapper goes around the definition
-       propper to ensure that only one copy is generated.
+       proper to ensure that only one copy is generated.
 
        nb: this will not work when a module is being inlined for every
        use.

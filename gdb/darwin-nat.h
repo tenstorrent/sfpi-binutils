@@ -1,5 +1,5 @@
 /* Common things used by the various darwin files
-   Copyright (C) 1995-2022 Free Software Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef DARWIN_NAT_H
-#define DARWIN_NAT_H
+#ifndef GDB_DARWIN_NAT_H
+#define GDB_DARWIN_NAT_H
 
 #include "inf-child.h"
 #include <mach/mach.h>
@@ -126,7 +126,7 @@ private:
   void stop_inferior (inferior *inf);
   void init_thread_list (inferior *inf);
   void ptrace_him (int pid);
-  int cancel_breakpoint (ptid_t ptid);
+  int cancel_breakpoint (inferior *inf, ptid_t ptid);
 };
 
 /* Describe the mach exception handling state for a task.  This state is saved
@@ -154,7 +154,7 @@ struct darwin_exception_info
 static inline darwin_thread_info *
 get_darwin_thread_info (class thread_info *thread)
 {
-  return static_cast<darwin_thread_info *> (thread->priv.get ());
+  return gdb::checked_static_cast<darwin_thread_info *> (thread->priv.get ());
 }
 
 /* Describe an inferior.  */
@@ -188,7 +188,7 @@ struct darwin_inferior : public private_inferior
 static inline darwin_inferior *
 get_darwin_inferior (inferior *inf)
 {
-  return static_cast<darwin_inferior *> (inf->priv.get ());
+  return gdb::checked_static_cast<darwin_inferior *> (inf->priv.get ());
 }
 
 /* Exception port.  */
@@ -210,4 +210,4 @@ void darwin_set_sstep (thread_t thread, int enable);
 
 void darwin_check_osabi (darwin_inferior *inf, thread_t thread);
 
-#endif /* DARWIN_NAT_H */
+#endif /* GDB_DARWIN_NAT_H */
