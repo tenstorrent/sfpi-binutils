@@ -1,6 +1,6 @@
 /* Fortran language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992-2022 Free Software Foundation, Inc.
+   Copyright (C) 1992-2024 Free Software Foundation, Inc.
 
    Contributed by Motorola.  Adapted from the C definitions by Farooq Butt
    (fmbutt@engage.sps.mot.com).
@@ -20,9 +20,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef F_LANG_H
-#define F_LANG_H
+#ifndef GDB_F_LANG_H
+#define GDB_F_LANG_H
 
+#include "language.h"
 #include "valprint.h"
 
 struct type_print_options;
@@ -139,9 +140,17 @@ public:
 
   /* See language.h.  */
 
+  struct block_symbol lookup_symbol_local
+       (const char *scope,
+	const char *name,
+	const struct block *block,
+	const domain_search_flags domain) const override;
+
+  /* See language.h.  */
+
   struct block_symbol lookup_symbol_nonlocal
 	(const char *name, const struct block *block,
-	 const domain_enum domain) const override;
+	 const domain_search_flags domain) const override;
 
   /* See language.h.  */
 
@@ -175,7 +184,7 @@ public:
   {
     const char *type_encoding = get_encoding (elttype);
 
-    if (TYPE_LENGTH (elttype) == 4)
+    if (elttype->length () == 4)
       gdb_puts ("4_", stream);
 
     if (!encoding || !*encoding)
@@ -197,8 +206,13 @@ public:
     type = check_typedef (type);
     return (type->code () == TYPE_CODE_STRING
 	    || (type->code () == TYPE_CODE_ARRAY
-		&& TYPE_TARGET_TYPE (type)->code () == TYPE_CODE_CHAR));
+		&& type->target_type ()->code () == TYPE_CODE_CHAR));
   }
+
+  /* See language.h.  */
+
+  struct value *value_string (struct gdbarch *gdbarch,
+			      const char *ptr, ssize_t len) const override;
 
   /* See language.h.  */
 
@@ -317,22 +331,22 @@ extern int calc_f77_array_dims (struct type *);
 
 struct builtin_f_type
 {
-  struct type *builtin_character;
-  struct type *builtin_integer_s1;
-  struct type *builtin_integer_s2;
-  struct type *builtin_integer;
-  struct type *builtin_integer_s8;
-  struct type *builtin_logical_s1;
-  struct type *builtin_logical_s2;
-  struct type *builtin_logical;
-  struct type *builtin_logical_s8;
-  struct type *builtin_real;
-  struct type *builtin_real_s8;
-  struct type *builtin_real_s16;
-  struct type *builtin_complex;
-  struct type *builtin_complex_s8;
-  struct type *builtin_complex_s16;
-  struct type *builtin_void;
+  struct type *builtin_character = nullptr;
+  struct type *builtin_integer_s1 = nullptr;
+  struct type *builtin_integer_s2 = nullptr;
+  struct type *builtin_integer = nullptr;
+  struct type *builtin_integer_s8 = nullptr;
+  struct type *builtin_logical_s1 = nullptr;
+  struct type *builtin_logical_s2 = nullptr;
+  struct type *builtin_logical = nullptr;
+  struct type *builtin_logical_s8 = nullptr;
+  struct type *builtin_real = nullptr;
+  struct type *builtin_real_s8 = nullptr;
+  struct type *builtin_real_s16 = nullptr;
+  struct type *builtin_complex = nullptr;
+  struct type *builtin_complex_s8 = nullptr;
+  struct type *builtin_complex_s16 = nullptr;
+  struct type *builtin_void = nullptr;
 };
 
 /* Return the Fortran type table for the specified architecture.  */
@@ -372,4 +386,4 @@ extern struct type *fortran_preserve_arg_pointer (struct value *arg,
 extern CORE_ADDR fortran_adjust_dynamic_array_base_address_hack
 	(struct type *type, CORE_ADDR address);
 
-#endif /* F_LANG_H */
+#endif /* GDB_F_LANG_H */

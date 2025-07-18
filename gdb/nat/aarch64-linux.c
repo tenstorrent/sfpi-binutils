@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2022 Free Software Foundation, Inc.
+/* Copyright (C) 2009-2024 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GDB.
@@ -16,7 +16,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "gdbsupport/common-defs.h"
 #include "gdbsupport/break-common.h"
 #include "nat/linux-nat.h"
 #include "nat/aarch64-linux-hw-point.h"
@@ -249,4 +248,25 @@ aarch64_ps_get_thread_area (struct ps_prochandle *ph,
     *base = (void *) (uintptr_t) (reg32 - idx);
 
   return PS_OK;
+}
+
+/* See nat/aarch64-linux.h.  */
+
+int
+aarch64_tls_register_count (int tid)
+{
+  uint64_t tls_regs[2];
+  struct iovec iovec;
+  iovec.iov_base = tls_regs;
+  iovec.iov_len = sizeof (tls_regs);
+
+  /* Attempt to read both TPIDR and TPIDR2.  If ptrace returns less data than
+     we are expecting, that means it doesn't support all the registers.  From
+     the iovec length, figure out how many TPIDR registers the target actually
+     supports.  */
+  if (ptrace (PTRACE_GETREGSET, tid, NT_ARM_TLS, &iovec) != 0)
+    return 0;
+
+  /* Calculate how many TPIDR registers we have.  */
+  return iovec.iov_len / sizeof (uint64_t);
 }

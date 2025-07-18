@@ -1,6 +1,6 @@
 /* Disassemble support for GDB.
 
-   Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2000-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,21 +17,24 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "arch-utils.h"
+#include "event-top.h"
+#include "gdbsupport/unordered_set.h"
 #include "target.h"
 #include "value.h"
 #include "ui-out.h"
 #include "disasm.h"
 #include "gdbcore.h"
-#include "gdbcmd.h"
+#include "cli/cli-cmds.h"
 #include "dis-asm.h"
 #include "source.h"
-#include "safe-ctype.h"
+#include "gdbsupport/gdb-safe-ctype.h"
 #include <algorithm>
-#include "gdbsupport/gdb_optional.h"
+#include <optional>
 #include "valprint.h"
 #include "cli/cli-style.h"
+#include "objfiles.h"
+#include "inferior.h"
 
 /* Disassemble functions.
    FIXME: We should get rid of all the duplicate code in gdb that does
@@ -40,6 +43,65 @@
 /* This variable is used to hold the prospective disassembler_options value
    which is set by the "set disassembler_options" command.  */
 static std::string prospective_options;
+
+/* When this is true we will try to use libopcodes to provide styling to
+   the disassembler output.  */
+
+static bool use_libopcodes_styling = true;
+
+/* To support the set_use_libopcodes_styling function we have a second
+   variable which is connected to the actual set/show option.  */
+
+static bool use_libopcodes_styling_option = use_libopcodes_styling;
+
+/* The "maint show libopcodes-styling enabled" command.  */
+
+static void
+show_use_libopcodes_styling  (struct ui_file *file, int from_tty,
+			      struct cmd_list_element *c,
+			      const char *value)
+{
+  gdbarch *arch = current_inferior ()->arch ();
+  gdb_non_printing_memory_disassembler dis (arch);
+  bool supported = dis.disasm_info ()->created_styled_output;
+
+  if (supported || !use_libopcodes_styling)
+    gdb_printf (file, _("Use of libopcodes styling support is \"%s\".\n"),
+		value);
+  else
+    {
+      /* Use of libopcodes styling is not supported, and the user has this
+	 turned on!  */
+      gdb_printf (file, _("Use of libopcodes styling support is \"off\""
+			  " (not supported on architecture \"%s\")\n"),
+		  gdbarch_bfd_arch_info (arch)->printable_name);
+    }
+}
+
+/* The "maint set libopcodes-styling enabled" command.  */
+
+static void
+set_use_libopcodes_styling (const char *args, int from_tty,
+			    struct cmd_list_element *c)
+{
+  gdbarch *arch = current_inferior ()->arch ();
+  gdb_non_printing_memory_disassembler dis (arch);
+  bool supported = dis.disasm_info ()->created_styled_output;
+
+  /* If the current architecture doesn't support libopcodes styling then we
+     give an error here, but leave the underlying setting enabled.  This
+     means that if the user switches to an architecture that does support
+     libopcodes styling the setting will be enabled.  */
+
+  if (use_libopcodes_styling_option && !supported)
+    {
+      use_libopcodes_styling_option = use_libopcodes_styling;
+      error (_("Use of libopcodes styling not supported on architecture \"%s\"."),
+	     gdbarch_bfd_arch_info (arch)->printable_name);
+    }
+  else
+    use_libopcodes_styling = use_libopcodes_styling_option;
+}
 
 /* This structure is used to store line number information for the
    deprecated /m option.
@@ -61,89 +123,46 @@ struct deprecated_dis_line_entry
 
 struct dis_line_entry
 {
+  dis_line_entry (struct symtab *symtab, int line) noexcept
+    : symtab (symtab),
+      line (line)
+  {}
+
+  bool operator== (const dis_line_entry &other) const noexcept
+  { return this->symtab == other.symtab && this->line == other.line; }
+
   struct symtab *symtab;
   int line;
 };
 
 /* Hash function for dis_line_entry.  */
 
-static hashval_t
-hash_dis_line_entry (const void *item)
+struct dis_line_entry_hash
 {
-  const struct dis_line_entry *dle = (const struct dis_line_entry *) item;
-
-  return htab_hash_pointer (dle->symtab) + dle->line;
-}
-
-/* Equal function for dis_line_entry.  */
-
-static int
-eq_dis_line_entry (const void *item_lhs, const void *item_rhs)
-{
-  const struct dis_line_entry *lhs = (const struct dis_line_entry *) item_lhs;
-  const struct dis_line_entry *rhs = (const struct dis_line_entry *) item_rhs;
-
-  return (lhs->symtab == rhs->symtab
-	  && lhs->line == rhs->line);
-}
-
-/* Create the table to manage lines for mixed source/disassembly.  */
-
-static htab_t
-allocate_dis_line_table (void)
-{
-  return htab_create_alloc (41,
-			    hash_dis_line_entry, eq_dis_line_entry,
-			    xfree, xcalloc, xfree);
-}
-
-/* Add a new dis_line_entry containing SYMTAB and LINE to TABLE.  */
-
-static void
-add_dis_line_entry (htab_t table, struct symtab *symtab, int line)
-{
-  void **slot;
-  struct dis_line_entry dle, *dlep;
-
-  dle.symtab = symtab;
-  dle.line = line;
-  slot = htab_find_slot (table, &dle, INSERT);
-  if (*slot == NULL)
-    {
-      dlep = XNEW (struct dis_line_entry);
-      dlep->symtab = symtab;
-      dlep->line = line;
-      *slot = dlep;
-    }
-}
-
-/* Return non-zero if SYMTAB, LINE are in TABLE.  */
-
-static int
-line_has_code_p (htab_t table, struct symtab *symtab, int line)
-{
-  struct dis_line_entry dle;
-
-  dle.symtab = symtab;
-  dle.line = line;
-  return htab_find (table, &dle) != NULL;
-}
+  std::size_t operator() (const dis_line_entry &x) const noexcept
+  { return std::hash<symtab *> () (x.symtab) + std::hash<int> () (x.line); }
+};
 
 /* Wrapper of target_read_code.  */
 
 int
 gdb_disassembler_memory_reader::dis_asm_read_memory
   (bfd_vma memaddr, gdb_byte *myaddr, unsigned int len,
-   struct disassemble_info *info)
+   struct disassemble_info *info) noexcept
 {
-  return target_read_code (memaddr, myaddr, len);
+  auto res = catch_exceptions<int, -1> ([&]
+    {
+      return target_read_code (memaddr, myaddr, len);
+    });
+
+  return res;
 }
 
 /* Wrapper of memory_error.  */
 
 void
-gdb_disassembler::dis_asm_memory_error (int err, bfd_vma memaddr,
-					struct disassemble_info *info)
+gdb_disassembler::dis_asm_memory_error
+  (int err, bfd_vma memaddr, struct disassemble_info *info) noexcept
 {
   gdb_disassembler *self
     = static_cast<gdb_disassembler *>(info->application_data);
@@ -154,26 +173,60 @@ gdb_disassembler::dis_asm_memory_error (int err, bfd_vma memaddr,
 /* Wrapper of print_address.  */
 
 void
-gdb_disassembler::dis_asm_print_address (bfd_vma addr,
-					 struct disassemble_info *info)
+gdb_disassembler::dis_asm_print_address
+  (bfd_vma addr, struct disassemble_info *info) noexcept
 {
   gdb_disassembler *self
     = static_cast<gdb_disassembler *>(info->application_data);
 
-  print_address (self->arch (), addr, self->stream ());
+  if (self->in_comment_p ())
+    {
+      /* Calling 'print_address' might add styling to the output (based on
+	 the properties of the stream we're writing too).  This is usually
+	 fine, but if we are in an assembler comment then we'd prefer to
+	 have the comment style, rather than the default address style.
+
+	 Print the address into a temporary buffer which doesn't support
+	 styling, then reprint this unstyled address with the default text
+	 style.
+
+	 As we are inside a comment right now, the standard print routine
+	 will ensure that the comment is printed to the user with a
+	 suitable comment style.  */
+      string_file tmp;
+      print_address (self->arch (), addr, &tmp);
+      self->fprintf_styled_func (self, dis_style_text, "%s", tmp.c_str ());
+    }
+  else
+    print_address (self->arch (), addr, self->stream ());
+}
+
+/* See disasm.h.  */
+
+ui_file *
+gdb_printing_disassembler::stream_from_gdb_disassemble_info (void *dis_info)
+{
+  gdb_disassemble_info *di = (gdb_disassemble_info *) dis_info;
+  gdb_printing_disassembler *dis
+    = gdb::checked_static_cast<gdb_printing_disassembler *> (di);
+  ui_file *stream = dis->stream ();
+  gdb_assert (stream != nullptr);
+  return stream;
 }
 
 /* Format disassembler output to STREAM.  */
 
 int
-gdb_printing_disassembler::fprintf_func (void *stream,
-					 const char *format, ...)
+gdb_printing_disassembler::fprintf_func (void *dis_info,
+					 const char *format, ...) noexcept
 {
-  va_list args;
+  ui_file *stream = stream_from_gdb_disassemble_info (dis_info);
 
+  va_list args;
   va_start (args, format);
-  gdb_vprintf ((struct ui_file *) stream, format, args);
+  gdb_vprintf (stream, format, args);
   va_end (args);
+
   /* Something non -ve.  */
   return 0;
 }
@@ -181,15 +234,60 @@ gdb_printing_disassembler::fprintf_func (void *stream,
 /* See disasm.h.  */
 
 int
-gdb_printing_disassembler::fprintf_styled_func (void *stream,
-						enum disassembler_style style,
-						const char *format, ...)
+gdb_printing_disassembler::fprintf_styled_func
+  (void *dis_info, enum disassembler_style style,
+   const char *format, ...) noexcept
 {
-  va_list args;
+  ui_file *stream = stream_from_gdb_disassemble_info (dis_info);
+  gdb_printing_disassembler *dis = (gdb_printing_disassembler *) dis_info;
 
+  va_list args;
   va_start (args, format);
-  gdb_vprintf ((struct ui_file *) stream, format, args);
+  std::string content = string_vprintf (format, args);
   va_end (args);
+
+  /* Once in a comment then everything should be styled as a comment.  */
+  if (style == dis_style_comment_start)
+    dis->set_in_comment (true);
+  if (dis->in_comment_p ())
+    style = dis_style_comment_start;
+
+  /* Now print the content with the correct style.  */
+  const char *txt = content.c_str ();
+  switch (style)
+    {
+    case dis_style_mnemonic:
+    case dis_style_sub_mnemonic:
+    case dis_style_assembler_directive:
+      fputs_styled (txt, disasm_mnemonic_style.style (), stream);
+      break;
+
+    case dis_style_register:
+      fputs_styled (txt, disasm_register_style.style (), stream);
+      break;
+
+    case dis_style_immediate:
+    case dis_style_address_offset:
+      fputs_styled (txt, disasm_immediate_style.style (), stream);
+      break;
+
+    case dis_style_address:
+      fputs_styled (txt, address_style.style (), stream);
+      break;
+
+    case dis_style_symbol:
+      fputs_styled (txt, function_name_style.style (), stream);
+      break;
+
+    case dis_style_comment_start:
+      fputs_styled (txt, disasm_comment_style.style (), stream);
+      break;
+
+    case dis_style_text:
+      gdb_puts (txt, stream);
+      break;
+    }
+
   /* Something non -ve.  */
   return 0;
 }
@@ -309,7 +407,7 @@ gdb_pretty_print_disassembler::pretty_print_insn (const struct disasm_insn *insn
 	size = m_di.print_insn (pc);
 	gdb_assert (size > 0);
       }
-    catch (const gdb_exception &ex)
+    catch (const gdb_exception &)
       {
 	/* An exception was thrown while disassembling the instruction.
 	   However, the disassembler might still have written something
@@ -318,29 +416,64 @@ gdb_pretty_print_disassembler::pretty_print_insn (const struct disasm_insn *insn
 	   object destructor as the write itself might throw an exception
 	   if the pager kicks in, and the user selects quit.  */
 	write_out_insn_buffer ();
-	throw ex;
+	throw;
       }
 
-    if (flags & DISASSEMBLY_RAW_INSN)
+    if ((flags & (DISASSEMBLY_RAW_INSN | DISASSEMBLY_RAW_BYTES)) != 0)
       {
-	CORE_ADDR end_pc;
-	bfd_byte data;
-	const char *spacer = "";
-
 	/* Build the opcodes using a temporary stream so we can
 	   write them out in a single go for the MI.  */
 	m_opcode_stb.clear ();
 
-	end_pc = pc + size;
+	/* Read the instruction opcode data.  */
+	m_opcode_data.resize (size);
+	read_code (pc, m_opcode_data.data (), size);
 
-	for (;pc < end_pc; ++pc)
+	/* The disassembler provides information about the best way to
+	   display the instruction bytes to the user.  We provide some sane
+	   defaults in case the disassembler gets it wrong.  */
+	const struct disassemble_info *di = m_di.disasm_info ();
+	int bytes_per_line = std::max (di->bytes_per_line, size);
+	int bytes_per_chunk = std::max (di->bytes_per_chunk, 1);
+
+	/* If the user has requested the instruction bytes be displayed
+	   byte at a time, then handle that here.  Also, if the instruction
+	   is not a multiple of the chunk size (which probably indicates a
+	   disassembler problem) then avoid that causing display problems
+	   by switching to byte at a time mode.  */
+	if ((flags & DISASSEMBLY_RAW_BYTES) != 0
+	    || (size % bytes_per_chunk) != 0)
+	  bytes_per_chunk = 1;
+
+	/* Print the instruction opcodes bytes, grouped into chunks.  */
+	for (int i = 0; i < size; i += bytes_per_chunk)
 	  {
-	    read_code (pc, &data, 1);
-	    m_opcode_stb.printf ("%s%02x", spacer, (unsigned) data);
-	    spacer = " ";
+	    if (i > 0)
+	      m_opcode_stb.puts (" ");
+
+	    if (di->display_endian == BFD_ENDIAN_LITTLE)
+	      {
+		for (int k = bytes_per_chunk; k-- != 0; )
+		  m_opcode_stb.printf ("%02x", (unsigned) m_opcode_data[i + k]);
+	      }
+	    else
+	      {
+		for (int k = 0; k < bytes_per_chunk; k++)
+		  m_opcode_stb.printf ("%02x", (unsigned) m_opcode_data[i + k]);
+	      }
+	  }
+
+	/* Calculate required padding.  */
+	int nspaces = 0;
+	for (int i = size; i < bytes_per_line; i += bytes_per_chunk)
+	  {
+	    if (i > size)
+	      nspaces++;
+	    nspaces += bytes_per_chunk * 2;
 	  }
 
 	m_uiout->field_stream ("opcodes", m_opcode_stb);
+	m_uiout->spaces (nspaces);
 	m_uiout->text ("\t");
       }
 
@@ -401,7 +534,7 @@ do_mixed_source_and_assembly_deprecated
 {
   int newlines = 0;
   int nlines;
-  struct linetable_entry *le;
+  const struct linetable_entry *le;
   struct deprecated_dis_line_entry *mle;
   struct symtab_and_line sal;
   int i;
@@ -421,19 +554,26 @@ do_mixed_source_and_assembly_deprecated
   mle = (struct deprecated_dis_line_entry *)
     alloca (nlines * sizeof (struct deprecated_dis_line_entry));
 
+  struct objfile *objfile = symtab->compunit ()->objfile ();
+
+  unrelocated_addr unrel_low
+    = unrelocated_addr (low - objfile->text_section_offset ());
+  unrelocated_addr unrel_high
+    = unrelocated_addr (high - objfile->text_section_offset ());
+
   /* Copy linetable entries for this function into our data
      structure, creating end_pc's and setting out_of_order as
      appropriate.  */
 
   /* First, skip all the preceding functions.  */
 
-  for (i = 0; i < nlines - 1 && le[i].pc < low; i++);
+  for (i = 0; i < nlines - 1 && le[i].unrelocated_pc () < unrel_low; i++);
 
   /* Now, copy all entries before the end of this function.  */
 
-  for (; i < nlines - 1 && le[i].pc < high; i++)
+  for (; i < nlines - 1 && le[i].unrelocated_pc () < unrel_high; i++)
     {
-      if (le[i].line == le[i + 1].line && le[i].pc == le[i + 1].pc)
+      if (le[i] == le[i + 1])
 	continue;		/* Ignore duplicates.  */
 
       /* Skip any end-of-function markers.  */
@@ -443,19 +583,19 @@ do_mixed_source_and_assembly_deprecated
       mle[newlines].line = le[i].line;
       if (le[i].line > le[i + 1].line)
 	out_of_order = 1;
-      mle[newlines].start_pc = le[i].pc;
-      mle[newlines].end_pc = le[i + 1].pc;
+      mle[newlines].start_pc = le[i].pc (objfile);
+      mle[newlines].end_pc = le[i + 1].pc (objfile);
       newlines++;
     }
 
   /* If we're on the last line, and it's part of the function,
      then we need to get the end pc in a special way.  */
 
-  if (i == nlines - 1 && le[i].pc < high)
+  if (i == nlines - 1 && le[i].unrelocated_pc () < unrel_high)
     {
       mle[newlines].line = le[i].line;
-      mle[newlines].start_pc = le[i].pc;
-      sal = find_pc_line (le[i].pc, 0);
+      mle[newlines].start_pc = le[i].pc (objfile);
+      sal = find_pc_line (le[i].pc (objfile), 0);
       mle[newlines].end_pc = sal.end;
       newlines++;
     }
@@ -471,8 +611,8 @@ do_mixed_source_and_assembly_deprecated
 
   ui_out_emit_list asm_insns_list (uiout, "asm_insns");
 
-  gdb::optional<ui_out_emit_tuple> outer_tuple_emitter;
-  gdb::optional<ui_out_emit_list> inner_list_emitter;
+  std::optional<ui_out_emit_tuple> outer_tuple_emitter;
+  std::optional<ui_out_emit_list> inner_list_emitter;
 
   for (i = 0; i < newlines; i++)
     {
@@ -560,7 +700,14 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
      but if that text is for code that will be disassembled later, then
      we'll want to defer printing it until later with its associated code.  */
 
-  htab_up dis_line_table (allocate_dis_line_table ());
+  gdb::unordered_set<dis_line_entry, dis_line_entry_hash> dis_line_table;
+
+  struct objfile *objfile = main_symtab->compunit ()->objfile ();
+
+  unrelocated_addr unrel_low
+    = unrelocated_addr (low - objfile->text_section_offset ());
+  unrelocated_addr unrel_high
+    = unrelocated_addr (high - objfile->text_section_offset ());
 
   pc = low;
 
@@ -575,10 +722,10 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
   first_le = NULL;
 
   /* Skip all the preceding functions.  */
-  for (i = 0; i < nlines && le[i].pc < low; i++)
+  for (i = 0; i < nlines && le[i].unrelocated_pc () < unrel_low; i++)
     continue;
 
-  if (i < nlines && le[i].pc < high)
+  if (i < nlines && le[i].unrelocated_pc () < unrel_high)
     first_le = &le[i];
 
   /* Add lines for every pc value.  */
@@ -592,7 +739,7 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
       pc += length;
 
       if (sal.symtab != NULL)
-	add_dis_line_entry (dis_line_table.get (), sal.symtab, sal.line);
+	dis_line_table.emplace (sal.symtab, sal.line);
     }
 
   /* Second pass: print the disassembly.
@@ -621,8 +768,8 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
 
   ui_out_emit_list asm_insns_emitter (uiout, "asm_insns");
 
-  gdb::optional<ui_out_emit_tuple> tuple_emitter;
-  gdb::optional<ui_out_emit_list> list_emitter;
+  std::optional<ui_out_emit_tuple> tuple_emitter;
+  std::optional<ui_out_emit_list> list_emitter;
 
   last_symtab = NULL;
   last_line = 0;
@@ -665,11 +812,9 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
 		  /* Several preceding source lines.  Print the trailing ones
 		     not associated with code that we'll print later.  */
 		  for (l = sal.line - 1; l > last_line; --l)
-		    {
-		      if (line_has_code_p (dis_line_table.get (),
-					   sal.symtab, l))
-			break;
-		    }
+		    if (dis_line_table.contains ({sal.symtab, l}))
+		      break;
+
 		  if (l < sal.line - 1)
 		    {
 		      start_preceding_line_to_display = l + 1;
@@ -705,7 +850,10 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
 		 output includes the source specs for each line.  */
 	      if (sal.symtab != NULL)
 		{
-		  uiout->text (symtab_to_filename_for_display (sal.symtab));
+		  auto filename = symtab_to_filename_for_display (sal.symtab);
+		  uiout->message ("%ps",
+				  styled_string (file_name_style.style (),
+						 filename));
 		}
 	      else
 		uiout->text ("unknown");
@@ -801,15 +949,54 @@ gdb_disassembler::gdb_disassembler (struct gdbarch *gdbarch,
 				    read_memory_ftype func)
   : gdb_printing_disassembler (gdbarch, &m_buffer, func,
 			       dis_asm_memory_error, dis_asm_print_address),
-    m_buffer (!use_ext_lang_colorization_p && disassembler_styling
-	      && file->can_emit_style_escape ()),
-    m_dest (file)
+    m_dest (file),
+    m_buffer (!use_ext_lang_for_styling () && use_libopcodes_for_styling ())
 { /* Nothing.  */ }
 
 /* See disasm.h.  */
 
+bool
+gdb_disassembler::use_ext_lang_for_styling () const
+{
+  /* The use of m_di.created_styled_output here is a bit of a cheat, but
+     it works fine for now.
+
+     This function is called in situations after m_di has been initialized,
+     but before the instruction has been disassembled.
+
+     Currently, every target that supports libopcodes styling sets the
+     created_styled_output field in disassemble_init_for_target, which was
+     called as part of the initialization of gdb_printing_disassembler.
+
+     This means that we are OK to check the created_styled_output field
+     here.
+
+     If, in the future, there's ever a target that only sets the
+     created_styled_output field during the actual instruction disassembly
+     phase, then we will need to update this code.  */
+  return (disassembler_styling
+	  && (!m_di.created_styled_output || !use_libopcodes_styling)
+	  && use_ext_lang_colorization_p
+	  && m_dest->can_emit_style_escape ());
+}
+
+/* See disasm.h.  */
+
+bool
+gdb_disassembler::use_libopcodes_for_styling () const
+{
+  /* See the comment on the use of m_di.created_styled_output in the
+     gdb_disassembler::use_ext_lang_for_styling function.  */
+  return (disassembler_styling
+	  && m_di.created_styled_output
+	  && use_libopcodes_styling
+	  && m_dest->can_emit_style_escape ());
+}
+
+/* See disasm.h.  */
+
 gdb_disassemble_info::gdb_disassemble_info
-  (struct gdbarch *gdbarch, struct ui_file *stream,
+  (struct gdbarch *gdbarch,
    read_memory_ftype read_memory_func, memory_error_ftype memory_error_func,
    print_address_ftype print_address_func, fprintf_ftype fprintf_func,
    fprintf_styled_ftype fprintf_styled_func)
@@ -817,7 +1004,7 @@ gdb_disassemble_info::gdb_disassemble_info
 {
   gdb_assert (fprintf_func != nullptr);
   gdb_assert (fprintf_styled_func != nullptr);
-  init_disassemble_info (&m_di, stream, fprintf_func,
+  init_disassemble_info (&m_di, (void *) this, fprintf_func,
 			 fprintf_styled_func);
   m_di.flavour = bfd_target_unknown_flavour;
 
@@ -865,7 +1052,7 @@ gdb_print_insn_1 (struct gdbarch *gdbarch, CORE_ADDR vma,
 		  struct disassemble_info *info)
 {
   /* Call into the extension languages to do the disassembly.  */
-  gdb::optional<int> length = ext_lang_print_insn (gdbarch, vma, info);
+  std::optional<int> length = ext_lang_print_insn (gdbarch, vma, info);
   if (length.has_value ())
     return *length;
 
@@ -886,18 +1073,18 @@ gdb_disassembler::print_insn (CORE_ADDR memaddr,
 {
   m_err_memaddr.reset ();
   m_buffer.clear ();
+  this->set_in_comment (false);
 
   int length = gdb_print_insn_1 (arch (), memaddr, &m_di);
 
-  /* If we have successfully disassembled an instruction, styling is on, we
-     think that the extension language might be able to perform styling for
-     us, and the destination can support styling, then lets call into the
-     extension languages in order to style this output.  */
-  if (length > 0 && disassembler_styling
-      && use_ext_lang_colorization_p
-      && m_dest->can_emit_style_escape ())
+  /* If we have successfully disassembled an instruction, disassembler
+     styling using the extension language is on, and libopcodes hasn't
+     already styled the output for us, and, if the destination can support
+     styling, then lets call into the extension languages in order to style
+     this output.  */
+  if (length > 0 && use_ext_lang_for_styling ())
     {
-      gdb::optional<std::string> ext_contents;
+      std::optional<std::string> ext_contents;
       ext_contents = ext_lang_colorize_disasm (m_buffer.string (), arch ());
       if (ext_contents.has_value ())
 	m_buffer = std::move (*ext_contents);
@@ -909,6 +1096,10 @@ gdb_disassembler::print_insn (CORE_ADDR memaddr,
 	     extension language for styling.  */
 	  use_ext_lang_colorization_p = false;
 
+	  /* We're about to disassemble this instruction again, reset the
+	     in-comment state.  */
+	  this->set_in_comment (false);
+
 	  /* The instruction we just disassembled, and the extension
 	     languages failed to style, might have otherwise had some
 	     minimal styling applied by GDB.  To regain that styling we
@@ -917,11 +1108,11 @@ gdb_disassembler::print_insn (CORE_ADDR memaddr,
 	     To do this we perform an in-place new, but this time turn on
 	     the styling support, then we can re-disassembly the
 	     instruction, and gain any minimal styling GDB might add.  */
-	  gdb_static_assert ((std::is_same<decltype (m_buffer),
+	  static_assert ((std::is_same<decltype (m_buffer),
 			      string_file>::value));
 	  gdb_assert (!m_buffer.term_out ());
 	  m_buffer.~string_file ();
-	  new (&m_buffer) string_file (true);
+	  new (&m_buffer) string_file (use_libopcodes_for_styling ());
 	  length = gdb_print_insn_1 (arch (), memaddr, &m_di);
 	  gdb_assert (length > 0);
 	}
@@ -930,7 +1121,7 @@ gdb_disassembler::print_insn (CORE_ADDR memaddr,
   /* Push any disassemble output to the real destination stream.  We do
      this even if the disassembler reported failure (-1) as the
      disassembler may have printed something to its output stream.  */
-  m_di.fprintf_func (m_dest, "%s", m_buffer.c_str ());
+  gdb_printf (m_dest, "%s", m_buffer.c_str ());
 
   /* If the disassembler failed then report an appropriate error.  */
   if (length < 0)
@@ -1006,8 +1197,8 @@ gdb_insn_length (struct gdbarch *gdbarch, CORE_ADDR addr)
 /* See disasm.h.  */
 
 int
-gdb_non_printing_disassembler::null_fprintf_func (void *stream,
-						  const char *format, ...)
+gdb_non_printing_disassembler::null_fprintf_func
+  (void *stream, const char *format, ...) noexcept
 {
   return 0;
 }
@@ -1016,7 +1207,8 @@ gdb_non_printing_disassembler::null_fprintf_func (void *stream,
 
 int
 gdb_non_printing_disassembler::null_fprintf_styled_func
-  (void *stream, enum disassembler_style style, const char *format, ...)
+  (void *stream, enum disassembler_style style,
+   const char *format, ...) noexcept
 {
   return 0;
 }
@@ -1058,20 +1250,20 @@ gdb_buffered_insn_length (struct gdbarch *gdbarch,
   return result;
 }
 
-char *
+const char *
 get_disassembler_options (struct gdbarch *gdbarch)
 {
-  char **disassembler_options = gdbarch_disassembler_options (gdbarch);
-  if (disassembler_options == NULL)
-    return NULL;
-  return *disassembler_options;
+  std::string *disassembler_options = gdbarch_disassembler_options (gdbarch);
+  if (disassembler_options == nullptr || disassembler_options->empty ())
+    return nullptr;
+  return disassembler_options->c_str ();
 }
 
 void
 set_disassembler_options (const char *prospective_options)
 {
   struct gdbarch *gdbarch = get_current_arch ();
-  char **disassembler_options = gdbarch_disassembler_options (gdbarch);
+  std::string *disassembler_options = gdbarch_disassembler_options (gdbarch);
   const disasm_options_and_args_t *valid_options_and_args;
   const disasm_options_t *valid_options;
   gdb::unique_xmalloc_ptr<char> prospective_options_local
@@ -1084,11 +1276,8 @@ set_disassembler_options (const char *prospective_options)
      to reset their disassembler options to NULL.  */
   if (options == NULL)
     {
-      if (disassembler_options != NULL)
-	{
-	  free (*disassembler_options);
-	  *disassembler_options = NULL;
-	}
+      if (disassembler_options != nullptr)
+	disassembler_options->clear ();
       return;
     }
 
@@ -1117,6 +1306,8 @@ set_disassembler_options (const char *prospective_options)
 	    if (memcmp (opt, valid_options->name[i], len) != 0)
 	      continue;
 	    arg = opt + len;
+	    if (valid_options->arg[i]->values == NULL)
+	      break;
 	    for (j = 0; valid_options->arg[i]->values[j] != NULL; j++)
 	      if (disassembler_options_cmp
 		    (arg, valid_options->arg[i]->values[j]) == 0)
@@ -1138,8 +1329,7 @@ set_disassembler_options (const char *prospective_options)
 	}
     }
 
-  free (*disassembler_options);
-  *disassembler_options = xstrdup (options);
+  *disassembler_options = options;
 }
 
 static void
@@ -1238,6 +1428,8 @@ The following disassembler options are supported for use with the\n\
 
       for (i = 0; valid_args[i].name != NULL; i++)
 	{
+	  if (valid_args[i].values == NULL)
+	    continue;
 	  gdb_printf (file, _("\n\
   For the options above, the following values are supported for \"%s\":\n   "),
 		      valid_args[i].name);
@@ -1294,4 +1486,39 @@ Show the disassembler options."), NULL,
 					 show_disassembler_options_sfunc,
 					 &setlist, &showlist);
   set_cmd_completer (set_show_disas_opts.set, disassembler_options_completer);
+
+
+  /* All the 'maint set|show libopcodes-styling' sub-commands.  */
+  static struct cmd_list_element *maint_set_libopcodes_styling_cmdlist;
+  static struct cmd_list_element *maint_show_libopcodes_styling_cmdlist;
+
+  /* Adds 'maint set|show libopcodes-styling'.  */
+  add_setshow_prefix_cmd ("libopcodes-styling", class_maintenance,
+			  _("Set libopcodes-styling specific variables."),
+			  _("Show libopcodes-styling specific variables."),
+			  &maint_set_libopcodes_styling_cmdlist,
+			  &maint_show_libopcodes_styling_cmdlist,
+			  &maintenance_set_cmdlist,
+			  &maintenance_show_cmdlist);
+
+  /* Adds 'maint set|show gnu-source-highlight enabled'.  */
+  add_setshow_boolean_cmd ("enabled", class_maintenance,
+			   &use_libopcodes_styling_option, _("\
+Set whether the libopcodes styling support should be used."), _("\
+Show whether the libopcodes styling support should be used."),_("\
+When enabled, GDB will try to make use of the builtin libopcodes styling\n\
+support, to style the disassembler output.  Not every architecture has\n\
+styling support within libopcodes, so enabling this is not a guarantee\n\
+that libopcodes styling will be available.\n\
+\n\
+When this option is disabled, GDB will make use of the Python Pygments\n\
+package (if available) to style the disassembler output.\n\
+\n\
+All disassembler styling can be disabled with:\n\
+\n\
+  set style disassembler enabled off"),
+			   set_use_libopcodes_styling,
+			   show_use_libopcodes_styling,
+			   &maint_set_libopcodes_styling_cmdlist,
+			   &maint_show_libopcodes_styling_cmdlist);
 }

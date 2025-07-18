@@ -1,4 +1,4 @@
-#as: -mlfence-after-load=yes
+#as: -mlfence-after-load=yes -march=+mpx
 #objdump: -dw
 #warning_output: lfence-load.e
 #name: x86-64 -mlfence-after-load=yes
@@ -33,6 +33,9 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f 18 55 00          	prefetcht1 0x0\(%rbp\)
  +[a-f0-9]+:	0f 18 5d 00          	prefetcht2 0x0\(%rbp\)
  +[a-f0-9]+:	0f 0d 4d 00          	prefetchw 0x0\(%rbp\)
+ +[a-f0-9]+:	0f 18 3d 78 56 34 12 	prefetchit0 0x12345678\(%rip\)        # [0-9a-f]+ <_start\+0x[0-9a-f]+>
+ +[a-f0-9]+:	0f 18 35 78 56 34 12 	prefetchit1 0x12345678\(%rip\)        # [0-9a-f]+ <_start\+0x[0-9a-f]+>
+ +[a-f0-9]+:	0f 18 65 00          	prefetchrst2 0x0\(%rbp\)
  +[a-f0-9]+:	0f a1                	pop    %fs
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	9d                   	popf
@@ -44,16 +47,21 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	db 55 00             	fistl  0x0\(%rbp\)
  +[a-f0-9]+:	df 55 00             	fists  0x0\(%rbp\)
+ +[a-f0-9]+:	db 5d 00             	fistpl 0x0\(%rbp\)
+ +[a-f0-9]+:	df 5d 00             	fistps 0x0\(%rbp\)
+ +[a-f0-9]+:	df 7d 00             	fistpll 0x0\(%rbp\)
  +[a-f0-9]+:	db 45 00             	fildl  0x0\(%rbp\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	df 45 00             	filds  0x0\(%rbp\)
  +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	df 6d 00             	fildll 0x0\(%rbp\)
+ +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	9b dd 75 00          	fsave  0x0\(%rbp\)
  +[a-f0-9]+:	dd 65 00             	frstor 0x0\(%rbp\)
  +[a-f0-9]+:	0f ae e8             	lfence
- +[a-f0-9]+:	df 45 00             	filds  0x0\(%rbp\)
- +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	db 4d 00             	fisttpl 0x0\(%rbp\)
  +[a-f0-9]+:	df 4d 00             	fisttps 0x0\(%rbp\)
+ +[a-f0-9]+:	dd 4d 00             	fisttpll 0x0\(%rbp\)
  +[a-f0-9]+:	d9 65 00             	fldenv 0x0\(%rbp\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	9b d9 75 00          	fstenv 0x0\(%rbp\)
@@ -83,7 +91,7 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	58                   	pop    %rax
  +[a-f0-9]+:	0f ae e8             	lfence
- +[a-f0-9]+:	66 d1 11             	rclw   \(%rcx\)
+ +[a-f0-9]+:	66 d1 11             	rclw   \$1,\(%rcx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	f7 01 01 00 00 00    	testl  \$0x1,\(%rcx\)
  +[a-f0-9]+:	0f ae e8             	lfence

@@ -1,7 +1,7 @@
 /* Support for connecting Guile's stdio to GDB's.
    as well as r/w memory via ports.
 
-   Copyright (C) 2014-2022 Free Software Foundation, Inc.
+   Copyright (C) 2014-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -21,12 +21,11 @@
 /* See README file in this directory for implementation notes, coding
    conventions, et.al.  */
 
-#include "defs.h"
 #include "gdbsupport/gdb_select.h"
-#include "top.h"
+#include "ui.h"
 #include "target.h"
 #include "guile-internal.h"
-#include "gdbsupport/gdb_optional.h"
+#include <optional>
 
 #ifdef HAVE_POLL
 #if defined (HAVE_POLL_H)
@@ -602,13 +601,12 @@ ioscm_with_output_to_port_worker (SCM port, SCM thunk, enum oport oport,
 						  ? &gdb_stderr : &gdb_stdout);
 
   {
-    gdb::optional<ui_out_redirect_pop> redirect_popper;
+    std::optional<ui_out_redirect_pop> redirect_popper;
     if (oport == GDB_STDERR)
       gdb_stderr = port_file.get ();
     else
       {
-	current_uiout->redirect (port_file.get ());
-	redirect_popper.emplace (current_uiout);
+	redirect_popper.emplace (current_uiout, port_file.get ());
 
 	gdb_stdout = port_file.get ();
       }

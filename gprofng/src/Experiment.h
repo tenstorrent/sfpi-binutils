@@ -1,4 +1,4 @@
-/* Copyright (C) 2021 Free Software Foundation, Inc.
+/* Copyright (C) 2021-2025 Free Software Foundation, Inc.
    Contributed by Oracle.
 
    This file is part of GNU Binutils.
@@ -65,7 +65,7 @@ template <class ITEM> class Vector;
 // operate on the next stage
 typedef struct
 {
-  Vector<DbeInstr*> *natpcs;
+  Vector<Histable*> *natpcs;
   Vector<Histable*> *jpcs;
   long idx;
   FramePacket *frp;
@@ -434,7 +434,8 @@ protected:
   char *expt_name;      // name of experiment
   char *arch_name;      // <experiment>/archive
   char *fndr_arch_name; // <founder_experiment>/archive
-  //TBR? hrtime_t sample_time;  // total of sample durations
+  char *dyntext_name;   // <experiment>/dyntext
+
   int yyparse ();       // Allow yyparse actions to access
   Vaddr stack_base;     // Stack base
 

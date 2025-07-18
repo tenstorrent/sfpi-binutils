@@ -1,5 +1,5 @@
 /* tc-xtensa.c -- Assemble Xtensa instructions.
-   Copyright (C) 2003-2022 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -27,21 +27,8 @@
 #include "xtensa-relax.h"
 #include "dwarf2dbg.h"
 #include "xtensa-istack.h"
-#include "xtensa-config.h"
+#include "xtensa-dynconfig.h"
 #include "elf/xtensa.h"
-
-/* Provide default values for new configuration settings.  */
-#ifndef XTHAL_ABI_WINDOWED
-#define XTHAL_ABI_WINDOWED 0
-#endif
-
-#ifndef XTHAL_ABI_CALL0
-#define XTHAL_ABI_CALL0 1
-#endif
-
-#ifndef XTENSA_MARCH_EARLIEST
-#define XTENSA_MARCH_EARLIEST 0
-#endif
 
 #ifndef uint32
 #define uint32 unsigned int
@@ -94,7 +81,7 @@ static enum debug_info_type xt_saved_debug_type = DEBUG_NONE;
 /* Some functions are only valid in the front end.  This variable
    allows us to assert that we haven't crossed over into the
    back end.  */
-static bool past_xtensa_end = false;
+static bool past_xtensa_md_finish = false;
 
 /* Flags for properties of the last instruction in a segment.  */
 #define FLAG_IS_A0_WRITER	0x1
@@ -748,9 +735,9 @@ enum
   option_abi_call0,
 };
 
-const char *md_shortopts = "";
+const char md_shortopts[] = "";
 
-struct option md_longopts[] =
+const struct option md_longopts[] =
 {
   { "density", no_argument, NULL, option_density },
   { "no-density", no_argument, NULL, option_no_density },
@@ -833,8 +820,7 @@ struct option md_longopts[] =
   { NULL, no_argument, NULL, 0 }
 };
 
-size_t md_longopts_size = sizeof md_longopts;
-
+const size_t md_longopts_size = sizeof md_longopts;
 
 int
 md_parse_option (int c, const char *arg)
@@ -1189,9 +1175,9 @@ const pseudo_typeS md_pseudo_table[] =
 static bool
 use_transform (void)
 {
-  /* After md_end, you should be checking frag by frag, rather
+  /* After md_finish, you should be checking frag by frag, rather
      than state directives.  */
-  gas_assert (!past_xtensa_end);
+  gas_assert (!past_xtensa_md_finish);
   return directive_state[directive_transform];
 }
 
@@ -1199,10 +1185,10 @@ use_transform (void)
 static bool
 do_align_targets (void)
 {
-  /* Do not use this function after md_end; just look at align_targets
+  /* Do not use this function after md_finish; just look at align_targets
      instead.  There is no target-align directive, so alignment is either
      enabled for all frags or not done at all.  */
-  gas_assert (!past_xtensa_end);
+  gas_assert (!past_xtensa_md_finish);
   return align_targets && use_transform ();
 }
 
@@ -1586,8 +1572,8 @@ xtensa_literal_pseudo (int ignored ATTRIBUTE_UNUSED)
   c = get_symbol_name (&base_name);
   /* Just after name is now '\0'.  */
   p = input_line_pointer;
-  *p = c;
-  SKIP_WHITESPACE_AFTER_NAME ();
+  restore_line_pointer (c);
+  SKIP_WHITESPACE ();
 
   if (*input_line_pointer != ',' && *input_line_pointer != ':')
     {
@@ -4980,7 +4966,7 @@ xtensa_set_frag_assembly_state (fragS *fragP)
     fragP->tc_frag_data.is_no_density = true;
 
   /* This function is called from subsegs_finish, which is called
-     after xtensa_end, so we can't use "use_transform" or
+     after xtensa_md_finish, so we can't use "use_transform" or
      "use_schedule" here.  */
   if (!directive_state[directive_transform])
     fragP->tc_frag_data.is_no_transform = true;
@@ -6172,8 +6158,8 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 {
   arelent *reloc;
 
-  reloc = XNEW (arelent);
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
+  reloc = notes_alloc (sizeof (arelent));
+  reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
 
@@ -6189,8 +6175,6 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    _("cannot represent `%s' relocation in object file"),
 		    bfd_get_reloc_code_name (fixp->fx_r_type));
-      free (reloc->sym_ptr_ptr);
-      free (reloc);
       return NULL;
     }
 
@@ -6600,7 +6584,7 @@ find_vinsn_conflicts (vliw_insn *vinsn)
   int branches = 0;
   xtensa_isa isa = xtensa_default_isa;
 
-  gas_assert (!past_xtensa_end);
+  gas_assert (!past_xtensa_md_finish);
 
   for (i = 0 ; i < vinsn->num_slots; i++)
     {
@@ -7369,7 +7353,7 @@ xg_assemble_vliw_tokens (vliw_insn *vinsn)
 }
 
 
-/* xtensa_end and helper functions.  */
+/* xtensa_md_finish and helper functions.  */
 
 static void xtensa_cleanup_align_frags (void);
 static void xtensa_fix_target_frags (void);
@@ -7384,12 +7368,12 @@ static void xtensa_sanity_check (void);
 static void xtensa_add_config_info (void);
 
 void
-xtensa_end (void)
+xtensa_md_finish (void)
 {
   directive_balance ();
   xtensa_flush_pending_output ();
 
-  past_xtensa_end = true;
+  past_xtensa_md_finish = true;
 
   xtensa_move_literals ();
 
@@ -7882,8 +7866,9 @@ dump_litpools (void)
 		count++;
 	      litfrag = litfrag->fr_next;
 	    }
-	  printf("   %ld <%d:%d> (%d) [%d]: ",
-		 lpf->addr, lpf->priority, lpf->original_priority,
+	  printf("   %" PRId64 " <%d:%d> (%d) [%d]: ",
+		 (int64_t) lpf->addr,
+		 lpf->priority, lpf->original_priority,
 		 lpf->fragP->fr_line, count);
 	  /* dump_frag(lpf->fragP);  */
 	}
@@ -7927,7 +7912,7 @@ xtensa_maybe_create_literal_pool_frag (bool create, bool only_if_needed)
     {
       if (only_if_needed)
 	{
-	  if (past_xtensa_end || !use_transform() ||
+	  if (past_xtensa_md_finish || !use_transform() ||
 	      frag_now->tc_frag_data.is_no_transform)
 	    {
 	      return;
@@ -8616,6 +8601,7 @@ unrelaxed_frag_max_size (fragS *fragP)
     case rs_leb128:
     case rs_cfa:
     case rs_dwarf2dbg:
+    case rs_sframe:
       /* No further adjustments needed.  */
       break;
     case rs_machine_dependent:
@@ -8990,16 +8976,15 @@ static void
 xtensa_add_config_info (void)
 {
   asection *info_sec;
-  char *data, *p;
+  char data[100];
+  char *p;
   int sz;
 
   info_sec = subseg_new (".xtensa.info", 0);
   bfd_set_section_flags (info_sec, SEC_HAS_CONTENTS | SEC_READONLY);
 
-  data = XNEWVEC (char, 100);
-  sprintf (data, "USE_ABSOLUTE_LITERALS=%d\nABI=%d\n",
-	   XSHAL_USE_ABSOLUTE_LITERALS, xtensa_abi_choice ());
-  sz = strlen (data) + 1;
+  sz = 1 + sprintf (data, "USE_ABSOLUTE_LITERALS=%d\nABI=%d\n",
+		    XSHAL_USE_ABSOLUTE_LITERALS, xtensa_abi_choice ());
 
   /* Add enough null terminators to pad to a word boundary.  */
   do
@@ -9026,8 +9011,6 @@ xtensa_add_config_info (void)
   /* Finally, write the descriptor.  */
   p = frag_more (sz);
   memcpy (p, data, sz);
-
-  free (data);
 }
 
 
@@ -11732,10 +11715,11 @@ cache_literal_section (bool use_abs_literals)
 	       | (linkonce ? (SEC_LINK_ONCE | SEC_LINK_DUPLICATES_DISCARD) : 0)
 	       | (use_abs_literals ? SEC_DATA : SEC_CODE));
 
-      elf_group_name (seg) = group_name;
-
       bfd_set_section_flags (seg, flags);
       bfd_set_section_alignment (seg, 2);
+
+      if (group_name)
+	elf_set_group_name (seg, group_name);
     }
 
   *pcached = seg;
@@ -11803,6 +11787,37 @@ get_frag_is_literal (const fragS *fragP)
   return fragP->tc_frag_data.is_literal;
 }
 
+static asection *
+xtensa_make_property_section (asection *sec, const char *base_name)
+{
+  char *prop_sec_name;
+  asection *prop_sec;
+
+  /* Check if the section already exists.  */
+  prop_sec_name = xtensa_property_section_name (sec, base_name,
+						elf32xtensa_separate_props);
+  prop_sec = bfd_get_section_by_name_if (sec->owner, prop_sec_name,
+					 match_section_group,
+					 (void *) elf_group_name (sec));
+  /* If not, create it.  */
+  if (! prop_sec)
+    {
+      flagword flags = (SEC_RELOC | SEC_HAS_CONTENTS | SEC_READONLY);
+      flags |= (bfd_section_flags (sec)
+		& (SEC_LINK_ONCE | SEC_LINK_DUPLICATES));
+
+      prop_sec = bfd_make_section_anyway_with_flags
+	(sec->owner, strdup (prop_sec_name), flags);
+      if (! prop_sec)
+	return 0;
+
+      if (elf_group_name (sec))
+	elf_set_group_name (prop_sec, elf_group_name (sec));
+    }
+
+  free (prop_sec_name);
+  return prop_sec;
+}
 
 static void
 xtensa_create_property_segments (frag_predicate property_function,

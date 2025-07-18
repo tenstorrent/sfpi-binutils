@@ -1,5 +1,5 @@
 /* tc-hppa.c -- Assemble for the PA
-   Copyright (C) 1989-2022 Free Software Foundation, Inc.
+   Copyright (C) 1989-2025 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -591,7 +591,7 @@ static struct pa_it the_insn;
 /* Points to the end of an expression just parsed by get_expression
    and friends.  FIXME.  This shouldn't be handled with a file-global
    variable.  */
-static char *expr_end;
+static char *expr_parse_end;
 
 /* Nonzero if a .callinfo appeared within the current procedure.  */
 static int callinfo_found;
@@ -1270,7 +1270,7 @@ cons_fix_new_hppa (fragS *frag, int where, int size, expressionS *exp,
 		hppa_field_selector, size * 8, 0, 0);
 }
 
-/* Mark (via expr_end) the end of an expression (I think).  FIXME.  */
+/* Mark (via expr_parse_end) the end of an expression (I think).  FIXME.  */
 
 static void
 get_expression (char *str)
@@ -1286,11 +1286,11 @@ get_expression (char *str)
 	|| SEG_NORMAL (seg)))
     {
       as_warn (_("Bad segment in expression."));
-      expr_end = input_line_pointer;
+      expr_parse_end = input_line_pointer;
       input_line_pointer = save_in;
       return;
     }
-  expr_end = input_line_pointer;
+  expr_parse_end = input_line_pointer;
   input_line_pointer = save_in;
 }
 
@@ -1348,17 +1348,12 @@ tc_gen_reloc (asection *section, fixS *fixp)
   int n_relocs;
   int i;
 
-  hppa_fixp = (struct hppa_fix_struct *) fixp->tc_fix_data;
   if (fixp->fx_addsy == 0)
     return &no_relocs;
 
+  hppa_fixp = (struct hppa_fix_struct *) fixp->tc_fix_data;
   gas_assert (hppa_fixp != 0);
   gas_assert (section != 0);
-
-  reloc = XNEW (arelent);
-
-  reloc->sym_ptr_ptr = XNEW (asymbol *);
-  *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
 
   /* Allow fixup_segment to recognize hand-written pc-relative relocations.
      When we went through cons_fix_new_hppa, we classified them as complex.  */
@@ -1388,11 +1383,10 @@ tc_gen_reloc (asection *section, fixS *fixp)
   for (n_relocs = 0; codes[n_relocs]; n_relocs++)
     ;
 
-  relocs = XNEWVEC (arelent *, n_relocs + 1);
-  reloc = XNEWVEC (arelent, n_relocs);
+  relocs = notes_alloc (sizeof (*relocs) * (n_relocs + 1));
+  reloc = notes_alloc (sizeof (*reloc) * n_relocs);
   for (i = 0; i < n_relocs; i++)
     relocs[i] = &reloc[i];
-
   relocs[n_relocs] = NULL;
 
 #ifdef OBJ_ELF
@@ -1447,7 +1441,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
 	  break;
 	}
 
-      reloc->sym_ptr_ptr = XNEW (asymbol *);
+      reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
       *reloc->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
       reloc->howto = bfd_reloc_type_lookup (stdoutput,
 					    (bfd_reloc_code_real_type) code);
@@ -1463,7 +1457,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
     {
       code = *codes[i];
 
-      relocs[i]->sym_ptr_ptr = XNEW (asymbol *);
+      relocs[i]->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
       *relocs[i]->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
       relocs[i]->howto =
 	bfd_reloc_type_lookup (stdoutput,
@@ -1477,36 +1471,25 @@ tc_gen_reloc (asection *section, fixS *fixp)
 	     of two symbols.  With that in mind we fill in all four
 	     relocs now and break out of the loop.  */
 	  gas_assert (i == 1);
-	  relocs[0]->sym_ptr_ptr
-	    = (asymbol **) bfd_abs_section_ptr->symbol_ptr_ptr;
-	  relocs[0]->howto
-	    = bfd_reloc_type_lookup (stdoutput,
-				     (bfd_reloc_code_real_type) *codes[0]);
-	  relocs[0]->address = fixp->fx_frag->fr_address + fixp->fx_where;
+	  /* relocs[0] and relocs[1] have been initialised above.  We can
+	     use relocs[0]->sym_ptr_ptr allocation for relocs[2].  */
+	  relocs[2]->sym_ptr_ptr = relocs[0]->sym_ptr_ptr;
+	  relocs[0]->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 	  relocs[0]->addend = 0;
-	  relocs[1]->sym_ptr_ptr = XNEW (asymbol *);
-	  *relocs[1]->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
-	  relocs[1]->howto
-	    = bfd_reloc_type_lookup (stdoutput,
-				     (bfd_reloc_code_real_type) *codes[1]);
-	  relocs[1]->address = fixp->fx_frag->fr_address + fixp->fx_where;
 	  relocs[1]->addend = 0;
-	  relocs[2]->sym_ptr_ptr = XNEW (asymbol *);
 	  *relocs[2]->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_subsy);
 	  relocs[2]->howto
 	    = bfd_reloc_type_lookup (stdoutput,
 				     (bfd_reloc_code_real_type) *codes[2]);
 	  relocs[2]->address = fixp->fx_frag->fr_address + fixp->fx_where;
 	  relocs[2]->addend = 0;
-	  relocs[3]->sym_ptr_ptr
-	    = (asymbol **) bfd_abs_section_ptr->symbol_ptr_ptr;
+	  relocs[3]->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 	  relocs[3]->howto
 	    = bfd_reloc_type_lookup (stdoutput,
 				     (bfd_reloc_code_real_type) *codes[3]);
 	  relocs[3]->address = fixp->fx_frag->fr_address + fixp->fx_where;
 	  relocs[3]->addend = 0;
-	  relocs[4]->sym_ptr_ptr
-	    = (asymbol **) bfd_abs_section_ptr->symbol_ptr_ptr;
+	  relocs[4]->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 	  relocs[4]->howto
 	    = bfd_reloc_type_lookup (stdoutput,
 				     (bfd_reloc_code_real_type) *codes[4]);
@@ -1546,7 +1529,6 @@ tc_gen_reloc (asection *section, fixS *fixp)
 	case R_N0SEL:
 	case R_N1SEL:
 	  /* There is no symbol or addend associated with these fixups.  */
-	  relocs[i]->sym_ptr_ptr = XNEW (asymbol *);
 	  *relocs[i]->sym_ptr_ptr = symbol_get_bfdsym (dummy_symbol);
 	  relocs[i]->addend = 0;
 	  break;
@@ -1555,7 +1537,6 @@ tc_gen_reloc (asection *section, fixS *fixp)
 	case R_ENTRY:
 	case R_EXIT:
 	  /* There is no symbol associated with these fixups.  */
-	  relocs[i]->sym_ptr_ptr = XNEW (asymbol *);
 	  *relocs[i]->sym_ptr_ptr = symbol_get_bfdsym (dummy_symbol);
 	  relocs[i]->addend = fixp->fx_offset;
 	  break;
@@ -1631,26 +1612,26 @@ md_estimate_size_before_relax (fragS *fragP, asection *segment ATTRIBUTE_UNUSED)
 
 #ifdef OBJ_ELF
 # ifdef WARN_COMMENTS
-const char *md_shortopts = "Vc";
+const char md_shortopts[] = "Vc";
 # else
-const char *md_shortopts = "V";
+const char md_shortopts[] = "V";
 # endif
 #else
 # ifdef WARN_COMMENTS
-const char *md_shortopts = "c";
+const char md_shortopts[] = "c";
 # else
-const char *md_shortopts = "";
+const char md_shortopts[] = "";
 # endif
 #endif
 
-struct option md_longopts[] =
+const struct option md_longopts[] =
 {
 #ifdef WARN_COMMENTS
   {"warn-comment", no_argument, NULL, 'c'},
 #endif
   {NULL, no_argument, NULL, 0}
 };
-size_t md_longopts_size = sizeof (md_longopts);
+const size_t md_longopts_size = sizeof (md_longopts);
 
 int
 md_parse_option (int c, const char *arg ATTRIBUTE_UNUSED)
@@ -2518,7 +2499,7 @@ evaluate_absolute (struct pa_it *insn)
   return hppa_field_adjust (0, value, field_selector);
 }
 
-/* Mark (via expr_end) the end of an absolute expression.  FIXME.  */
+/* Mark (via expr_parse_end) the end of an absolute expression.  FIXME.  */
 
 static int
 pa_get_absolute_expression (struct pa_it *insn, char **strp)
@@ -2529,7 +2510,7 @@ pa_get_absolute_expression (struct pa_it *insn, char **strp)
   save_in = input_line_pointer;
   input_line_pointer = *strp;
   expression (&insn->exp);
-  expr_end = input_line_pointer;
+  expr_parse_end = input_line_pointer;
   input_line_pointer = save_in;
   if (insn->exp.X_op != O_constant)
     {
@@ -3346,7 +3327,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 32, 1, 0);
 	      SAVE_IMMEDIATE(num);
 	      INSERT_FIELD_AND_CONTINUE (opcode, 32 - num, 0);
@@ -3356,7 +3337,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      /* When in strict mode, we want to just reject this
 		 match instead of giving an out of range error.  */
 	      CHECK_FIELD (num, 15, -16, strict);
@@ -3368,7 +3349,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      /* When in strict mode, we want to just reject this
 		 match instead of giving an out of range error.  */
 	      CHECK_FIELD (num, 15, -16, strict);
@@ -3380,7 +3361,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 31, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 0);
 
@@ -3389,7 +3370,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 31, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 16);
 
@@ -3398,7 +3379,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 1023, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 16);
 
@@ -4556,7 +4537,7 @@ pa_ip (char *str)
 	       are 0..6 inclusive.  */
 	    case 'h':
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4573,7 +4554,7 @@ pa_ip (char *str)
 	      get_expression (s);
 	      if (the_insn.exp.X_op == O_constant)
 		{
-		  s = expr_end;
+		  s = expr_parse_end;
 		  num = evaluate_absolute (&the_insn);
 		  CHECK_FIELD (num, 6, 0, 0);
 		  num = (num + 1) ^ 1;
@@ -4593,7 +4574,7 @@ pa_ip (char *str)
 	    case 'i':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4629,7 +4610,7 @@ pa_ip (char *str)
 	    case 'J':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  int mb;
@@ -4653,7 +4634,7 @@ pa_ip (char *str)
 	    case 'K':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  int mb;
@@ -4675,7 +4656,7 @@ pa_ip (char *str)
 	    case '<':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  int mb;
@@ -4695,7 +4676,7 @@ pa_ip (char *str)
 	    case '>':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  int mb;
@@ -4719,7 +4700,7 @@ pa_ip (char *str)
 		break;
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4761,7 +4742,7 @@ pa_ip (char *str)
 	    case 'd':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4802,7 +4783,7 @@ pa_ip (char *str)
 	    case 'j':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4838,7 +4819,7 @@ pa_ip (char *str)
 	    case 'k':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4874,7 +4855,7 @@ pa_ip (char *str)
 	    case 'l':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4911,7 +4892,7 @@ pa_ip (char *str)
 	    case 'y':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4949,7 +4930,7 @@ pa_ip (char *str)
 	    case '&':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      if (the_insn.exp.X_op == O_constant)
 		{
 		  num = evaluate_absolute (&the_insn);
@@ -4987,7 +4968,7 @@ pa_ip (char *str)
 	    case 'w':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      the_insn.pcrel = 1;
 	      if (!the_insn.exp.X_add_symbol
 		  || !strcmp (S_GET_NAME (the_insn.exp.X_add_symbol),
@@ -5011,7 +4992,7 @@ pa_ip (char *str)
 		  the_insn.format = 12;
 		  the_insn.arg_reloc = last_call_desc.arg_reloc;
 		  memset (&last_call_desc, 0, sizeof (struct call_desc));
-		  s = expr_end;
+		  s = expr_parse_end;
 		  continue;
 		}
 
@@ -5019,7 +5000,7 @@ pa_ip (char *str)
 	    case 'W':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      the_insn.pcrel = 1;
 	      if (!the_insn.exp.X_add_symbol
 		  || !strcmp (S_GET_NAME (the_insn.exp.X_add_symbol),
@@ -5050,7 +5031,7 @@ pa_ip (char *str)
 	    case 'X':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      the_insn.pcrel = 1;
 	      if (!the_insn.exp.X_add_symbol
 		  || !strcmp (S_GET_NAME (the_insn.exp.X_add_symbol),
@@ -5080,7 +5061,7 @@ pa_ip (char *str)
 	    case 'z':
 	      the_insn.field_selector = pa_chk_field_selector (&s);
 	      get_expression (s);
-	      s = expr_end;
+	      s = expr_parse_end;
 	      the_insn.pcrel = 0;
 	      if (!the_insn.exp.X_add_symbol
 		  || !strcmp (S_GET_NAME (the_insn.exp.X_add_symbol),
@@ -5137,7 +5118,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 3, 1, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 6);
 
@@ -5146,7 +5127,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 15, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 6);
 
@@ -5155,7 +5136,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 31, 0, strict);
 	      SAVE_IMMEDIATE(num);
 	      INSERT_FIELD_AND_CONTINUE (opcode, 31 - num, 5);
@@ -5165,7 +5146,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 63, 0, strict);
 	      SAVE_IMMEDIATE(num);
 	      num = 63 - num;
@@ -5178,7 +5159,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 64, 1, strict);
 	      SAVE_IMMEDIATE(num);
 	      num--;
@@ -5191,7 +5172,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 64, 1, strict);
 	      SAVE_IMMEDIATE(num);
 	      num--;
@@ -5204,7 +5185,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 31, 0, strict);
 	      SAVE_IMMEDIATE(num);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 5);
@@ -5214,7 +5195,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 63, 0, strict);
 	      SAVE_IMMEDIATE(num);
 	      opcode |= (num & 0x20) << 6;
@@ -5226,7 +5207,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 63, 0, strict);
 	      if (num & 0x20)
 		opcode &= ~(1 << 13);
@@ -5237,7 +5218,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 31, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 21);
 
@@ -5246,7 +5227,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 511, 1, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 3);
 
@@ -5255,7 +5236,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 8191, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 13);
 
@@ -5264,7 +5245,7 @@ pa_ip (char *str)
 	      num = pa_get_absolute_expression (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 67108863, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 0);
 
@@ -5275,7 +5256,7 @@ pa_ip (char *str)
 	      num = pa_get_number (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 7, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 6);
 
@@ -5284,7 +5265,7 @@ pa_ip (char *str)
 	      num = pa_get_number (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 1048575, 0, strict);
 	      num = (num & 0x1f) | ((num & 0x000fffe0) << 6);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 0);
@@ -5294,7 +5275,7 @@ pa_ip (char *str)
 	      num = pa_get_number (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 32767, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 11);
 
@@ -5303,7 +5284,7 @@ pa_ip (char *str)
 	      num = pa_get_number (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 1023, 0, strict);
 	      num = (num & 0x1f) | ((num & 0x000003e0) << 6);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 0);
@@ -5313,7 +5294,7 @@ pa_ip (char *str)
 	      num = pa_get_number (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 32767, 0, strict);
 	      num = (num & 0x1f) | ((num & 0x00007fe0) << 6);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 0);
@@ -5325,7 +5306,7 @@ pa_ip (char *str)
 	      num = pa_get_number (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 7, 0, strict);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 6);
 
@@ -5334,7 +5315,7 @@ pa_ip (char *str)
 	      num = pa_get_number (&the_insn, &s);
 	      if (strict && the_insn.exp.X_op != O_constant)
 		break;
-	      s = expr_end;
+	      s = expr_parse_end;
 	      CHECK_FIELD (num, 4194303, 0, strict);
 	      num = (num & 0x1f) | ((num & 0x003fffe0) << 4);
 	      INSERT_FIELD_AND_CONTINUE (opcode, num, 0);
@@ -6199,7 +6180,7 @@ pa_callinfo (int unused ATTRIBUTE_UNUSED)
    label when finished.  */
 
 static void
-pa_text (int unused ATTRIBUTE_UNUSED)
+pa_text (int arg)
 {
 #ifdef OBJ_SOM
   current_space = is_defined_space ("$TEXT$");
@@ -6207,21 +6188,32 @@ pa_text (int unused ATTRIBUTE_UNUSED)
     = pa_subsegment_to_subspace (current_space->sd_seg, 0);
 #endif
 
-  s_text (0);
+#ifdef OBJ_ELF
+  obj_elf_text (arg);
+#else
+  s_text (arg);
+#endif
+
   pa_undefine_label ();
 }
 
 /* Switch to the data space.  As usual delete our label.  */
 
 static void
-pa_data (int unused ATTRIBUTE_UNUSED)
+pa_data (int arg)
 {
 #ifdef OBJ_SOM
   current_space = is_defined_space ("$PRIVATE$");
   current_subspace
     = pa_subsegment_to_subspace (current_space->sd_seg, 0);
 #endif
-  s_data (0);
+
+#ifdef OBJ_ELF
+  obj_elf_data (arg);
+#else
+  s_data (arg);
+#endif
+
   pa_undefine_label ();
 }
 
@@ -6354,6 +6346,7 @@ hppa_force_reg_syms_absolute (expressionS *resultP,
 			      expressionS *rightP)
 {
   if (fudge_reg_expressions
+      && resultP
       && rightP->X_op == O_register
       && resultP->X_op == O_register)
     {

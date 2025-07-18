@@ -3,7 +3,7 @@
 
 #include "sim-main.h"
 #include "sim-signal.h"
-#include "v850_sim.h"
+#include "v850-sim.h"
 #include "simops.h"
 
 #include <sys/types.h>
@@ -12,9 +12,7 @@
 #include <utime.h>
 #endif
 #include <time.h>
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -39,7 +37,7 @@ int type2_regs[16] = { 3, 2, 1, 0, 27, 26, 25, 24, 31, 30, 29, 28, 23, 22, 20, 2
    that order in a push/pop instruction.  */
 int type3_regs[15] = { 2, 1, 0, 27, 26, 25, 24, 31, 30, 29, 28, 23, 22, 20, 21};
 
-#ifdef DEBUG
+#if WITH_TRACE_ANY_P
 #ifndef SIZE_INSTRUCTION
 #define SIZE_INSTRUCTION 18
 #endif
@@ -47,6 +45,9 @@ int type3_regs[15] = { 2, 1, 0, 27, 26, 25, 24, 31, 30, 29, 28, 23, 22, 20, 21};
 #ifndef SIZE_VALUES
 #define SIZE_VALUES 11
 #endif
+
+/* TODO: This file largely assumes a single CPU.  */
+#define CPU STATE_CPU (sd, 0)
 
 
 uint32_t   trace_values[3];
@@ -354,7 +355,7 @@ Multiply64 (int sign, unsigned long op0)
   hi   = (((op0 >> 16) & 0xFFFF) * ((op1 >> 16) & 0xFFFF));
   
   /* We now need to add all of these results together, taking care
-     to propogate the carries from the additions: */
+     to propagate the carries from the additions: */
   RdLo = Add32 (lo, (mid1 << 16), & carry);
   RdHi = carry;
   RdLo = Add32 (RdLo, (mid2 << 16), & carry);
@@ -398,7 +399,7 @@ fetch_str (SIM_DESC sd, address_word addr)
     nr++;
 
   buf = NZALLOC (char, nr + 1);
-  sim_read (simulator, addr, (unsigned char *) buf, nr);
+  sim_read (simulator, addr, buf, nr);
 
   return buf;
 }
@@ -1692,7 +1693,7 @@ OP_10007E0 (void)
 	  {
 	    char *buf = zalloc (PARM3);
 	    RETVAL = sim_io_read (simulator, PARM1, buf, PARM3);
-	    sim_write (simulator, PARM2, (unsigned char *) buf, PARM3);
+	    sim_write (simulator, PARM2, buf, PARM3);
 	    free (buf);
 	    if ((int) RETVAL < 0)
 	      RETERR = sim_io_get_errno (simulator);
@@ -1702,7 +1703,7 @@ OP_10007E0 (void)
 	case TARGET_NEWLIB_V850_SYS_write:
 	  {
 	    char *buf = zalloc (PARM3);
-	    sim_read (simulator, PARM2, (unsigned char *) buf, PARM3);
+	    sim_read (simulator, PARM2, buf, PARM3);
 	    if (PARM1 == 1)
 	      RETVAL = sim_io_write_stdout (simulator, buf, PARM3);
 	    else
@@ -2105,7 +2106,6 @@ divn
   unsigned int    DBZ = als == 0 ? 1 : 0;
   unsigned int    Q   = ~(SS ^ SD) & 1;
   unsigned int    C;
-  unsigned int    S;
   unsigned int    i;
   unsigned long   alt = Q ? ~als : als;
 
@@ -2117,7 +2117,7 @@ divn
 	 | (((alt >> 31) ^ (ald >> 31)) & (~alo >> 31)));
   Q   = C ^ SS;
   R1  = (alo == 0) ? 0 : (R1 & (Q ^ (SS ^ SD)));
-  S   = alo >> 31;
+  /* S   = alo >> 31; */
   sfi = (sfi << (32-N+1)) | Q;
   ald = (alo << 1) | (sfi >> 31);
   if ((alo >> 31) ^ (ald >> 31))
@@ -2135,7 +2135,7 @@ divn
 	     | (((alt >> 31) ^ (ald >> 31)) & (~alo >> 31)));
       Q   = C ^ SS;
       R1  = (alo == 0) ? 0 : (R1 & (Q ^ (SS ^ SD)));
-      S   = alo >> 31;
+      /* S   = alo >> 31; */
       sfi = (sfi << 1) | Q;
       ald = (alo << 1) | (sfi >> 31);
       if ((alo >> 31) ^ (ald >> 31))
@@ -2455,7 +2455,6 @@ OP_28007E0 (void)
   signed long int remainder;
   signed long int divide_by;
   signed long int divide_this;
-  int         overflow = 0;
   
   trace_input ("divh", OP_REG_REG_REG, 0);
   
@@ -3033,7 +3032,7 @@ v850_float_compare (SIM_DESC sd, int cmp, sim_fpu wop1, sim_fpu wop2, int double
     }
   else
     {
-      int gt = 0,lt = 0,eq = 0, status;
+      int lt = 0, eq = 0, status;
 
       status = sim_fpu_cmp (&wop1, &wop2);
 
@@ -3048,19 +3047,19 @@ v850_float_compare (SIM_DESC sd, int cmp, sim_fpu wop1, sim_fpu wop2, int double
 	  lt = 1;
 	  break;
 	case SIM_FPU_IS_PINF:
-	  gt = 1;
+	  /* gt = 1; */
 	  break;
 	case SIM_FPU_IS_NNUMBER:
 	  lt = 1;
 	  break;
 	case SIM_FPU_IS_PNUMBER:
-	  gt = 1;
+	  /* gt = 1; */
 	  break;
 	case SIM_FPU_IS_NDENORM:
 	  lt = 1;
 	  break;
 	case SIM_FPU_IS_PDENORM:
-	  gt = 1;
+	  /* gt = 1; */
 	  break;
 	case SIM_FPU_IS_NZERO:
 	case SIM_FPU_IS_PZERO:
@@ -3387,7 +3386,7 @@ v850_satsub (SIM_DESC sd, unsigned int op0, unsigned int op1, unsigned int *op2p
 
 uint32_t
 load_data_mem (SIM_DESC  sd,
-	       SIM_ADDR  addr,
+	       address_word  addr,
 	       int       len)
 {
   uint32_t data;
@@ -3414,7 +3413,7 @@ load_data_mem (SIM_DESC  sd,
 
 void
 store_data_mem (SIM_DESC    sd,
-		SIM_ADDR    addr,
+		address_word    addr,
 		int         len,
 		uint32_t  data)
 {

@@ -1,5 +1,5 @@
 /* Header file for GDB CLI command implementation library.
-   Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2000-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,9 +14,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CLI_CLI_SCRIPT_H
-#define CLI_CLI_SCRIPT_H
+#ifndef GDB_CLI_CLI_SCRIPT_H
+#define GDB_CLI_CLI_SCRIPT_H
 
+#include "compile/compile.h"
 #include "gdbsupport/function-view.h"
 
 struct ui_file;
@@ -112,11 +113,18 @@ private:
   }
 };
 
+/* Prototype for a function to call to get one more input line.
+
+   If the function needs to return a dynamically allocated string, it can place
+   in the passed-in buffer, and return a pointer to it.  Otherwise, it can
+   simply ignore it.  */
+
+using read_next_line_ftype = gdb::function_view<const char * (std::string &)>;
+
 extern counted_command_line read_command_lines
     (const char *, int, int, gdb::function_view<void (const char *)>);
 extern counted_command_line read_command_lines_1
-    (gdb::function_view<const char * ()>, int,
-     gdb::function_view<void (const char *)>);
+    (read_next_line_ftype, int, gdb::function_view<void (const char *)>);
 
 
 /* Exported to cli/cli-cmds.c */
@@ -174,4 +182,4 @@ extern void print_command_trace (const char *cmd, ...)
 
 extern void reset_command_nest_depth (void);
 
-#endif /* CLI_CLI_SCRIPT_H */
+#endif /* GDB_CLI_CLI_SCRIPT_H */

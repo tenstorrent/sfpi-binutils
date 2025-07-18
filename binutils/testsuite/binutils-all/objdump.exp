@@ -1,4 +1,4 @@
-#   Copyright (C) 1993-2022 Free Software Foundation, Inc.
+#   Copyright (C) 1993-2025 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -375,6 +375,32 @@ if { [is_elf_format] } then {
     }
 }
 
+proc test_objdump_d_show_all_symbols { testfile dumpfile } {
+    global OBJDUMP
+    global OBJDUMPFLAGS
+
+    set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS -d --show-all-symbols $testfile"]
+
+    set want "${dumpfile}.*:.*00+0 <text_symbol>"
+    if ![regexp $want $got] then {
+	fail "objdump -d --show-all-symbols $testfile: Missing 'text_symbol'"
+	return
+    }
+
+    set want "${dumpfile}.*:.*00+0 <static_text_symbol>"
+    if ![regexp $want $got] then {
+	fail "objdump -d --show-all-symbols $testfile: Missing 'static_text_symbol'"
+	return
+    }
+
+    pass "objdump -d --show-all-symbols $testfile"
+}
+
+# The AIX and ECOFF assemblers default to makeing symbols local, not global.
+# So they do not show up in this test.
+setup_xfail "*-*-*aix*"
+setup_xfail "*-*-*ecoff"
+test_objdump_d_show_all_symbols $testfile $testfile
 
 # Test objdump -s
 
@@ -440,6 +466,22 @@ if { ![is_elf_format] } then {
     } else {
 	pass "objdump -W"
     }
+
+    # Test objdump -Z -s on a file that contains some compressed .debug sections
+
+    set got [remote_exec host "$OBJDUMP $OBJDUMPFLAGS -Z -s -j .zdebug_abbrev $compressed_testfile" "" "/dev/null" "objdump.out"]
+
+    if { [lindex $got 0] != 0 || ![string match "" [lindex $got 1]] } then {
+	fail "objdump -Z -s (reason: unexpected output)"
+	send_log $got
+	send_log "\n"
+    }
+
+    if { [regexp_diff objdump.out $srcdir/$subdir/objdump.Zs] } then {
+	fail "objdump -Z -s"
+    } else {
+	pass "objdump -Z -s"
+    }
 }
 
 # Test objdump -WL on a file that contains line information for multiple files and search directories.
@@ -456,6 +498,8 @@ if { ![is_elf_format]
 } else {
     if { [istarget "or1k*-*-*"] } then {
         set decodedline_testsrc $srcdir/$subdir/dw2-decodedline-1.S
+    } elseif { [istarget "kvx*-*-*"] } {
+        set decodedline_testsrc $srcdir/$subdir/dw2-decodedline-2.S
     } else {
         set decodedline_testsrc $srcdir/$subdir/dw2-decodedline.S
     }
@@ -554,7 +598,7 @@ if { ![is_elf_format] } then {
     file_on_host delete $output
 }
 
-proc test_build_id_debuglink {} {
+proc test_build_id_debuglink {option} {
     global srcdir
     global subdir
     global env
@@ -564,13 +608,13 @@ proc test_build_id_debuglink {} {
     global CFLAGS_FOR_TARGET
     global exe
     
-    set test "build-id-debuglink"
+    set test "build-id-debuglink ($option)"
 
     # Use a fixed build-id.
     if { [info exists CFLAGS_FOR_TARGET] } {
 	set save_CFLAGS_FOR_TARGET $CFLAGS_FOR_TARGET
     }
-    set CFLAGS_FOR_TARGET "-g -Wl,--build-id=0x12345678abcdef01"
+    set CFLAGS_FOR_TARGET "-g -Wl,--build-id=0x12345678abcdef01,--compress-debug-sections=$option"
 
     if { [target_compile $srcdir/$subdir/testprog.c tmpdir/testprog${exe} executable debug] != "" } {
 	unsupported "$test (build)"
@@ -632,7 +676,8 @@ proc test_build_id_debuglink {} {
 }
 
 if {[is_elf_format]} then {
-    test_build_id_debuglink
+    test_build_id_debuglink none
+    test_build_id_debuglink zlib
 }
 
 # Test objdump -Wk on a file containing debug links.
@@ -787,6 +832,12 @@ proc test_objdump_dotnet_assemblies {} {
 
     set test "dotnet-assemblies"
 
+    # If gentestdlls isn't available, skip instead of crashing below.
+    if ![file exists $base_dir/testsuite/gentestdlls] {
+	untested $test
+	return
+    }
+
     set got [binutils_run "$base_dir/testsuite/gentestdlls" "tmpdir pei-i386 pei-x86-64"]
     set want "wrote linux-pei-x86-64.dll"
     # The test program is hardcoded to generate valid dlls on any target
@@ -890,6 +941,60 @@ proc test_objdump_S { } {
 }
 
 test_objdump_S
+
+# Test objdump --private
+proc test_objdump_P {} {
+    global srcdir
+    global subdir
+    global OBJDUMP
+    global OBJDUMPFLAGS
+    global obj
+    
+    set test "objdump -P"
+    
+    if {![binutils_assemble $srcdir/$subdir/bintest.s tmpdir/bintest.${obj}]} then {
+	unsupported "$test (build)"
+	return
+    }
+
+    if [is_remote host] {
+	set testfile [remote_download host tmpdir/bintest.${obj}]
+    } else {
+	set testfile tmpdir/bintest.${obj}
+    }
+
+    set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS -P header $testfile"]
+
+    # FIXME: We should probably test the output further than this...
+    set want "Machine Num"
+    
+    if [regexp $want $got] then {
+	pass "$test (dump headers)"
+    } else {
+	fail "$test (dump headers)"
+    }
+
+    set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS --private=sections $testfile"]
+
+    # FIXME: We should probably test the output further than this...
+    set want "EXECUTE,READ"
+
+    if [regexp $want $got] then {
+	pass "$test (dump sections)"
+    } else {
+	fail "$test (dump sections)"
+    }
+
+    # remote_file host delete $testfile
+}
+
+# Test objdump --private of a PE format file.
+if { [istarget "*-*-pe*"]
+     || [istarget "*-*-cygwin*"]
+     || [istarget "*-*-mingw*"]
+} then {
+    test_objdump_P
+}
 
 # Options which are not tested: -a -D -R -T -x -l --stabs
 # I don't see any generic way to test any of these other than -a.

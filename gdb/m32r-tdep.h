@@ -1,6 +1,6 @@
 /* Target-dependent code for Renesas M32R, for GDB.
  
-   Copyright (C) 2004-2022 Free Software Foundation, Inc.
+   Copyright (C) 2004-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,12 +17,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef M32R_TDEP_H
-#define M32R_TDEP_H
+#ifndef GDB_M32R_TDEP_H
+#define GDB_M32R_TDEP_H
 
 #include "gdbarch.h"
 
-struct m32r_gdbarch_tdep : gdbarch_tdep
+struct m32r_gdbarch_tdep : gdbarch_tdep_base
 {
   /* gdbarch target dependent data here.  Currently unused for M32R.  */
 };
@@ -49,4 +49,4 @@ enum m32r_regnum
 
 #define M32R_NUM_REGS 25
 
-#endif /* m32r-tdep.h */
+#endif /* GDB_M32R_TDEP_H */

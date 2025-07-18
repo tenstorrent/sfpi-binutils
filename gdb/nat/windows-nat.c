@@ -1,5 +1,5 @@
 /* Internal interfaces for the Windows code
-   Copyright (C) 1995-2022 Free Software Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -16,7 +16,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "gdbsupport/common-defs.h"
 #include "nat/windows-nat.h"
 #include "gdbsupport/common-debug.h"
 #include "target/target.h"
@@ -95,8 +94,8 @@ windows_thread_info::suspend ()
 	 We can get Invalid Handle (6) if the main thread
 	 has exited.  */
       if (err != ERROR_INVALID_HANDLE && err != ERROR_ACCESS_DENIED)
-	warning (_("SuspendThread (tid=0x%x) failed. (winerr %u)"),
-		 (unsigned) tid, (unsigned) err);
+	warning (_("SuspendThread (tid=0x%x) failed. (winerr %u: %s)"),
+		 (unsigned) tid, (unsigned) err, strwinerror (err));
       suspended = -1;
     }
   else
@@ -113,8 +112,8 @@ windows_thread_info::resume ()
       if (ResumeThread (h) == (DWORD) -1)
 	{
 	  DWORD err = GetLastError ();
-	  warning (_("warning: ResumeThread (tid=0x%x) failed. (winerr %u)"),
-		   (unsigned) tid, (unsigned) err);
+	  warning (_("warning: ResumeThread (tid=0x%x) failed. (winerr %u: %s)"),
+		   (unsigned) tid, (unsigned) err, strwinerror (err));
 	}
     }
   suspended = 0;
@@ -173,23 +172,13 @@ windows_process_info::get_exec_module_filename (char *exe_name_ret,
   DWORD cbNeeded;
 
   cbNeeded = 0;
-#ifdef __x86_64__
-  if (wow64_process)
+  BOOL ret = with_context (nullptr, [&] (auto *context)
     {
-      if (!EnumProcessModulesEx (handle,
-				 &dh_buf, sizeof (HMODULE), &cbNeeded,
-				 LIST_MODULES_32BIT)
-	  || !cbNeeded)
-	return 0;
-    }
-  else
-#endif
-    {
-      if (!EnumProcessModules (handle,
-			       &dh_buf, sizeof (HMODULE), &cbNeeded)
-	  || !cbNeeded)
-	return 0;
-    }
+      return enum_process_modules (context, handle, &dh_buf,
+				   sizeof (HMODULE), &cbNeeded);
+    });
+  if (!ret || !cbNeeded)
+    return 0;
 
   /* We know the executable is always first in the list of modules,
      which we just fetched.  So no need to fetch more.  */
@@ -204,8 +193,10 @@ windows_process_info::get_exec_module_filename (char *exe_name_ret,
     len = GetModuleFileNameEx (handle,
 			       dh_buf, pathbuf, exe_name_max_len);
     if (len == 0)
-      error (_("Error getting executable filename: %u."),
-	     (unsigned) GetLastError ());
+      {
+	unsigned err = (unsigned) GetLastError ();
+	throw_winerror_with_name (_("Error getting executable filename"), err);
+      }
     if (cygwin_conv_path (CCP_WIN_W_TO_POSIX, pathbuf, exe_name_ret,
 			  exe_name_max_len) < 0)
       error (_("Error converting executable filename to POSIX: %d."), errno);
@@ -214,8 +205,10 @@ windows_process_info::get_exec_module_filename (char *exe_name_ret,
   len = GetModuleFileNameEx (handle,
 			     dh_buf, exe_name_ret, exe_name_max_len);
   if (len == 0)
-    error (_("Error getting executable filename: %u."),
-	   (unsigned) GetLastError ());
+    {
+      unsigned err = (unsigned) GetLastError ();
+      throw_winerror_with_name (_("Error getting executable filename"), err);
+    }
 #endif
 
     return 1;	/* success */
@@ -450,7 +443,7 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
 	  break;
 	}
 #endif
-      /* FALLTHROUGH */
+      [[fallthrough]];
     case STATUS_WX86_BREAKPOINT:
       DEBUG_EXCEPTION_SIMPLE ("EXCEPTION_BREAKPOINT");
       ourstatus->set_stopped (GDB_SIGNAL_TRAP);
@@ -489,7 +482,7 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
 	  break;
 	}
 	/* treat improperly formed exception as unknown */
-	/* FALLTHROUGH */
+	[[fallthrough]];
     default:
       /* Treat unhandled first chance exceptions specially.  */
       if (current_event.u.Exception.dwFirstChance)
@@ -520,41 +513,22 @@ windows_process_info::add_dll (LPVOID load_addr)
   HMODULE *hmodules;
   int i;
 
-#ifdef __x86_64__
-  if (wow64_process)
+  BOOL ret = with_context (nullptr, [&] (auto *context)
     {
-      if (EnumProcessModulesEx (handle, &dummy_hmodule,
-				sizeof (HMODULE), &cb_needed,
-				LIST_MODULES_32BIT) == 0)
-	return;
-    }
-  else
-#endif
-    {
-      if (EnumProcessModules (handle, &dummy_hmodule,
-			      sizeof (HMODULE), &cb_needed) == 0)
-	return;
-    }
-
-  if (cb_needed < 1)
+      return enum_process_modules (context, handle, &dummy_hmodule,
+				   sizeof (HMODULE), &cb_needed);
+    });
+  if (!ret || cb_needed < 1)
     return;
 
   hmodules = (HMODULE *) alloca (cb_needed);
-#ifdef __x86_64__
-  if (wow64_process)
+  ret = with_context (nullptr, [&] (auto *context)
     {
-      if (EnumProcessModulesEx (handle, hmodules,
-				cb_needed, &cb_needed,
-				LIST_MODULES_32BIT) == 0)
-	return;
-    }
-  else
-#endif
-    {
-      if (EnumProcessModules (handle, hmodules,
-			      cb_needed, &cb_needed) == 0)
-	return;
-    }
+      return enum_process_modules (context, handle, hmodules,
+				   cb_needed, &cb_needed);
+    });
+  if (!ret)
+    return;
 
   char system_dir[MAX_PATH];
   char syswow_dir[MAX_PATH];
@@ -692,10 +666,10 @@ windows_process_info::matching_pending_stop (bool debug_events)
 
 /* See nat/windows-nat.h.  */
 
-gdb::optional<pending_stop>
+std::optional<pending_stop>
 windows_process_info::fetch_pending_stop (bool debug_events)
 {
-  gdb::optional<pending_stop> result;
+  std::optional<pending_stop> result;
   for (auto iter = pending_stops.begin ();
        iter != pending_stops.end ();
        ++iter)
@@ -794,6 +768,10 @@ create_process_wrapper (FUNC *do_create_process, const CHAR *image,
 	    gdb_lpproc_thread_attribute_list lpAttributeList;
 	  };
 
+#	  ifndef EXTENDED_STARTUPINFO_PRESENT
+#	   define EXTENDED_STARTUPINFO_PRESENT 0x00080000
+#	  endif
+
 	  gdb_extended_info info_ex {};
 
 	  if (startup_info != nullptr)
@@ -804,11 +782,11 @@ create_process_wrapper (FUNC *do_create_process, const CHAR *image,
 	     call always fails, by design.  */
 	  InitializeProcThreadAttributeList (nullptr, 1, 0, &size);
 	  info_ex.lpAttributeList
-	    = (PPROC_THREAD_ATTRIBUTE_LIST) alloca (size);
+	    = (gdb_lpproc_thread_attribute_list) alloca (size);
 	  InitializeProcThreadAttributeList (info_ex.lpAttributeList,
 					     1, 0, &size);
 
-	  gdb::optional<BOOL> return_value;
+	  std::optional<BOOL> return_value;
 	  DWORD attr_flags = relocate_aslr_flags;
 	  if (!UpdateProcThreadAttribute (info_ex.lpAttributeList, 0,
 					  mitigation_policy,
@@ -825,7 +803,7 @@ create_process_wrapper (FUNC *do_create_process, const CHAR *image,
 						| EXTENDED_STARTUPINFO_PRESENT),
 					       environment,
 					       cur_dir,
-					       (STARTUPINFO *) &info_ex,
+					       &info_ex.StartupInfo,
 					       process_info);
 	      if (result)
 		return_value = result;

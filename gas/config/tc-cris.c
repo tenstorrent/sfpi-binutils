@@ -1,5 +1,5 @@
 /* tc-cris.c -- Assembler code for the CRIS CPU core.
-   Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2000-2025 Free Software Foundation, Inc.
 
    Contributed by Axis Communications AB, Lund, Sweden.
    Originally written for GAS 1.38.1 by Mikael Asker.
@@ -211,7 +211,7 @@ static int warn_for_branch_expansion = 0;
 static int err_for_dangerous_mul_placement
  = (XCONCAT2 (arch_,DEFAULT_CRIS_ARCH) != arch_crisv32);
 
-const char cris_comment_chars[] = ";";
+const char comment_chars[] = ";";
 
 /* This array holds the chars that only start a comment at the beginning of
    a line.  If the line seems to have the form '# 123 filename'
@@ -414,7 +414,7 @@ const relax_typeS md_cris_relax_table[] =
 #undef BDAP_WB
 
 /* Target-specific multicharacter options, not const-declared.  */
-struct option md_longopts[] =
+const struct option md_longopts[] =
 {
 #define OPTION_NO_US (OPTION_MD_BASE + 0)
   {"no-underscore", no_argument, NULL, OPTION_NO_US},
@@ -432,8 +432,8 @@ struct option md_longopts[] =
 };
 
 /* Not const-declared.  */
-size_t md_longopts_size = sizeof (md_longopts);
-const char *md_shortopts = "hHN";
+const size_t md_longopts_size = sizeof (md_longopts);
+const char md_shortopts[] = "hHN";
 
 /* At first glance, this may seems wrong and should be 4 (ba + nop); but
    since a short_jump must skip a *number* of long jumps, it must also be
@@ -548,11 +548,11 @@ cris_relax_frag (segT seg ATTRIBUTE_UNUSED, fragS *fragP,
       if (fragP->fr_symbol == NULL
 	  || S_GET_SEGMENT (fragP->fr_symbol) != absolute_section)
 	as_fatal (_("internal inconsistency problem in %s: fr_symbol %lx"),
-		  __FUNCTION__, (long) fragP->fr_symbol);
+		  __func__, (long) fragP->fr_symbol);
       symbolP = fragP->fr_symbol;
       if (symbol_resolved_p (symbolP))
 	as_fatal (_("internal inconsistency problem in %s: resolved symbol"),
-		  __FUNCTION__);
+		  __func__);
       aim = S_GET_VALUE (symbolP);
       break;
 
@@ -562,7 +562,7 @@ cris_relax_frag (segT seg ATTRIBUTE_UNUSED, fragS *fragP,
 
     default:
       as_fatal (_("internal inconsistency problem in %s: fr_subtype %d"),
-		  __FUNCTION__, fragP->fr_subtype);
+		  __func__, fragP->fr_subtype);
     }
 
   /* The rest is stolen from relax_frag.  There's no obvious way to
@@ -962,7 +962,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
     case ENCODE_RELAX (STATE_BASE_PLUS_DISP_PREFIX, STATE_BYTE):
       if (symbolP == NULL)
 	as_fatal (_("internal inconsistency in %s: bdapq no symbol"),
-		    __FUNCTION__);
+		    __func__);
       opcodep[0] = S_GET_VALUE (symbolP);
       var_part_size = 0;
       break;
@@ -975,7 +975,7 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED,
       opcodep[1] |= BDAP_INCR_HIGH;
       if (symbolP == NULL)
 	as_fatal (_("internal inconsistency in %s: bdap.w with no symbol"),
-		  __FUNCTION__);
+		  __func__);
       md_number_to_chars (var_partp, S_GET_VALUE (symbolP), 2);
       var_part_size = 2;
       break;
@@ -3953,9 +3953,8 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
       return 0;
     }
 
-  relP = XNEW (arelent);
-  gas_assert (relP != 0);
-  relP->sym_ptr_ptr = XNEW (asymbol *);
+  relP = notes_alloc (sizeof (arelent));
+  relP->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
   *relP->sym_ptr_ptr = symbol_get_bfdsym (fixP->fx_addsy);
   relP->address = fixP->fx_frag->fr_address + fixP->fx_where;
 
@@ -4237,7 +4236,7 @@ s_cris_dtpoff (int bytes)
 
   if (bytes != 4)
     as_fatal (_("internal inconsistency problem: %s called for %d bytes"),
-	      __FUNCTION__, bytes);
+	      __func__, bytes);
 
   expression (&ex);
 
