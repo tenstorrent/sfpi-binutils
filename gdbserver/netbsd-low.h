@@ -1,4 +1,4 @@
-/* Copyright (C) 2020-2022 Free Software Foundation, Inc.
+/* Copyright (C) 2020-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -42,7 +42,7 @@ class netbsd_process_target : public process_stratum_target
 public:
 
   int create_inferior (const char *program,
-		       const std::vector<char *> &program_args) override;
+		       const std::string &program_args) override;
 
   void post_create_inferior () override;
 
@@ -77,7 +77,7 @@ public:
 
   bool supports_read_auxv () override;
 
-  int read_auxv (CORE_ADDR offset, unsigned char *myaddr,
+  int read_auxv (int pid, CORE_ADDR offset, unsigned char *myaddr,
 		 unsigned int len) override;
 
   bool supports_hardware_single_step () override;

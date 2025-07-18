@@ -1,5 +1,5 @@
 /* RISC-V spec version controlling support.
-   Copyright (C) 2019-2022 Free Software Foundation, Inc.
+   Copyright (C) 2019-2025 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
@@ -26,9 +26,6 @@ enum riscv_spec_class
   ISA_SPEC_CLASS_20190608,
   ISA_SPEC_CLASS_20191213,
   ISA_SPEC_CLASS_DRAFT,
-  ISA_SPEC_CLASS_SFPU,
-  ISA_SPEC_CLASS_SFPU_WORMHOLE,
-  ISA_SPEC_CLASS_SFPU_BLACKHOLE,
 
   /* Privileged spec.  */
   PRIV_SPEC_CLASS_NONE,

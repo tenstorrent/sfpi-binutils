@@ -1,6 +1,6 @@
 /* CLI stylizing
 
-   Copyright (C) 2018-2022 Free Software Foundation, Inc.
+   Copyright (C) 2018-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,8 +17,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef CLI_CLI_STYLE_H
-#define CLI_CLI_STYLE_H
+#ifndef GDB_CLI_CLI_STYLE_H
+#define GDB_CLI_CLI_STYLE_H
 
 #include "ui-file.h"
 #include "command.h"
@@ -43,12 +43,13 @@ public:
   /* Return the style name.  */
   const char *name () { return m_name; };
 
-  /* Call once to register this CLI style with the CLI engine.  */
-  void add_setshow_commands (enum command_class theclass,
-			     const char *prefix_doc,
-			     struct cmd_list_element **set_list,
-			     struct cmd_list_element **show_list,
-			     bool skip_intensity);
+  /* Call once to register this CLI style with the CLI engine.  Returns
+     the set/show prefix commands for the style.  */
+  set_show_commands add_setshow_commands (enum command_class theclass,
+					  const char *prefix_doc,
+					  struct cmd_list_element **set_list,
+					  struct cmd_list_element **show_list,
+					  bool skip_intensity);
 
   /* Return the 'set style NAME' command list, that can be used
      to build a lambda DO_SET to call add_setshow_commands.  */
@@ -66,9 +67,9 @@ private:
   const char *m_name;
 
   /* The foreground.  */
-  const char *m_foreground;
+  ui_file_style::color m_foreground;
   /* The background.  */
-  const char *m_background;
+  ui_file_style::color m_background;
   /* The intensity.  */
   const char *m_intensity;
 
@@ -95,6 +96,10 @@ private:
 				 const char *value);
 };
 
+/* Chains containing all defined "set/show style" subcommands.  */
+extern struct cmd_list_element *style_set_list;
+extern struct cmd_list_element *style_show_list;
+
 /* The file name style.  */
 extern cli_style_option file_name_style;
 
@@ -113,8 +118,26 @@ extern cli_style_option highlight_style;
 /* The title style.  */
 extern cli_style_option title_style;
 
+/* Style used for commands.  */
+extern cli_style_option command_style;
+
 /* The metadata style.  */
 extern cli_style_option metadata_style;
+
+/* The disassembler style for mnemonics or assembler directives
+   (e.g. '.byte', etc).  */
+extern cli_style_option disasm_mnemonic_style;
+
+/* The disassembler style for register names.  */
+extern cli_style_option disasm_register_style;
+
+/* The disassembler style for numerical values that are not addresses, this
+   includes immediate operands (e.g. in, an add instruction), but also
+   address offsets (e.g. in a load instruction).  */
+extern cli_style_option disasm_immediate_style;
+
+/* The disassembler style for comments.  */
+extern cli_style_option disasm_comment_style;
 
 /* The border style of a TUI window that does not have the focus.  */
 extern cli_style_option tui_border_style;
@@ -125,6 +148,9 @@ extern cli_style_option tui_active_border_style;
 /* The style to use for the GDB version string.  */
 extern cli_style_option version_style;
 
+/* The style for a line number.  */
+extern cli_style_option line_number_style;
+
 /* True if source styling is enabled.  */
 extern bool source_styling;
 
@@ -134,4 +160,4 @@ extern bool disassembler_styling;
 /* True if styling is enabled.  */
 extern bool cli_styling;
 
-#endif /* CLI_CLI_STYLE_H */
+#endif /* GDB_CLI_CLI_STYLE_H */

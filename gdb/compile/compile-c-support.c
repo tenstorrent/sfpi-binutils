@@ -1,6 +1,6 @@
 /* C/C++ language support for compilation.
 
-   Copyright (C) 2014-2022 Free Software Foundation, Inc.
+   Copyright (C) 2014-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "compile-internal.h"
 #include "compile-c.h"
 #include "compile-cplus.h"
@@ -53,7 +52,7 @@ c_get_mode_for_size (int size)
       mode = "DI";
       break;
     default:
-      internal_error (__FILE__, __LINE__, _("Invalid GCC mode size %d."), size);
+      internal_error (_("Invalid GCC mode size %d."), size);
     }
 
   return mode;
@@ -118,7 +117,7 @@ get_compile_context (const char *fe_libcc, const char *fe_context,
     error (_("The loaded version of GCC does not support the required version "
 	     "of the API."));
 
-  return std::unique_ptr<compile_instance> (new INSTTYPE (context));
+  return std::make_unique<INSTTYPE> (context);
 }
 
 /* A C-language implementation of get_compile_context.  */
@@ -252,7 +251,7 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
 	      case TYPE_CODE_INT:
 		{
 		  const char *mode
-		    = c_get_mode_for_size (TYPE_LENGTH (regtype));
+		    = c_get_mode_for_size (regtype->length ());
 
 		  if (mode != NULL)
 		    {
@@ -267,7 +266,7 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
 		    }
 		}
 
-		/* Fall through.  */
+		[[fallthrough]];
 
 	      default:
 		gdb_printf (stream,
@@ -275,7 +274,7 @@ generate_register_struct (struct ui_file *stream, struct gdbarch *gdbarch,
 			    " __attribute__((__aligned__("
 			    "__BIGGEST_ALIGNMENT__)))",
 			    regname.c_str (),
-			    pulongest (TYPE_LENGTH (regtype)));
+			    pulongest (regtype->length ()));
 	      }
 	    gdb_puts (";\n", stream);
 	  }

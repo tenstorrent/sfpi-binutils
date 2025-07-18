@@ -1,6 +1,6 @@
 /* Rust expression parsing for GDB, the GNU debugger.
 
-   Copyright (C) 2016-2022 Free Software Foundation, Inc.
+   Copyright (C) 2016-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 
 #include "block.h"
 #include "charset.h"
@@ -30,6 +29,7 @@
 #include "value.h"
 #include "gdbarch.h"
 #include "rust-exp.h"
+#include "inferior.h"
 
 using namespace expr;
 
@@ -69,7 +69,7 @@ static const char number_regex_text[] =
 #define INT_TEXT 5
 #define INT_TYPE 6
   "(0x[a-fA-F0-9_]+|0o[0-7_]+|0b[01_]+|[0-9][0-9_]*)"
-  "([iu](size|8|16|32|64))?"
+  "([iu](size|8|16|32|64|128))?"
   ")";
 /* The number of subexpressions to allocate space for, including the
    "0th" whole match subexpression.  */
@@ -126,7 +126,7 @@ enum token_type : int
 
 struct typed_val_int
 {
-  ULONGEST val;
+  gdb_mpz val;
   struct type *type;
 };
 
@@ -235,27 +235,31 @@ struct rust_parser
   std::string super_name (const std::string &ident, unsigned int n_supers);
 
   int lex_character ();
+  int lex_decimal_integer ();
   int lex_number ();
   int lex_string ();
   int lex_identifier ();
   uint32_t lex_hex (int min, int max);
-  uint32_t lex_escape (int is_byte);
+  uint32_t lex_escape (bool is_byte);
   int lex_operator ();
-  int lex_one_token ();
+  int lex_one_token (bool decimal_only);
   void push_back (char c);
 
   /* The main interface to lexing.  Lexes one token and updates the
-     internal state.  */
-  void lex ()
+     internal state.  DECIMAL_ONLY is true in the special case where
+     we want to tell the lexer not to parse a number as a float, but
+     instead only as a decimal integer.  See parse_field.  */
+  void lex (bool decimal_only = false)
   {
-    current_token = lex_one_token ();
+    current_token = lex_one_token (decimal_only);
   }
 
-  /* Assuming the current token is TYPE, lex the next token.  */
-  void assume (int type)
+  /* Assuming the current token is TYPE, lex the next token.
+     DECIMAL_ONLY is passed to 'lex', which see.  */
+  void assume (int type, bool decimal_only = false)
   {
     gdb_assert (current_token == type);
-    lex ();
+    lex (decimal_only);
   }
 
   /* Require the single-character token C, and lex the next token; or
@@ -307,7 +311,7 @@ struct rust_parser
   void update_innermost_block (struct block_symbol sym);
   struct block_symbol lookup_symbol (const char *name,
 				     const struct block *block,
-				     const domain_enum domain);
+				     const domain_search_flags domain);
   struct type *rust_lookup_type (const char *name);
 
   /* Clear some state.  This is only used for testing.  */
@@ -373,7 +377,9 @@ rust_parser::crate_name (const std::string &name)
 std::string
 rust_parser::super_name (const std::string &ident, unsigned int n_supers)
 {
-  const char *scope = block_scope (pstate->expression_context_block);
+  const char *scope = "";
+  if (pstate->expression_context_block != nullptr)
+    scope = pstate->expression_context_block->scope ();
   int offset;
 
   if (scope[0] == '\0')
@@ -419,7 +425,7 @@ munge_name_and_block (const char **name, const struct block **block)
   if (startswith (*name, "::"))
     {
       *name += 2;
-      *block = block_static_block (*block);
+      *block = (*block)->static_block ();
     }
 }
 
@@ -428,7 +434,7 @@ munge_name_and_block (const char **name, const struct block **block)
 
 struct block_symbol
 rust_parser::lookup_symbol (const char *name, const struct block *block,
-			    const domain_enum domain)
+			    const domain_search_flags domain)
 {
   struct block_symbol result;
 
@@ -451,7 +457,7 @@ rust_parser::rust_lookup_type (const char *name)
   const struct block *block = pstate->expression_context_block;
   munge_name_and_block (&name, &block);
 
-  result = ::lookup_symbol (name, block, STRUCT_DOMAIN, NULL);
+  result = ::lookup_symbol (name, block, SEARCH_TYPE_DOMAIN, nullptr);
   if (result.symbol != NULL)
     {
       update_innermost_block (result);
@@ -517,7 +523,7 @@ rust_parser::lex_hex (int min, int max)
    otherwise we're lexing a character escape.  */
 
 uint32_t
-rust_parser::lex_escape (int is_byte)
+rust_parser::lex_escape (bool is_byte)
 {
   uint32_t result;
 
@@ -615,12 +621,12 @@ lex_multibyte_char (const char *text, int *len)
 int
 rust_parser::lex_character ()
 {
-  int is_byte = 0;
+  bool is_byte = false;
   uint32_t value;
 
   if (pstate->lexptr[0] == 'b')
     {
-      is_byte = 1;
+      is_byte = true;
       ++pstate->lexptr;
     }
   gdb_assert (pstate->lexptr[0] == '\'');
@@ -670,10 +676,8 @@ starts_raw_string (const char *str)
 static bool
 ends_raw_string (const char *str, int n)
 {
-  int i;
-
   gdb_assert (str[0] == '"');
-  for (i = 0; i < n; ++i)
+  for (int i = 0; i < n; ++i)
     if (str[i + 1] != '#')
       return false;
   return true;
@@ -898,6 +902,26 @@ rust_parser::lex_operator ()
   return *pstate->lexptr++;
 }
 
+/* Lex a decimal integer.  */
+
+int
+rust_parser::lex_decimal_integer ()
+{
+  gdb_assert (pstate->lexptr[0] >= '0' && pstate->lexptr[0] <= '9');
+
+  std::string copy;
+  while (pstate->lexptr[0] >= '0' && pstate->lexptr[0] <= '9')
+    {
+      copy.push_back (pstate->lexptr[0]);
+      ++pstate->lexptr;
+    }
+
+  /* No need to set the value's type in this situation.  */
+  current_int_val.val.set (copy.c_str (), 10);
+
+  return DECIMAL_INTEGER;
+}
+
 /* Lex a number.  */
 
 int
@@ -905,14 +929,12 @@ rust_parser::lex_number ()
 {
   regmatch_t subexps[NUM_SUBEXPRESSIONS];
   int match;
-  int is_integer = 0;
-  int could_be_decimal = 1;
-  int implicit_i32 = 0;
+  bool is_integer = false;
+  bool implicit_i32 = false;
   const char *type_name = NULL;
   struct type *type;
   int end_index;
   int type_index = -1;
-  int i;
 
   match = regexec (&number_regex, pstate->lexptr, ARRAY_SIZE (subexps),
 		   subexps, 0);
@@ -922,18 +944,15 @@ rust_parser::lex_number ()
   if (subexps[INT_TEXT].rm_so != -1)
     {
       /* Integer part matched.  */
-      is_integer = 1;
+      is_integer = true;
       end_index = subexps[INT_TEXT].rm_eo;
       if (subexps[INT_TYPE].rm_so == -1)
 	{
 	  type_name = "i32";
-	  implicit_i32 = 1;
+	  implicit_i32 = true;
 	}
       else
-	{
-	  type_index = INT_TYPE;
-	  could_be_decimal = 0;
-	}
+	type_index = INT_TYPE;
     }
   else if (subexps[FLOAT_TYPE1].rm_so != -1)
     {
@@ -966,11 +985,10 @@ rust_parser::lex_number ()
       if (rust_identifier_start_p (*next) || *next == '.')
 	{
 	  --subexps[0].rm_eo;
-	  is_integer = 1;
+	  is_integer = true;
 	  end_index = subexps[0].rm_eo;
 	  type_name = "i32";
-	  could_be_decimal = 1;
-	  implicit_i32 = 1;
+	  implicit_i32 = true;
 	}
     }
 
@@ -991,11 +1009,9 @@ rust_parser::lex_number ()
 
   /* Copy the text of the number and remove the "_"s.  */
   std::string number;
-  for (i = 0; i < end_index && pstate->lexptr[i]; ++i)
+  for (int i = 0; i < end_index && pstate->lexptr[i]; ++i)
     {
-      if (pstate->lexptr[i] == '_')
-	could_be_decimal = 0;
-      else
+      if (pstate->lexptr[i] != '_')
 	number.push_back (pstate->lexptr[i]);
     }
 
@@ -1005,7 +1021,6 @@ rust_parser::lex_number ()
   /* Parse the number.  */
   if (is_integer)
     {
-      uint64_t value;
       int radix = 10;
       int offset = 0;
 
@@ -1018,20 +1033,25 @@ rust_parser::lex_number ()
 	  else if (number[1] == 'b')
 	    radix = 2;
 	  if (radix != 10)
-	    {
-	      offset = 2;
-	      could_be_decimal = 0;
-	    }
+	    offset = 2;
 	}
 
-      const char *trailer;
-      value = strtoulst (number.c_str () + offset, &trailer, radix);
-      if (*trailer != '\0')
-	error (_("Integer literal is too large"));
-      if (implicit_i32 && value >= ((uint64_t) 1) << 31)
-	type = get_type ("i64");
+      if (!current_int_val.val.set (number.c_str () + offset, radix))
+	{
+	  /* Shouldn't be possible.  */
+	  error (_("Invalid integer"));
+	}
+      if (implicit_i32)
+	{
+	  static gdb_mpz sixty_three_bit = gdb_mpz::pow (2, 63);
+	  static gdb_mpz thirty_one_bit = gdb_mpz::pow (2, 31);
 
-      current_int_val.val = value;
+	  if (current_int_val.val >= sixty_three_bit)
+	    type = get_type ("i128");
+	  else if (current_int_val.val >= thirty_one_bit)
+	    type = get_type ("i64");
+	}
+
       current_int_val.type = type;
     }
   else
@@ -1043,13 +1063,13 @@ rust_parser::lex_number ()
       gdb_assert (parsed);
     }
 
-  return is_integer ? (could_be_decimal ? DECIMAL_INTEGER : INTEGER) : FLOAT;
+  return is_integer ? INTEGER : FLOAT;
 }
 
 /* The lexer.  */
 
 int
-rust_parser::lex_one_token ()
+rust_parser::lex_one_token (bool decimal_only)
 {
   /* Skip all leading whitespace.  */
   while (pstate->lexptr[0] == ' '
@@ -1076,7 +1096,7 @@ rust_parser::lex_one_token ()
     }
 
   if (pstate->lexptr[0] >= '0' && pstate->lexptr[0] <= '9')
-    return lex_number ();
+    return decimal_only ? lex_decimal_integer () : lex_number ();
   else if (pstate->lexptr[0] == 'b' && pstate->lexptr[1] == '\'')
     return lex_character ();
   else if (pstate->lexptr[0] == 'b' && pstate->lexptr[1] == '"')
@@ -1181,7 +1201,7 @@ rust_parser::parse_array ()
       result = make_operation<rust_array_operation> (std::move (expr),
 						     std::move (rhs));
     }
-  else if (current_token == ',')
+  else if (current_token == ',' || current_token == ']')
     {
       std::vector<operation_up> ops;
       ops.push_back (std::move (expr));
@@ -1196,7 +1216,7 @@ rust_parser::parse_array ()
       int len = ops.size () - 1;
       result = make_operation<array_operation> (0, len, std::move (ops));
     }
-  else if (current_token != ']')
+  else
     error (_("',', ';', or ']' expected"));
 
   require (']');
@@ -1211,7 +1231,7 @@ rust_parser::name_to_operation (const std::string &name)
 {
   struct block_symbol sym = lookup_symbol (name.c_str (),
 					   pstate->expression_context_block,
-					   VAR_DOMAIN);
+					   SEARCH_VFT);
   if (sym.symbol != nullptr && sym.symbol->aclass () != LOC_TYPEDEF)
     return make_operation<var_value_operation> (sym);
 
@@ -1344,6 +1364,8 @@ rust_parser::parse_binop (bool required)
   OPERATION (ANDAND, 2, logical_and_operation)	\
   OPERATION (OROR, 1, logical_or_operation)
 
+#define ASSIGN_PREC 0
+
   operation_up start = parse_atom (required);
   if (start == nullptr)
     {
@@ -1374,9 +1396,9 @@ rust_parser::parse_binop (bool required)
 
 	case COMPOUND_ASSIGN:
 	  compound_assign_op = current_opcode;
-	  /* FALLTHROUGH */
+	  [[fallthrough]];
 	case '=':
-	  precedence = 0;
+	  precedence = ASSIGN_PREC;
 	  lex ();
 	  break;
 
@@ -1396,9 +1418,13 @@ rust_parser::parse_binop (bool required)
 	  /* Arrange to pop the entire stack.  */
 	  precedence = -2;
 	  break;
-        }
+	}
 
-      while (precedence < operator_stack.back ().precedence
+      /* Make sure that assignments are right-associative while other
+	 operations are left-associative.  */
+      while ((precedence == ASSIGN_PREC
+	      ? precedence < operator_stack.back ().precedence
+	      : precedence <= operator_stack.back ().precedence)
 	     && operator_stack.size () > 1)
 	{
 	  rustop_item rhs = std::move (operator_stack.back ());
@@ -1525,7 +1551,7 @@ rust_parser::parse_addr ()
 operation_up
 rust_parser::parse_field (operation_up &&lhs)
 {
-  assume ('.');
+  assume ('.', true);
 
   operation_up result;
   switch (current_token)
@@ -1548,13 +1574,12 @@ rust_parser::parse_field (operation_up &&lhs)
       break;
 
     case DECIMAL_INTEGER:
-      result = make_operation<rust_struct_anon> (current_int_val.val,
-						 std::move (lhs));
-      lex ();
+      {
+	int idx = current_int_val.val.as_integer<int> ();
+	result = make_operation<rust_struct_anon> (idx, std::move (lhs));
+	lex ();
+      }
       break;
-
-    case INTEGER:
-      error (_("'_' not allowed in integers in anonymous field references"));
 
     default:
       error (_("field name expected"));
@@ -1649,9 +1674,9 @@ rust_parser::parse_array_type ()
   struct type *elt_type = parse_type ();
   require (';');
 
-  if (current_token != INTEGER && current_token != DECIMAL_INTEGER)
+  if (current_token != INTEGER)
     error (_("integer expected"));
-  ULONGEST val = current_int_val.val;
+  ULONGEST val = current_int_val.val.as_integer<ULONGEST> ();
   lex ();
   require (']');
 
@@ -1664,6 +1689,16 @@ struct type *
 rust_parser::parse_slice_type ()
 {
   assume ('&');
+
+  /* Handle &str specially.  This is an important type in Rust.  While
+     the compiler does emit the "&str" type in the DWARF, just "str"
+     itself isn't always available -- but it's handy if this works
+     seamlessly.  */
+  if (current_token == IDENT && get_string () == "str")
+    {
+      lex ();
+      return rust_slice_type ("&str", get_type ("u8"), get_type ("usize"));
+    }
 
   bool is_slice = current_token == '[';
   if (is_slice)
@@ -1803,7 +1838,7 @@ rust_parser::parse_path (bool for_expr)
       if (current_token != COLONCOLON)
 	return "self";
       lex ();
-      /* FALLTHROUGH */
+      [[fallthrough]];
     case KW_SUPER:
       while (current_token == KW_SUPER)
 	{
@@ -2012,7 +2047,6 @@ rust_parser::parse_atom (bool required)
       break;
 
     case INTEGER:
-    case DECIMAL_INTEGER:
       result = make_operation<long_const_operation> (current_int_val.type,
 						     current_int_val.val);
       lex ();
@@ -2153,12 +2187,12 @@ rust_lex_test_one (rust_parser *parser, const char *input, int expected)
 
   parser->reset (input);
 
-  token = parser->lex_one_token ();
+  token = parser->lex_one_token (false);
   SELF_CHECK (token == expected);
 
   if (token)
     {
-      token = parser->lex_one_token ();
+      token = parser->lex_one_token (false);
       SELF_CHECK (token == 0);
     }
 }
@@ -2208,13 +2242,11 @@ static void
 rust_lex_test_sequence (rust_parser *parser, const char *input, int len,
 			const int expected[])
 {
-  int i;
-
   parser->reset (input);
 
-  for (i = 0; i < len; ++i)
+  for (int i = 0; i < len; ++i)
     {
-      int token = parser->lex_one_token ();
+      int token = parser->lex_one_token (false);
       SELF_CHECK (token == expected[i]);
     }
 }
@@ -2224,10 +2256,10 @@ rust_lex_test_sequence (rust_parser *parser, const char *input, int len,
 static void
 rust_lex_test_trailing_dot (rust_parser *parser)
 {
-  const int expected1[] = { DECIMAL_INTEGER, '.', IDENT, '(', ')', 0 };
+  const int expected1[] = { INTEGER, '.', IDENT, '(', ')', 0 };
   const int expected2[] = { INTEGER, '.', IDENT, '(', ')', 0 };
   const int expected3[] = { FLOAT, EQEQ, '(', ')', 0 };
-  const int expected4[] = { DECIMAL_INTEGER, DOTDOT, DECIMAL_INTEGER, 0 };
+  const int expected4[] = { INTEGER, DOTDOT, INTEGER, 0 };
 
   rust_lex_test_sequence (parser, "23.g()", ARRAY_SIZE (expected1), expected1);
   rust_lex_test_sequence (parser, "23_0.g()", ARRAY_SIZE (expected2),
@@ -2244,14 +2276,14 @@ rust_lex_test_completion (rust_parser *parser)
 {
   const int expected[] = { IDENT, '.', COMPLETE, 0 };
 
-  parser->pstate->parse_completion = 1;
+  parser->pstate->parse_completion = true;
 
   rust_lex_test_sequence (parser, "something.wha", ARRAY_SIZE (expected),
 			  expected);
   rust_lex_test_sequence (parser, "something.", ARRAY_SIZE (expected),
 			  expected);
 
-  parser->pstate->parse_completion = 0;
+  parser->pstate->parse_completion = false;
 }
 
 /* Test pushback.  */
@@ -2263,16 +2295,16 @@ rust_lex_test_push_back (rust_parser *parser)
 
   parser->reset (">>=");
 
-  token = parser->lex_one_token ();
+  token = parser->lex_one_token (false);
   SELF_CHECK (token == COMPOUND_ASSIGN);
   SELF_CHECK (parser->current_opcode == BINOP_RSH);
 
   parser->push_back ('=');
 
-  token = parser->lex_one_token ();
+  token = parser->lex_one_token (false);
   SELF_CHECK (token == '=');
 
-  token = parser->lex_one_token ();
+  token = parser->lex_one_token (false);
   SELF_CHECK (token == 0);
 }
 
@@ -2282,8 +2314,8 @@ static void
 rust_lex_tests (void)
 {
   /* Set up dummy "parser", so that rust_type works.  */
-  struct parser_state ps (language_def (language_rust), target_gdbarch (),
-			  nullptr, 0, 0, nullptr, 0, nullptr, false);
+  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
+		   nullptr, 0, 0, nullptr, 0, nullptr);
   rust_parser parser (&ps);
 
   rust_lex_test_one (&parser, "", 0);
@@ -2330,7 +2362,7 @@ rust_lex_tests (void)
   rust_lex_exception_test (&parser, "'\\Q'", "Invalid escape \\Q in literal");
   rust_lex_exception_test (&parser, "b'\\Q'", "Invalid escape \\Q in literal");
 
-  rust_lex_int_test (&parser, "23", 23, DECIMAL_INTEGER);
+  rust_lex_int_test (&parser, "23", 23, INTEGER);
   rust_lex_int_test (&parser, "2_344__29", 234429, INTEGER);
   rust_lex_int_test (&parser, "0x1f", 0x1f, INTEGER);
   rust_lex_int_test (&parser, "23usize", 23, INTEGER);
@@ -2355,7 +2387,7 @@ rust_lex_tests (void)
   rust_lex_stringish_test (&parser, "thread", "thread", IDENT);
   rust_lex_stringish_test (&parser, "r#true", "true", IDENT);
 
-  const int expected1[] = { IDENT, DECIMAL_INTEGER, 0 };
+  const int expected1[] = { IDENT, INTEGER, 0 };
   rust_lex_test_sequence (&parser, "r#thread 23", ARRAY_SIZE (expected1),
 			  expected1);
   const int expected2[] = { IDENT, '#', 0 };

@@ -1,4 +1,4 @@
-# Copyright 1992-2022 Free Software Foundation, Inc.
+# Copyright 1992-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,13 @@
 
 set ws "\[\r\n\t \]+"
 
-if { [skip_cplus_tests] } { continue }
+require allow_cplus_tests
 
 standard_testfile .cc
 
 set flags [list debug c++]
+lappend flags additional_flags=-std=c++11
+
 if { [test_compiler_info gcc-*] && [gcc_major_version] >= 10 } {
     # Work around PR gcc/101452.
     lappend flags additional_flags=-DGCC_BUG
@@ -68,7 +70,7 @@ proc test_ptype_of_templates {} {
 	    # The destructor has an argument type.
 	    kfail "gdb/8218" "ptype T5<int>"
 	}
-	-re "type = class T5<int> \{${ws}public:${ws}static int X;${ws}int x;${ws}int val;${ws}T5\\(int\\);${ws}T5\\((T5<int> const|const T5<int>) ?&\\);${ws}~T5\\(\\);${ws}static void \\* operator new\\((size_t|unsigned( int| long|))\\);${ws}static void operator delete\\(void ?\\*\\);${ws}int value\\((void|)\\);${ws}\}\r\n$gdb_prompt $" {
+	-re "type = class T5<int> \{${ws}public:${ws}static int X;${ws}int x;${ws}int val;${ws}T5\\(int\\);${ws}T5\\((T5<int> const|const T5<int>) ?&\\);${ws}~T5\\(void\\);${ws}static void \\* operator new\\((size_t|unsigned( int| long|))\\);${ws}static void operator delete\\(void ?\\*\\);${ws}int value\\((void|)\\);${ws}\}\r\n$gdb_prompt $" {
 	    pass "ptype T5<int>"
 	}
     }
@@ -108,7 +110,7 @@ proc test_ptype_of_templates {} {
 	    # The destructor has an argument type.
 	    kfail "gdb/8218" "ptype t5i"
 	}
-	-re "type = class T5<int> \{${ws}public:${ws}static int X;${ws}int x;${ws}int val;${ws}T5\\(int\\);${ws}T5\\((T5<int> const|const T5<int>) ?&\\);${ws}~T5\\(\\);${ws}static void \\* operator new\\((size_t|unsigned( int| long|))\\);${ws}static void operator delete\\(void ?\\*\\);${ws}int value\\((void|)\\);${ws}\}\r\n$gdb_prompt $" {
+	-re "type = class T5<int> \{${ws}public:${ws}static int X;${ws}int x;${ws}int val;${ws}T5\\(int\\);${ws}T5\\((T5<int> const|const T5<int>) ?&\\);${ws}~T5\\(void\\);${ws}static void \\* operator new\\((size_t|unsigned( int| long|))\\);${ws}static void operator delete\\(void ?\\*\\);${ws}int value\\((void|)\\);${ws}\}\r\n$gdb_prompt $" {
 	    pass "ptype t5i"
 	}
     }
@@ -639,7 +641,8 @@ foreach t [list "int" "char" "Empty<int>"] {
     gdb_test "break Foozle::fogey<$t>" "Breakpoint.*at.* \\(3 locations\\)"
     foreach u [list "int" "char" "Empty<int>"] {
 	gdb_breakpoint "Foozle<$t>::fogey<$u>" message
-	gdb_breakpoint "Foozle<$t>::fogey<$u> ($u)" message
+	gdb_assert { [gdb_breakpoint "Foozle<$t>::fogey<$u> ($u)" no-message] } \
+	    "break Foozle<$t>::fogey<$u> ($u), success"
     }
 }
 
@@ -665,10 +668,14 @@ foreach t [list "Empty" "Foozle"] {
 
     # Try a specific instance, both with and without whitespace
     # after the template-template parameter.
-    gdb_breakpoint "operator< <$tt> ($tt&, $tt&)" message
-    gdb_breakpoint "operator< <$tt > ($tt&, $tt&)" message
-    gdb_breakpoint "operator<< <$tt> ($tt&, $tt&)" message
-    gdb_breakpoint "operator<< <$tt > ($tt&, $tt&)" message
+    set loc "operator< <$tt> ($tt&, $tt&)"
+    gdb_assert { [gdb_breakpoint $loc no-message] } "break $loc, success"
+    set loc "operator< <$tt > ($tt&, $tt&)"
+    gdb_assert { [gdb_breakpoint $loc no-message] } "break $loc, success"
+    set loc "operator<< <$tt> ($tt&, $tt&)"
+    gdb_assert { [gdb_breakpoint $loc no-message] } "break $loc, success"
+    set loc "operator<< <$tt > ($tt&, $tt&)"
+    gdb_assert { [gdb_breakpoint $loc no-message] } "break $loc, success"
 }
 
 # Test that "-qualified" finds no matching locations.

@@ -1,4 +1,4 @@
-# Copyright 2021-2022 Free Software Foundation, Inc.
+# Copyright 2021-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 # set past the syscall due to faulty prologue skipping, the breakpoint will not
 # trigger.
 #
-# In particular, we're trying to excercise the instruction analysis
+# In particular, we're trying to exercise the instruction analysis
 # functionality of prologue skipping.  If the non-minimal symbols are
 # read for libc, then that functionality might not be used because f.i.
 # line-info is used instead.  Also, if the minimal symbols are not read
@@ -36,8 +36,7 @@
 standard_testfile
 
 # See if we have target board readnow.exp or similar.
-if { [lsearch -exact $GDBFLAGS -readnow] != -1 \
-	 || [lsearch -exact $GDBFLAGS --readnow] != -1 } {
+if {[readnow]} {
     untested "--readnever not allowed in combination with --readnow"
     return -1
 }
@@ -50,7 +49,7 @@ save_vars { GDBFLAGS } {
     }
 }
 
-if ![runto_main] then {
+if {![runto_main]} {
     return 0
 }
 

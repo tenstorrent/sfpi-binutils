@@ -1,6 +1,6 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998-2022 Free Software Foundation, Inc.
+   Copyright (C) 1998-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,11 +17,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 
 #include "arch-utils.h"
-#include "gdbcmd.h"
-#include "inferior.h"		/* enum CALL_DUMMY_LOCATION et al.  */
+#include "extract-store-integer.h"
+#include "cli/cli-cmds.h"
+#include "inferior.h"
 #include "infrun.h"
 #include "regcache.h"
 #include "sim-regno.h"
@@ -36,6 +36,8 @@
 #include "reggroups.h"
 #include "auxv.h"
 #include "observable.h"
+#include "solib-target.h"
+#include "event-top.h"
 
 #include "gdbsupport/version.h"
 
@@ -55,7 +57,7 @@ displaced_step_at_entry_point (struct gdbarch *gdbarch)
   CORE_ADDR addr;
   int bp_len;
 
-  addr = entry_point_address ();
+  addr = entry_point_address (current_program_space);
 
   /* Inferior calls also use the entry point as a breakpoint location.
      We don't want displaced stepping to interfere with those
@@ -73,15 +75,22 @@ legacy_register_sim_regno (struct gdbarch *gdbarch, int regnum)
   gdb_assert (regnum >= 0 && regnum < gdbarch_num_regs (gdbarch));
   /* NOTE: cagney/2002-05-13: The old code did it this way and it is
      suspected that some GDB/SIM combinations may rely on this
-     behaviour.  The default should be one2one_register_sim_regno
+     behavior.  The default should be one2one_register_sim_regno
      (below).  */
-  if (gdbarch_register_name (gdbarch, regnum) != NULL
-      && gdbarch_register_name (gdbarch, regnum)[0] != '\0')
+  if (gdbarch_register_name (gdbarch, regnum)[0] != '\0')
     return regnum;
   else
     return LEGACY_SIM_REGNO_IGNORE;
 }
 
+/* See arch-utils.h */
+
+CORE_ADDR
+default_remove_non_address_bits (struct gdbarch *gdbarch, CORE_ADDR pointer)
+{
+  /* By default, just return the pointer value.  */
+  return pointer;
+}
 
 /* See arch-utils.h */
 
@@ -95,7 +104,7 @@ default_memtag_to_string (struct gdbarch *gdbarch, struct value *tag)
 /* See arch-utils.h */
 
 bool
-default_tagged_address_p (struct gdbarch *gdbarch, struct value *address)
+default_tagged_address_p (struct gdbarch *gdbarch, CORE_ADDR address)
 {
   /* By default, assume the address is untagged.  */
   return false;
@@ -132,7 +141,7 @@ default_get_memtag (struct gdbarch *gdbarch, struct value *address,
 }
 
 CORE_ADDR
-generic_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
+generic_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
 {
   return 0;
 }
@@ -158,23 +167,23 @@ generic_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 int
 default_code_of_frame_writable (struct gdbarch *gdbarch,
-				struct frame_info *frame)
+				const frame_info_ptr &frame)
 {
   return 1;
 }
 
 /* Helper functions for gdbarch_inner_than */
 
-int
+bool
 core_addr_lessthan (CORE_ADDR lhs, CORE_ADDR rhs)
 {
-  return (lhs < rhs);
+  return lhs < rhs;
 }
 
-int
+bool
 core_addr_greaterthan (CORE_ADDR lhs, CORE_ADDR rhs)
 {
-  return (lhs > rhs);
+  return lhs > rhs;
 }
 
 /* Misc helper functions for targets.  */
@@ -269,8 +278,7 @@ legacy_virtual_frame_pointer (struct gdbarch *gdbarch,
   else
     /* Should this be an internal error?  I guess so, it is reflecting
        an architectural limitation in the current design.  */
-    internal_error (__FILE__, __LINE__, 
-		    _("No virtual frame pointer available"));
+    internal_error (_("No virtual frame pointer available"));
   *frame_offset = 0;
 }
 
@@ -397,14 +405,13 @@ set_endian (const char *ignore_args, int from_tty, struct cmd_list_element *c)
   if (set_endian_string == endian_auto)
     {
       target_byte_order_user = BFD_ENDIAN_UNKNOWN;
-      if (! gdbarch_update_p (info))
-	internal_error (__FILE__, __LINE__,
-			_("set_endian: architecture update failed"));
+      if (!gdbarch_update_p (current_inferior (), info))
+	internal_error (_("set_endian: architecture update failed"));
     }
   else if (set_endian_string == endian_little)
     {
       info.byte_order = BFD_ENDIAN_LITTLE;
-      if (! gdbarch_update_p (info))
+      if (!gdbarch_update_p (current_inferior (), info))
 	gdb_printf (gdb_stderr,
 		    _("Little endian target not supported by GDB\n"));
       else
@@ -413,15 +420,14 @@ set_endian (const char *ignore_args, int from_tty, struct cmd_list_element *c)
   else if (set_endian_string == endian_big)
     {
       info.byte_order = BFD_ENDIAN_BIG;
-      if (! gdbarch_update_p (info))
+      if (!gdbarch_update_p (current_inferior (), info))
 	gdb_printf (gdb_stderr,
 		    _("Big endian target not supported by GDB\n"));
       else
 	target_byte_order_user = BFD_ENDIAN_BIG;
     }
   else
-    internal_error (__FILE__, __LINE__,
-		    _("set_endian: bad value"));
+    internal_error (_("set_endian: bad value"));
 
   show_endian (gdb_stdout, from_tty, NULL, NULL);
 }
@@ -556,17 +562,15 @@ set_architecture (const char *ignore_args,
   if (strcmp (set_architecture_string, "auto") == 0)
     {
       target_architecture_user = NULL;
-      if (!gdbarch_update_p (info))
-	internal_error (__FILE__, __LINE__,
-			_("could not select an architecture automatically"));
+      if (!gdbarch_update_p (current_inferior (), info))
+	internal_error (_("could not select an architecture automatically"));
     }
   else
     {
       info.bfd_arch_info = bfd_scan_arch (set_architecture_string);
       if (info.bfd_arch_info == NULL)
-	internal_error (__FILE__, __LINE__,
-			_("set_architecture: bfd_scan_arch failed"));
-      if (gdbarch_update_p (info))
+	internal_error (_("set_architecture: bfd_scan_arch failed"));
+      if (gdbarch_update_p (current_inferior (), info))
 	target_architecture_user = info.bfd_arch_info;
       else
 	gdb_printf (gdb_stderr,
@@ -576,22 +580,23 @@ set_architecture (const char *ignore_args,
   show_architecture (gdb_stdout, from_tty, NULL, NULL);
 }
 
-/* Try to select a global architecture that matches "info".  Return
-   non-zero if the attempt succeeds.  */
+/* See arch-utils.h.  */
+
 int
-gdbarch_update_p (struct gdbarch_info info)
+gdbarch_update_p (inferior *inf, struct gdbarch_info info)
 {
   struct gdbarch *new_gdbarch;
 
   /* Check for the current file.  */
   if (info.abfd == NULL)
-    info.abfd = current_program_space->exec_bfd ();
+    info.abfd = inf->pspace->exec_bfd ();
+
   if (info.abfd == NULL)
-    info.abfd = core_bfd;
+    info.abfd = inf->pspace->core_bfd ();
 
   /* Check for the current target description.  */
   if (info.target_desc == NULL)
-    info.target_desc = target_current_description ();
+    info.target_desc = target_current_description (inf);
 
   new_gdbarch = gdbarch_find_by_info (info);
 
@@ -606,7 +611,7 @@ gdbarch_update_p (struct gdbarch_info info)
 
   /* If it is the same old architecture, accept the request (but don't
      swap anything).  */
-  if (new_gdbarch == target_gdbarch ())
+  if (new_gdbarch == inf->arch ())
     {
       if (gdbarch_debug)
 	gdb_printf (gdb_stdlog, "gdbarch_update_p: "
@@ -622,7 +627,8 @@ gdbarch_update_p (struct gdbarch_info info)
 		"New architecture %s (%s) selected\n",
 		host_address_to_string (new_gdbarch),
 		gdbarch_bfd_arch_info (new_gdbarch)->printable_name);
-  set_target_gdbarch (new_gdbarch);
+
+  inf->set_arch (new_gdbarch);
 
   return 1;
 }
@@ -649,12 +655,13 @@ set_gdbarch_from_file (bfd *abfd)
   struct gdbarch *gdbarch;
 
   info.abfd = abfd;
-  info.target_desc = target_current_description ();
+  info.target_desc = target_current_description (current_inferior ());
   gdbarch = gdbarch_find_by_info (info);
 
   if (gdbarch == NULL)
     error (_("Architecture of file not recognized."));
-  set_target_gdbarch (gdbarch);
+
+  current_inferior ()->set_arch (gdbarch);
 }
 
 /* Initialize the current architecture.  Update the ``set
@@ -700,13 +707,11 @@ initialize_current_architecture (void)
 	}
 
       if (chosen == NULL)
-	internal_error (__FILE__, __LINE__,
-			_("initialize_current_architecture: No arch"));
+	internal_error (_("initialize_current_architecture: No arch"));
 
       default_bfd_arch = bfd_scan_arch (chosen);
       if (default_bfd_arch == NULL)
-	internal_error (__FILE__, __LINE__,
-			_("initialize_current_architecture: Arch not found"));
+	internal_error (_("initialize_current_architecture: Arch not found"));
     }
 
   gdbarch_info info;
@@ -748,9 +753,8 @@ initialize_current_architecture (void)
   info.byte_order = default_byte_order;
   info.byte_order_for_code = info.byte_order;
 
-  if (! gdbarch_update_p (info))
-    internal_error (__FILE__, __LINE__,
-		    _("initialize_current_architecture: Selection of "
+  if (!gdbarch_update_p (current_inferior (), info))
+    internal_error (_("initialize_current_architecture: Selection of "
 		      "initial architecture failed"));
 
   /* Create the ``set architecture'' command appending ``auto'' to the
@@ -848,7 +852,7 @@ get_current_arch (void)
   if (has_stack_frames ())
     return get_frame_arch (get_selected_frame (NULL));
   else
-    return target_gdbarch ();
+    return current_inferior ()->arch ();
 }
 
 int
@@ -1038,7 +1042,11 @@ default_print_insn (bfd_vma memaddr, disassemble_info *info)
 				 info->mach, current_program_space->exec_bfd ());
 
   gdb_assert (disassemble_fn != NULL);
-  return (*disassemble_fn) (memaddr, info);
+  int res = (*disassemble_fn) (memaddr, info);
+
+  QUIT;
+
+  return res;
 }
 
 /* See arch-utils.h.  */
@@ -1077,7 +1085,7 @@ default_type_align (struct gdbarch *gdbarch, struct type *type)
 /* See arch-utils.h.  */
 
 std::string
-default_get_pc_address_flags (frame_info *frame, CORE_ADDR pc)
+default_get_pc_address_flags (const frame_info_ptr &frame, CORE_ADDR pc)
 {
   return "";
 }
@@ -1092,9 +1100,35 @@ default_read_core_file_mappings
 {
 }
 
-/* Static function declarations */
+/* See arch-utils.h.  */
+bool
+default_use_target_description_from_corefile_notes (struct gdbarch *gdbarch,
+						    struct bfd *corefile_bfd)
+{
+  /* Always trust the corefile target description contained in the target
+     description note.  */
+  return true;
+}
 
-static void alloc_gdbarch_data (struct gdbarch *);
+CORE_ADDR
+default_get_return_buf_addr (struct type *val_type,
+			     const frame_info_ptr &cur_frame)
+{
+  return 0;
+}
+
+bool
+default_dwarf2_omit_typedef_p (struct type *target_type, const char *producer,
+			       const char *name)
+{
+  return false;
+}
+
+static CORE_ADDR
+default_update_call_site_pc (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  return pc;
+}
 
 /* Non-zero if we want to trace architecture code.  */
 
@@ -1110,13 +1144,13 @@ show_gdbarch_debug (struct ui_file *file, int from_tty,
 }
 
 static const char *
-pformat (const struct floatformat **format)
+pformat (struct gdbarch *gdbarch, const struct floatformat **format)
 {
   if (format == NULL)
     return "(null)";
-  else
-    /* Just print out one of them - this is only for diagnostics.  */
-    return format[0]->name;
+
+  int format_index = gdbarch_byte_order (gdbarch) == BFD_ENDIAN_LITTLE ? 1 : 0;
+  return format[format_index]->name;
 }
 
 static const char *
@@ -1128,11 +1162,11 @@ pstring (const char *string)
 }
 
 static const char *
-pstring_ptr (char **string)
+pstring_ptr (std::string *string)
 {
-  if (string == NULL || *string == NULL)
+  if (string == nullptr)
     return "(null)";
-  return *string;
+  return string->c_str ();
 }
 
 /* Helper function to print a list of strings, represented as "const
@@ -1164,11 +1198,29 @@ pstring_list (const char *const *list)
   return ret;
 }
 
-#include "gdbarch.c"
+#include "gdbarch-gen.c"
+
+enum return_value_convention
+default_gdbarch_return_value
+     (struct gdbarch *gdbarch, struct value *function, struct type *valtype,
+      struct regcache *regcache, struct value **read_value,
+      const gdb_byte *writebuf)
+{
+  gdb_byte *readbuf = nullptr;
+
+  if (read_value != nullptr)
+    {
+      *read_value = value::allocate (valtype);
+      readbuf = (*read_value)->contents_raw ().data ();
+    }
+
+  return gdbarch->return_value (gdbarch, function, valtype, regcache,
+				readbuf, writebuf);
+}
 
 obstack *gdbarch_obstack (gdbarch *arch)
 {
-  return arch->obstack;
+  return &arch->obstack;
 }
 
 /* See gdbarch.h.  */
@@ -1176,9 +1228,8 @@ obstack *gdbarch_obstack (gdbarch *arch)
 char *
 gdbarch_obstack_strdup (struct gdbarch *arch, const char *string)
 {
-  return obstack_strdup (arch->obstack, string);
+  return obstack_strdup (&arch->obstack, string);
 }
-
 
 /* Free a gdbarch struct.  This should never happen in normal
    operation --- once you've created a gdbarch, you keep it around.
@@ -1189,130 +1240,26 @@ gdbarch_obstack_strdup (struct gdbarch *arch, const char *string)
 void
 gdbarch_free (struct gdbarch *arch)
 {
-  struct obstack *obstack;
-
   gdb_assert (arch != NULL);
   gdb_assert (!arch->initialized_p);
-  obstack = arch->obstack;
-  obstack_free (obstack, 0); /* Includes the ARCH.  */
-  xfree (obstack);
+  delete arch;
 }
 
-struct gdbarch_tdep *
-gdbarch_tdep (struct gdbarch *gdbarch)
+/* See gdbarch.h.  */
+
+struct gdbarch_tdep_base *
+gdbarch_tdep_1 (struct gdbarch *gdbarch)
 {
   if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_tdep called\n");
-  return gdbarch->tdep;
+    gdb_printf (gdb_stdlog, "gdbarch_tdep_1 called\n");
+  return gdbarch->tdep.get ();
 }
 
-/* Keep a registry of per-architecture data-pointers required by GDB
-   modules.  */
-
-struct gdbarch_data
+registry<gdbarch> *
+registry_accessor<gdbarch>::get (gdbarch *arch)
 {
-  unsigned index;
-  int init_p;
-  gdbarch_data_pre_init_ftype *pre_init;
-  gdbarch_data_post_init_ftype *post_init;
-};
-
-struct gdbarch_data_registration
-{
-  struct gdbarch_data *data;
-  struct gdbarch_data_registration *next;
-};
-
-struct gdbarch_data_registry
-{
-  unsigned nr;
-  struct gdbarch_data_registration *registrations;
-};
-
-static struct gdbarch_data_registry gdbarch_data_registry =
-{
-  0, NULL,
-};
-
-static struct gdbarch_data *
-gdbarch_data_register (gdbarch_data_pre_init_ftype *pre_init,
-		       gdbarch_data_post_init_ftype *post_init)
-{
-  struct gdbarch_data_registration **curr;
-
-  /* Append the new registration.  */
-  for (curr = &gdbarch_data_registry.registrations;
-       (*curr) != NULL;
-       curr = &(*curr)->next);
-  (*curr) = XNEW (struct gdbarch_data_registration);
-  (*curr)->next = NULL;
-  (*curr)->data = XNEW (struct gdbarch_data);
-  (*curr)->data->index = gdbarch_data_registry.nr++;
-  (*curr)->data->pre_init = pre_init;
-  (*curr)->data->post_init = post_init;
-  (*curr)->data->init_p = 1;
-  return (*curr)->data;
+  return &arch->registry_fields;
 }
-
-struct gdbarch_data *
-gdbarch_data_register_pre_init (gdbarch_data_pre_init_ftype *pre_init)
-{
-  return gdbarch_data_register (pre_init, NULL);
-}
-
-struct gdbarch_data *
-gdbarch_data_register_post_init (gdbarch_data_post_init_ftype *post_init)
-{
-  return gdbarch_data_register (NULL, post_init);
-}
-
-/* Create/delete the gdbarch data vector.  */
-
-static void
-alloc_gdbarch_data (struct gdbarch *gdbarch)
-{
-  gdb_assert (gdbarch->data == NULL);
-  gdbarch->nr_data = gdbarch_data_registry.nr;
-  gdbarch->data = GDBARCH_OBSTACK_CALLOC (gdbarch, gdbarch->nr_data, void *);
-}
-
-/* Return the current value of the specified per-architecture
-   data-pointer.  */
-
-void *
-gdbarch_data (struct gdbarch *gdbarch, struct gdbarch_data *data)
-{
-  gdb_assert (data->index < gdbarch->nr_data);
-  if (gdbarch->data[data->index] == NULL)
-    {
-      /* The data-pointer isn't initialized, call init() to get a
-	 value.  */
-      if (data->pre_init != NULL)
-	/* Mid architecture creation: pass just the obstack, and not
-	   the entire architecture, as that way it isn't possible for
-	   pre-init code to refer to undefined architecture
-	   fields.  */
-	gdbarch->data[data->index] = data->pre_init (gdbarch->obstack);
-      else if (gdbarch->initialized_p
-	       && data->post_init != NULL)
-	/* Post architecture creation: pass the entire architecture
-	   (as all fields are valid), but be careful to also detect
-	   recursive references.  */
-	{
-	  gdb_assert (data->init_p);
-	  data->init_p = 0;
-	  gdbarch->data[data->index] = data->post_init (gdbarch);
-	  data->init_p = 1;
-	}
-      else
-	internal_error (__FILE__, __LINE__,
-			_("gdbarch post-init data field can only be used "
-			  "after gdbarch is fully initialised"));
-      gdb_assert (gdbarch->data[data->index] != NULL);
-    }
-  return gdbarch->data[data->index];
-}
-
 
 /* Keep a registry of the architectures known by GDB.  */
 
@@ -1321,6 +1268,7 @@ struct gdbarch_registration
   enum bfd_architecture bfd_architecture;
   gdbarch_init_ftype *init;
   gdbarch_dump_tdep_ftype *dump_tdep;
+  gdbarch_supports_arch_info_ftype *supports_arch_info;
   struct gdbarch_list *arches;
   struct gdbarch_registration *next;
 };
@@ -1330,7 +1278,7 @@ static struct gdbarch_registration *gdbarch_registry = NULL;
 std::vector<const char *>
 gdbarch_printable_names ()
 {
-  /* Accumulate a list of names based on the registed list of
+  /* Accumulate a list of names based on the registered list of
      architectures.  */
   std::vector<const char *> arches;
 
@@ -1341,11 +1289,12 @@ gdbarch_printable_names ()
       const struct bfd_arch_info *ap
 	= bfd_lookup_arch (rego->bfd_architecture, 0);
       if (ap == nullptr)
-	internal_error (__FILE__, __LINE__,
-			_("gdbarch_architecture_names: multi-arch unknown"));
+	internal_error (_("gdbarch_architecture_names: multi-arch unknown"));
       do
 	{
-	  arches.push_back (ap->printable_name);
+	  if (rego->supports_arch_info == nullptr
+	      || rego->supports_arch_info (ap))
+	    arches.push_back (ap->printable_name);
 	  ap = ap->next;
 	}
       while (ap != NULL);
@@ -1358,7 +1307,8 @@ gdbarch_printable_names ()
 void
 gdbarch_register (enum bfd_architecture bfd_architecture,
 		  gdbarch_init_ftype *init,
-		  gdbarch_dump_tdep_ftype *dump_tdep)
+		  gdbarch_dump_tdep_ftype *dump_tdep,
+		  gdbarch_supports_arch_info_ftype *supports_arch_info)
 {
   struct gdbarch_registration **curr;
   const struct bfd_arch_info *bfd_arch_info;
@@ -1367,8 +1317,7 @@ gdbarch_register (enum bfd_architecture bfd_architecture,
   bfd_arch_info = bfd_lookup_arch (bfd_architecture, 0);
   if (bfd_arch_info == NULL)
     {
-      internal_error (__FILE__, __LINE__,
-		      _("gdbarch: Attempt to register "
+      internal_error (_("gdbarch: Attempt to register "
 			"unknown architecture (%d)"),
 		      bfd_architecture);
     }
@@ -1378,14 +1327,13 @@ gdbarch_register (enum bfd_architecture bfd_architecture,
        curr = &(*curr)->next)
     {
       if (bfd_architecture == (*curr)->bfd_architecture)
-	internal_error (__FILE__, __LINE__,
-			_("gdbarch: Duplicate registration "
+	internal_error (_("gdbarch: Duplicate registration "
 			  "of architecture (%s)"),
 			bfd_arch_info->printable_name);
     }
   /* log it */
   if (gdbarch_debug)
-    gdb_printf (gdb_stdlog, "register_gdbarch_init (%s, %s)\n",
+    gdb_printf (gdb_stdlog, "gdbarch_register (%s, %s)\n",
 		bfd_arch_info->printable_name,
 		host_address_to_string (init));
   /* Append it */
@@ -1393,17 +1341,10 @@ gdbarch_register (enum bfd_architecture bfd_architecture,
   (*curr)->bfd_architecture = bfd_architecture;
   (*curr)->init = init;
   (*curr)->dump_tdep = dump_tdep;
+  (*curr)->supports_arch_info = supports_arch_info;
   (*curr)->arches = NULL;
   (*curr)->next = NULL;
 }
-
-void
-register_gdbarch_init (enum bfd_architecture bfd_architecture,
-		       gdbarch_init_ftype *init)
-{
-  gdbarch_register (bfd_architecture, init, NULL);
-}
-
 
 /* Look for an architecture using gdbarch_info.  */
 
@@ -1442,13 +1383,13 @@ gdbarch_find_by_info (struct gdbarch_info info)
   gdbarch_info_fill (&info);
 
   /* Must have found some sort of architecture.  */
-  gdb_assert (info.bfd_arch_info != NULL);
+  gdb_assert (info.bfd_arch_info != nullptr);
 
   if (gdbarch_debug)
     {
       gdb_printf (gdb_stdlog,
 		  "gdbarch_find_by_info: info.bfd_arch_info %s\n",
-		  (info.bfd_arch_info != NULL
+		  (info.bfd_arch_info != nullptr
 		   ? info.bfd_arch_info->printable_name
 		   : "(null)"));
       gdb_printf (gdb_stdlog,
@@ -1467,16 +1408,16 @@ gdbarch_find_by_info (struct gdbarch_info info)
 
   /* Find the tdep code that knows about this architecture.  */
   for (rego = gdbarch_registry;
-       rego != NULL;
+       rego != nullptr;
        rego = rego->next)
     if (rego->bfd_architecture == info.bfd_arch_info->arch)
       break;
-  if (rego == NULL)
+  if (rego == nullptr)
     {
       if (gdbarch_debug)
 	gdb_printf (gdb_stdlog, "gdbarch_find_by_info: "
 		    "No matching architecture\n");
-      return 0;
+      return nullptr;
     }
 
   /* Ask the tdep code for an architecture that matches "info".  */
@@ -1484,12 +1425,12 @@ gdbarch_find_by_info (struct gdbarch_info info)
 
   /* Did the tdep code like it?  No.  Reject the change and revert to
      the old architecture.  */
-  if (new_gdbarch == NULL)
+  if (new_gdbarch == nullptr)
     {
       if (gdbarch_debug)
 	gdb_printf (gdb_stdlog, "gdbarch_find_by_info: "
 		    "Target rejected architecture\n");
-      return NULL;
+      return nullptr;
     }
 
   /* Is this a pre-existing architecture (as determined by already
@@ -1506,10 +1447,10 @@ gdbarch_find_by_info (struct gdbarch_info info)
 		    new_gdbarch->bfd_arch_info->printable_name);
       /* Find the existing arch in the list.  */
       for (list = &rego->arches;
-	   (*list) != NULL && (*list)->gdbarch != new_gdbarch;
+	   (*list) != nullptr && (*list)->gdbarch != new_gdbarch;
 	   list = &(*list)->next);
       /* It had better be in the list of architectures.  */
-      gdb_assert ((*list) != NULL && (*list)->gdbarch == new_gdbarch);
+      gdb_assert ((*list) != nullptr && (*list)->gdbarch == new_gdbarch);
       /* Unlink SELF.  */
       self = (*list);
       (*list) = self->next;
@@ -1540,32 +1481,48 @@ gdbarch_find_by_info (struct gdbarch_info info)
      any post init values.  */
   new_gdbarch->dump_tdep = rego->dump_tdep;
   verify_gdbarch (new_gdbarch);
-  new_gdbarch->initialized_p = 1;
+  new_gdbarch->initialized_p = true;
 
   if (gdbarch_debug)
     gdbarch_dump (new_gdbarch, gdb_stdlog);
 
+  gdb::observers::new_architecture.notify (new_gdbarch);
+
   return new_gdbarch;
 }
 
-/* Make the specified architecture current.  */
+/* See gdbarch.h.  */
 
-void
-set_target_gdbarch (struct gdbarch *new_gdbarch)
+bool
+gdbarch_initialized_p (gdbarch *arch)
 {
-  gdb_assert (new_gdbarch != NULL);
-  gdb_assert (new_gdbarch->initialized_p);
-  current_inferior ()->gdbarch = new_gdbarch;
-  gdb::observers::architecture_changed.notify (new_gdbarch);
-  registers_changed ();
+  return arch->initialized_p;
 }
 
-/* Return the current inferior's arch.  */
+/* See arch-utils.h.  */
 
-struct gdbarch *
-target_gdbarch (void)
+gdb_environ
+core_file_exec_context::environment () const
 {
-  return current_inferior ()->gdbarch;
+  gdb_environ e;
+
+  for (const auto &entry : m_environment)
+    {
+      char *eq = strchr (entry.get (), '=');
+
+      /* If there's no '=' character, then skip this entry.  */
+      if (eq == nullptr)
+	continue;
+
+      const char *value = eq + 1;
+      const char *var = entry.get ();
+
+      *eq = '\0';
+      e.set (var, value);
+      *eq = '=';
+    }
+
+  return e;
 }
 
 void _initialize_gdbarch_utils ();

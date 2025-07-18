@@ -1,5 +1,5 @@
 /* GDB-friendly replacement for <assert.h>.
-   Copyright (C) 2000-2022 Free Software Foundation, Inc.
+   Copyright (C) 2000-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -16,15 +16,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef COMMON_GDB_ASSERT_H
-#define COMMON_GDB_ASSERT_H
+#ifndef GDBSUPPORT_GDB_ASSERT_H
+#define GDBSUPPORT_GDB_ASSERT_H
 
 #include "errors.h"
-
-/* A static assertion.  This will cause a compile-time error if EXPR,
-   which must be a compile-time constant, is false.  */
-
-#define gdb_static_assert(expr) static_assert (expr, "")
 
 /* PRAGMATICS: "gdb_assert.h":gdb_assert() is a lower case (rather
    than upper case) macro since that provides the closest fit to the
@@ -38,14 +33,14 @@
 /* This prints an "Assertion failed" message, asking the user if they
    want to continue, dump core, or just exit.  */
 #define gdb_assert_fail(assertion, file, line, function)                      \
-  internal_error (file, line, _("%s: Assertion `%s' failed."),                \
-		  function, assertion)
+  internal_error_loc (file, line, _("%s: Assertion `%s' failed."),                \
+		      function, assertion)
 
 /* The canonical form of gdb_assert (0).
    MESSAGE is a string to include in the error message.  */
 
 #define gdb_assert_not_reached(message, ...) \
-  internal_error (__FILE__, __LINE__, _("%s: " message), __func__, \
-		  ##__VA_ARGS__)
+  internal_error_loc (__FILE__, __LINE__, _("%s: " message), __func__, \
+		      ##__VA_ARGS__)
 
-#endif /* COMMON_GDB_ASSERT_H */
+#endif /* GDBSUPPORT_GDB_ASSERT_H */

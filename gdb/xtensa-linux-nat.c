@@ -1,6 +1,6 @@
 /* Xtensa GNU/Linux native support.
 
-   Copyright (C) 2007-2022 Free Software Foundation, Inc.
+   Copyright (C) 2007-2024 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "frame.h"
 #include "inferior.h"
 #include "gdbcore.h"
@@ -62,7 +61,7 @@ fill_gregset (const struct regcache *regcache,
   int i;
   xtensa_elf_gregset_t *regs = (xtensa_elf_gregset_t *) gregsetp;
   struct gdbarch *gdbarch = regcache->arch ();
-  xtensa_gdbarch_tdep *tdep = (xtensa_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  xtensa_gdbarch_tdep *tdep = gdbarch_tdep<xtensa_gdbarch_tdep> (gdbarch);
 
   if (regnum == gdbarch_pc_regnum (gdbarch) || regnum == -1)
     regcache->raw_collect (gdbarch_pc_regnum (gdbarch), &regs->pc);
@@ -124,7 +123,7 @@ supply_gregset_reg (struct regcache *regcache,
   xtensa_elf_gregset_t *regs = (xtensa_elf_gregset_t *) gregsetp;
 
   struct gdbarch *gdbarch = regcache->arch ();
-  xtensa_gdbarch_tdep *tdep = (xtensa_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  xtensa_gdbarch_tdep *tdep = gdbarch_tdep<xtensa_gdbarch_tdep> (gdbarch);
 
   if (regnum == gdbarch_pc_regnum (gdbarch) || regnum == -1)
     regcache->raw_supply (gdbarch_pc_regnum (gdbarch), &regs->pc);

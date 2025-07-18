@@ -1,4 +1,4 @@
-# Copyright 2019-2022 Free Software Foundation, Inc.
+# Copyright 2019-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,10 +35,12 @@ if {[build_executable "failed to prepare" ${testfile} \
 
 mi_clean_restart $binfile
 
-mi_runto_main
+# Don't run to main to avoid increasing the search scope to include
+# debug info of shared libraries like libc, libgcc, etc.
 
 set qstr "\"\[^\"\]+\""
-set fun_re "\{line=\"$decimal\",name=${qstr},type=${qstr},description=${qstr}\}"
+set fun_re \
+    "\{(?:line=\"$decimal\",)?name=${qstr},type=${qstr},description=${qstr}\}"
 set type_re "\{(?:line=\"$decimal\",)*name=${qstr}\}"
 set sym_list "\\\[${fun_re}(?:,$fun_re)*\\\]"
 set type_sym_list "\\\[${type_re}(?:,$type_re)*\\\]"

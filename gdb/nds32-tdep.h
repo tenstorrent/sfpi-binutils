@@ -1,6 +1,6 @@
 /* Target-dependent code for the NDS32 architecture, for GDB.
 
-   Copyright (C) 2013-2022 Free Software Foundation, Inc.
+   Copyright (C) 2013-2024 Free Software Foundation, Inc.
    Contributed by Andes Technology Corporation.
 
    This file is part of GDB.
@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef NDS32_TDEP_H
-#define NDS32_TDEP_H
+#ifndef GDB_NDS32_TDEP_H
+#define GDB_NDS32_TDEP_H
 
 #include "gdbarch.h"
 
@@ -42,7 +42,7 @@ enum nds32_regnum
   NDS32_FD0_REGNUM = NDS32_NUM_REGS,
 };
 
-struct nds32_gdbarch_tdep : gdbarch_tdep
+struct nds32_gdbarch_tdep : gdbarch_tdep_base
 {
   /* The guessed FPU configuration.  */
   int fpu_freg = 0;
@@ -53,4 +53,4 @@ struct nds32_gdbarch_tdep : gdbarch_tdep
   /* ELF ABI info.  */
   int elf_abi = 0;
 };
-#endif /* NDS32_TDEP_H */
+#endif /* GDB_NDS32_TDEP_H */

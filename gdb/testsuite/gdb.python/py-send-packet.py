@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2022 Free Software Foundation, Inc.
+# Copyright (C) 2021-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,7 +14,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import xml.etree.ElementTree as ET
+
 import gdb
+
 
 # Make use of gdb.RemoteTargetConnection.send_packet to fetch the
 # thread list from the remote target.
@@ -114,10 +116,12 @@ def check_global_var(expected_val):
     if val != expected_val:
         raise gdb.GdbError("global_var is 0x%x, expected 0x%x" % (val, expected_val))
 
+
 # Return a bytes object representing an 'X' packet header with
 # address ADDR.
-def xpacket_header (addr):
-    return ("X%x,4:" % addr).encode('ascii')
+def xpacket_header(addr):
+    return ("X%x,4:" % addr).encode("ascii")
+
 
 # Set the 'X' packet to the remote target to set a global variable.
 # Checks that we can send byte values.
