@@ -4826,6 +4826,43 @@ _bfd_riscv_relax_lui (bfd *abfd,
 			? data_segment_alignment : max_alignment;
     }
 
+  // TT: our linker scripts mean we do not have to consider
+  // max_alignment (shrinking text won't move data), and in fact we
+  // don't want to (we'd like the full range of ITPE_IMM offsets). It
+  // would be nice to algorithmically detect this. Also, I'm pretty
+  // certain the max_alignment frobbing here is overly complex and
+  // pessimizing.  In the general case shrinking text could cause a
+  // data section to move, and that movement will be affected by the
+  // section's alignment.  That alignment could be different in the
+  // section of the GP symbol and the section of the reloc's
+  // symbol. And there could be intervening sections with different
+  // alignments to consider (we don't know what they are).
+  // But there are four cases:
+  // (a) GP is an absolute symbol.  This implies we're placing data in
+  // a specific region of memory, not affected by text
+  // shrinkage. Ignore alignment.
+  // (b) the GP and reloc symbols are in the same section.  They'll
+  // move consistently. Ignore alignment.
+  // (c) They're in different sections, with no intervening
+  // section.
+  //  (c1) GP is before reloc and GP alignment is greater or equal to
+  // symbol's.  The max relative shift is zero.
+  //  (c2) GP is before reloc and GP alignment is less than symbols.
+  // The max relative shift is reloc-align - GP-align - 1
+  //  (c3) GP is after reloc and GP alignment is greater than
+  // symbol's. The max relative shift is GP-align - reloc-align - 1
+  //  (c4) GP is after reloc and GP alignment is less than or equal to
+  // symbol's. The max relative shift is 0.
+  // (d) there is an intervening section. We don't know alignment so
+  // use max_alignment here. The result is using max alignment in
+  // place of the later section's alignment in the previous
+  // calculations.
+  // How do we know if there's an intervening section.  Look at the
+  // gap between the two sections and that bounds the alignment of any
+  // interstitial section -- so we can reduce max_alignment in (d)'s
+  // calculations.
+  max_alignment = 0;
+
   /* Is the reference in range of x0 or gp?
      Valid gp range conservatively because of alignment issue.
 
