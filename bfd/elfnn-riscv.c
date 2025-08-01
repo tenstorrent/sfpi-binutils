@@ -4861,7 +4861,6 @@ _bfd_riscv_relax_lui (bfd *abfd,
   // gap between the two sections and that bounds the alignment of any
   // interstitial section -- so we can reduce max_alignment in (d)'s
   // calculations.
-  max_alignment = 0;
 
   /* Is the reference in range of x0 or gp?
      Valid gp range conservatively because of alignment issue.

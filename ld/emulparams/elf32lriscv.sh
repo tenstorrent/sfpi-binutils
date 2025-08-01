@@ -12,4 +12,8 @@ case "$target" in
 	LIBPATH_SUFFIX="32/ilp32d 32" ;;
     esac
     ;;
+  riscv32*-tt-elf)
+    MAXPAGESIZE=1
+    COMMONPAGESIZE=1
+    ;;
 esac
