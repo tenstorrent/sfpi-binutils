@@ -2,7 +2,25 @@
 
 	# sfpload	"Jd1,Jxa3,Jm1,Jxa2"
 	sfpload L0,0,0,0
-	sfpload L7,8191,15,7
+	sfpload L7,0,0,0
+	sfpload L0,-0x1000,0,0
+	sfpload L0,0xfff,0,0
+	sfpload L0,0x1fff,0,0
+	sfpload L0,0,1,0
+	sfpload L0,0,2,0
+	sfpload L0,0,3,0
+	sfpload L0,0,4,0
+	sfpload L0,0,5,0
+	sfpload L0,0,6,0
+	sfpload L0,0,7,0
+	sfpload L0,0,8,0
+	sfpload L0,0,9,0
+	sfpload L0,0,10,0
+	sfpload L0,0,12,0
+	sfpload L0,0,13,0
+	sfpload L0,0,14,0
+	sfpload L0,0,15,0
+	sfpload L0,0,0,7
 
 	# sfploadi	"Jd1,Jn,Jm1"
 	sfploadi L0,-32768,0
@@ -11,10 +29,26 @@
 	sfploadi L7,32767,10
 
 	#sfpstore	"Jxa3,Jd2,Jm1,Jxa2"
-	sfpstore -4096,L0,0,0
-	sfpstore 8191,L15,10,3
-	sfpstore -4096,L0,12,4
-	sfpstore 8191,L15,15,7
+	sfpstore 0,L0,0,0
+	sfpstore 0,L15,0,0
+	sfpstore -0x1000,L0,0,0
+	sfpstore 0x0fff,L0,0,0
+	sfpstore 0x1fff,L0,0,0
+	sfpstore 0,L0,1,0
+	sfpstore 0,L0,2,0
+	sfpstore 0,L0,3,0
+	sfpstore 0,L0,4,0
+	sfpstore 0,L0,5,0
+	sfpstore 0,L0,6,0
+	sfpstore 0,L0,7,0
+	sfpstore 0,L0,8,0
+	sfpstore 0,L0,9,0
+	sfpstore 0,L0,10,0
+	sfpstore 0,L0,12,0
+	sfpstore 0,L0,13,0
+	sfpstore 0,L0,14,0
+	sfpstore 0,L0,15,0
+	sfpstore 0,L0,0,7
 
 	#sfplut	"Jd1,Jm3"
 	sfplut L0,0
