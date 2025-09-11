@@ -694,9 +694,8 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	  // encoding namespace.  Maybe one day.
 	  {
 	    // J<POS><LETTER><SUFFX>
-	    unsigned pos;
+	    unsigned pos, val;
 	    oparg = strdec (oparg + 1, &pos);
-	    unsigned val;
 	    switch (*oparg)
 	      {
 	      case 'R':
@@ -743,7 +742,7 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  
 	      default:
 		print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), *oparg);
-		break;
+		goto tensix_next;
 	      }
 	    print (info->stream, dis_style_immediate, "%d", val);
 	  tensix_next:
