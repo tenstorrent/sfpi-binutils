@@ -1647,7 +1647,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		{
 		  unsigned bits;
 		  oparg = strdec (oparg + 1, &bits) - 1;
-		  if (pos + bits > 24)
+		  if (pos + bits > 32)
 		    goto unknown_validate_operand;
 		  USE_IMM (bits, pos);
 		}
@@ -4037,7 +4037,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      }
 		  }
 	      }
-	      break;
+	      break;  // End of Tenstorrent
 
 	    case 'z':
 	      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
