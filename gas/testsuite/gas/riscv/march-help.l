@@ -162,6 +162,7 @@ All available -march extensions for RISC-V:
 	xtheadzvamo                             1.0
 	xttwh                                   1.0
 	xttbh                                   1.0
+	xttrocc                                 1.0
 	xventanacondops                         1.0
 	xsfvcp                                  1.0
 	xsfcease                                1.0
