@@ -1249,6 +1249,7 @@ static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
 {
   {"xttwh",       ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xttbh",       ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
+  {"xttrocc",       ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -2414,6 +2415,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xttwh");
     case INSN_CLASS_XTTBH:
       return riscv_subset_supports (rps, "xttbh");
+    case INSN_CLASS_XTTROCC:
+      return riscv_subset_supports (rps, "xttrocc");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2543,6 +2546,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xttwh";
     case INSN_CLASS_XTTBH:
       return "xttbh";
+    case INSN_CLASS_XTTROCC:
+      return "xttrocc";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

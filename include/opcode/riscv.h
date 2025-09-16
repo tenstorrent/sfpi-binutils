@@ -408,6 +408,7 @@ enum riscv_insn_class
 
   INSN_CLASS_XTTWH,
   INSN_CLASS_XTTBH,
+  INSN_CLASS_XTTROCC,
 };
 
 /* This structure holds information for a particular instruction.  */

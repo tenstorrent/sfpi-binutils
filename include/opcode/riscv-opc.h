@@ -2114,6 +2114,10 @@
 #define MATCH_CBO_ZERO 0x40200f
 #define MASK_CBO_ZERO 0xfff07fff
 
+/* Vendor specific (Tenstorrent) Xttrocc instructions */
+
+#define MASK_XTTROCC_GENERIC 0xfe00705b
+
 #include "riscv-opc-sfpu.h"
 
 /* Unprivileged Counter/Timers CSR addresses.  */
