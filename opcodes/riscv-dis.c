@@ -1534,6 +1534,17 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 			break;
 		      }
 		    break;
+		  case 'd':
+		    switch (*++oparg)
+		      {
+		      case '0':
+			print (info->stream, dis_style_immediate, "%ld", EXTRACT_OPERAND (CMDBUF, l));
+			break;
+		      case '1':
+			print (info->stream, dis_style_immediate, "%ld", EXTRACT_OPERAND (REG_VALUE, l));
+			break;
+			  }
+			break;
 
 		  default:
 		    print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), *oparg);
