@@ -292,6 +292,21 @@
 #define MATCH_SFPSTREAMWRCFG            0xb7000003
 #define MASK_SFPSTREAMWRCFG             0xffffffff
 
+#define MATCH_CMDBUF_WR_REG            0x0000200b
+#define MASK_CMDBUF_WR_REG             0x0000707f
+
+#define MATCH_CMDBUF_RD_REG            0x0000400b
+#define MASK_CMDBUF_RD_REG             0x0000707f
+
+#define MATCH_CMDBUF_GET_VC_SPACE      0x7c00400b
+#define MASK_CMDBUF_GET_VC_SPACE       0x7ffff07f
+
+#define MATCH_CMDBUF_GET_VC_SPACE_VC   0x7c00600b
+#define MASK_CMDBUF_GET_VC_SPACE_VC    0x7ff0707f
+
+#define MATCH_CMDBUF_WR_SENT	       0x7a00400b
+#define MASK_CMDBUF_WR_SENT	       0x7ffff07f
+
 #define SFP_OPCODE_END 0xB9
 
 #endif  // RISCV_OPC_SFPU_H

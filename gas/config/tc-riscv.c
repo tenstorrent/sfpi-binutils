@@ -1931,6 +1931,13 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
                     case '4': USE_BITS (OP_MASK_L_INSTRMODE, OP_SH_L_INSTRMODE); break;
 		    }
                   break;
+		case 'd':
+		  switch (*++oparg)
+		    {
+		    case '0': USE_BITS (OP_MASK_CMDBUF, OP_SH_CMDBUF); break;
+		    case '1': USE_BITS (OP_MASK_REG_VALUE, OP_SH_REG_VALUE); break;
+		    }
+		  break;
 		  }
 		break;
 	    default:
@@ -8124,6 +8131,41 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			      break;
 			    }
 			  INSERT_OPERAND (L_INSTRMODE, *ip, imm_expr->X_add_number);
+			  imm_expr->X_op = O_absent;
+			  asarg = expr_parse_end;
+			  break;
+			}
+		      break;
+
+		    case 'd':
+		      switch (*++oparg)
+			{
+			case '0':
+			  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+			      || imm_expr->X_op != O_constant
+			      || imm_expr->X_add_number < 0
+			      || imm_expr->X_add_number > 1)
+			    {
+			      as_bad (_("bad value for cmdbuf field, "
+					"values and 0...1"));
+			      break;
+			    }
+			  INSERT_OPERAND (CMDBUF, *ip, imm_expr->X_add_number);
+			  imm_expr->X_op = O_absent;
+			  asarg = expr_parse_end;
+			  break;
+
+			case '1':
+			  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+			      || imm_expr->X_op != O_constant
+			      || imm_expr->X_add_number < 0
+			      || imm_expr->X_add_number > 63)
+			    {
+			      as_bad (_("bad value for reg_index field, "
+					"values and 0...63"));
+			      break;
+			    }
+			  INSERT_OPERAND (REG_VALUE, *ip, imm_expr->X_add_number);
 			  imm_expr->X_op = O_absent;
 			  asarg = expr_parse_end;
 			  break;
