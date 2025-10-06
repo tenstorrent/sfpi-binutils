@@ -1,4 +1,4 @@
-	.attribute arch, "rv32i2p0_xttwh"
+	.attribute arch, "rv32i2p0_xtttensixwh"
 
 	# sfpload	"Jd1,Jq,Jm1,Jp"
 	sfpload L0,0,0,0

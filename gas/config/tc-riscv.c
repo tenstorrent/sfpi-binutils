@@ -748,8 +748,8 @@ riscv_target_format (void)
 static inline unsigned int
 insn_length (const struct riscv_cl_insn *insn)
 {
-  return (insn->insn_mo->insn_class == INSN_CLASS_XTTWH
-	  || insn->insn_mo->insn_class == INSN_CLASS_XTTBH
+  return (insn->insn_mo->insn_class == INSN_CLASS_XTTTENSIXWH
+	  || insn->insn_mo->insn_class == INSN_CLASS_XTTTENSIXBH
 	  ? 4 : riscv_insn_length (insn->insn_opcode));
 }
 
@@ -767,8 +767,8 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
 
   /*  Zero out the lower most two bits as they were set to indicate the
       instruction as a 4 byte instruction */
-  if (mo->insn_class == INSN_CLASS_XTTWH
-      || mo->insn_class == INSN_CLASS_XTTBH)
+  if (mo->insn_class == INSN_CLASS_XTTTENSIXWH
+      || mo->insn_class == INSN_CLASS_XTTTENSIXBH)
     insn->insn_opcode &= 0xfffffffc;
 }
 
@@ -1484,8 +1484,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
   insn_t required_bits;
 
   if (length == 0)
-    length = (opc->insn_class == INSN_CLASS_XTTWH
-	      || opc->insn_class == INSN_CLASS_XTTBH
+    length = (opc->insn_class == INSN_CLASS_XTTTENSIXWH
+	      || opc->insn_class == INSN_CLASS_XTTTENSIXBH
 	      ? 4 : riscv_insn_length (opc->match));
   /* We don't support instructions longer than 64-bits yet.  */
   if (length > 8)
@@ -2370,8 +2370,8 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	}
     }
 
-  if (ip->insn_mo->insn_class == INSN_CLASS_XTTWH ||
-      ip->insn_mo->insn_class == INSN_CLASS_XTTBH)
+  if (ip->insn_mo->insn_class == INSN_CLASS_XTTTENSIXWH ||
+      ip->insn_mo->insn_class == INSN_CLASS_XTTTENSIXBH)
     ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
@@ -4268,8 +4268,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   INSERT_OPERAND (YCC_LREG_C, *ip, regno);
                   continue;
                 case 'h': /* CC Instructions LREG_DEST L0-L3 (L0-L7 for Wormhole) */
-                  if (insn->insn_class == INSN_CLASS_XTTWH
-		      || insn->insn_class == INSN_CLASS_XTTBH)
+                  if (insn->insn_class == INSN_CLASS_XTTTENSIXWH
+		      || insn->insn_class == INSN_CLASS_XTTTENSIXBH)
                     {
                       if (0 == strcmp (insn->name, "sfpconfig"))
                         {
@@ -4582,7 +4582,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                   continue;
 
                 case 'o': /* mad/mul/add instr_mod0 */
-                  if (insn->insn_class == INSN_CLASS_XTTWH)
+                  if (insn->insn_class == INSN_CLASS_XTTTENSIXWH)
                     {
                       if (0 == strcmp (insn->name, "sfplutfp32"))
                         {
@@ -4612,7 +4612,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
                           break;
                         }
                     }
-                  else if (insn->insn_class == INSN_CLASS_XTTBH)
+                  else if (insn->insn_class == INSN_CLASS_XTTTENSIXBH)
                     {
                       if (0 == strcmp(insn->name, "sfplutfp32"))
                         {

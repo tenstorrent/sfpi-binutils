@@ -1791,10 +1791,10 @@ riscv_disassemble_insn (bfd_vma memaddr,
   /* Build a hash table to shorten the search time.  */
   if (! init)
     {
-      if (riscv_subset_supports (&riscv_rps_dis, "xttwh"))
-	tt_class = INSN_CLASS_XTTWH;
-      else if  (riscv_subset_supports (&riscv_rps_dis, "xttbh"))
-	tt_class = INSN_CLASS_XTTBH;
+      if (riscv_subset_supports (&riscv_rps_dis, "xtttensixwh"))
+	tt_class = INSN_CLASS_XTTTENSIXWH;
+      else if  (riscv_subset_supports (&riscv_rps_dis, "xtttensixbh"))
+	tt_class = INSN_CLASS_XTTTENSIXBH;
 
       for (op = riscv_opcodes; op->name; op++)
 	{
@@ -1808,8 +1808,8 @@ riscv_disassemble_insn (bfd_vma memaddr,
 	      else if (!riscv_hash[OP_HASH_IDX (op->match)])
 		riscv_hash[OP_HASH_IDX (op->match)] = op;
 	    }
-	  else if (op->insn_class != INSN_CLASS_XTTWH
-		   && op->insn_class != INSN_CLASS_XTTBH)
+	  else if (op->insn_class != INSN_CLASS_XTTTENSIXWH
+		   && op->insn_class != INSN_CLASS_XTTTENSIXBH)
 	    {
 	      if (!riscv_hash[OP_HASH_IDX (op->match)])
 		riscv_hash[OP_HASH_IDX (op->match)] = op;
@@ -2343,8 +2343,8 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
       insn = (insn_t) bfd_getl16 (packet);
       static int is_tt = -1;
       if (is_tt < 0)
-	is_tt = riscv_subset_supports (&riscv_rps_dis, "xttwh")
-	  || riscv_subset_supports (&riscv_rps_dis, "xttbh");
+	is_tt = riscv_subset_supports (&riscv_rps_dis, "xtttensixwh")
+	  || riscv_subset_supports (&riscv_rps_dis, "xtttensixbh");
       dump_size = is_tt ? 4 : riscv_insn_length (insn);
       riscv_disassembler = riscv_disassemble_insn;
     }

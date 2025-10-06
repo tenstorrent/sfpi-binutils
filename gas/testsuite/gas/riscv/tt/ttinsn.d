@@ -1,4 +1,4 @@
-#as: -march=rv32im_xttwh
+#as: -march=rv32im_xtttensixwh
 #source: ttinsn.s
 #objdump: -d
 
