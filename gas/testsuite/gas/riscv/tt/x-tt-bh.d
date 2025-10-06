@@ -1,4 +1,4 @@
-#as: -march=rv32i_xttbh1
+#as: -march=rv32i_xtttensixbh1
 #source: x-tt-nop.s
 #objdump: -dr
 

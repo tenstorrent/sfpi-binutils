@@ -1,1 +1,1 @@
-	.attribute arch,"rv32i_xttbh"
+	.attribute arch,"rv32i_xtttensixbh"

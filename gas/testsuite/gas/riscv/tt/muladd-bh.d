@@ -1,4 +1,4 @@
-#as: -march=rv32im_xttbh
+#as: -march=rv32im_xtttensixbh
 #source: muladd-bh.s
 #objdump: -d
 
