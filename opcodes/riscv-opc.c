@@ -3472,6 +3472,28 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vrgather.vi",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,VjVm", MATCH_VRGATHERVI, MASK_VRGATHERVI, match_opcode, 0},
 {"th.vcompress.vm",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,Vs", MATCH_VCOMPRESSVM, MASK_VCOMPRESSVM, match_opcode, 0},
 
+/* Vendor-specific (Tenstorrent) ROCC instructions */
+{"tt.rocc.cmdbuf_issue_write2_trans",   0, INSN_CLASS_XTTROCC, "Jxd0,s,t", MATCH_TTROCC_CMDBUF_ISSUE_WRITE2_TRANS, MASK_TTROCC_CMDBUF_ISSUE_WRITE2_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_write1_trans",   0, INSN_CLASS_XTTROCC, "Jxd0,s", MATCH_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, MASK_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_read2_trans",    0, INSN_CLASS_XTTROCC, "Jxd0,s,t", MATCH_TTROCC_CMDBUF_ISSUE_READ2_TRANS, MASK_TTROCC_CMDBUF_ISSUE_READ2_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_read1_trans",    0, INSN_CLASS_XTTROCC, "Jxd0,s", MATCH_TTROCC_CMDBUF_ISSUE_READ1_TRANS, MASK_TTROCC_CMDBUF_ISSUE_READ1_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_addr_trans",     0, INSN_CLASS_XTTROCC, "Jxd0,s,t", MATCH_TTROCC_CMDBUF_ISSUE_ADDR_TRANS, MASK_TTROCC_CMDBUF_ISSUE_ADDR_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_inline_trans",   0, INSN_CLASS_XTTROCC, "Jxd0,s", MATCH_TTROCC_CMDBUF_ISSUE_INLINE_TRANS, MASK_TTROCC_CMDBUF_ISSUE_INLINE_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_trans",	        0, INSN_CLASS_XTTROCC, "Jxd0", MATCH_TTROCC_CMDBUF_ISSUE_TRANS, MASK_TTROCC_CMDBUF_ISSUE_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_tr_ack_trid",     0, INSN_CLASS_XTTROCC, "d,Jxd0,s", MATCH_TTROCC_CMDBUF_IDMA_TR_ACK_TRID, MASK_TTROCC_CMDBUF_IDMA_TR_ACK_TRID, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_tr_ack",	        0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_TTROCC_CMDBUF_IDMA_TR_ACK, MASK_TTROCC_CMDBUF_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_get_vc_space_vc", 0, INSN_CLASS_XTTROCC, "d,Jxd0,s", MATCH_TTROCC_CMDBUF_IDMA_GET_VC_SPACE_VC, MASK_TTROCC_CMDBUF_IDMA_GET_VC_SPACE_VC, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_get_vc_space",	0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_TTROCC_CMDBUF_IDMA_GET_VC_SPACE, MASK_TTROCC_CMDBUF_IDMA_GET_VC_SPACE, match_opcode, 0},
+{"tt.rocc.cmdbuf_reset",		0, INSN_CLASS_XTTROCC, "Jxd0", MATCH_TTROCC_CMDBUF_RESET, MASK_TTROCC_CMDBUF_RESET, match_opcode, 0},
+{"tt.rocc.cmdbuf_tr_ack_trid",	      	0, INSN_CLASS_XTTROCC, "d,Jxd0,s", MATCH_TTROCC_CMDBUF_TR_ACK_TRID, MASK_TTROCC_CMDBUF_TR_ACK_TRID, match_opcode, 0},
+{"tt.rocc.cmdbuf_tr_ack",	      	0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_TTROCC_CMDBUF_TR_ACK, MASK_TTROCC_CMDBUF_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_wr_sent_trid",	      	0, INSN_CLASS_XTTROCC, "d,Jxd0,s", MATCH_TTROCC_CMDBUF_WR_SENT_TRID, MASK_TTROCC_CMDBUF_WR_SENT_TRID, match_opcode, 0},
+{"tt.rocc.cmdbuf_get_vc_space",	      	0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_TTROCC_CMDBUF_GET_VC_SPACE, MASK_TTROCC_CMDBUF_GET_VC_SPACE, match_opcode, 0},
+{"tt.rocc.cmdbuf_get_vc_space_vc",     	0, INSN_CLASS_XTTROCC, "d,Jxd0,s", MATCH_TTROCC_CMDBUF_GET_VC_SPACE_VC, MASK_TTROCC_CMDBUF_GET_VC_SPACE_VC, match_opcode, 0},
+{"tt.rocc.cmdbuf_wr_sent",	      	0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_TTROCC_CMDBUF_WR_SENT, MASK_TTROCC_CMDBUF_WR_SENT, match_opcode, 0},
+{"tt.rocc.cmdbuf_wr_reg",	      	0, INSN_CLASS_XTTROCC, "d,Jxd0,Jxd1,s,t", MATCH_TTROCC_CMDBUF_WR_REG, MASK_TTROCC_CMDBUF_WR_REG, match_opcode, 0},
+{"tt.rocc.cmdbuf_rd_reg",	      	0, INSN_CLASS_XTTROCC, "d,Jxd0,Jxd1,s,t", MATCH_TTROCC_CMDBUF_RD_REG, MASK_TTROCC_CMDBUF_RD_REG, match_opcode, 0},
+
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 {"vt.maskc",   64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKC, MASK_VT_MASKC, match_opcode, 0 },
 {"vt.maskcn",  64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKCN, MASK_VT_MASKCN, match_opcode, 0 },
