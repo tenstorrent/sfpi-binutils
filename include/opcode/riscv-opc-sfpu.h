@@ -292,6 +292,61 @@
 #define MATCH_SFPSTREAMWRCFG            0xb7000003
 #define MASK_SFPSTREAMWRCFG             0xffffffff
 
+#define MASK_ROCC_OPCODE 0x0000007f
+#define MASK_ROCC_XFLAGS 0x00007000
+#define MASK_ROCC_FUNCT7 0xfe000000
+#define MASK_ROCC_RD     0x00000f80
+#define MASK_ROCC_RS1    0x000f8000
+#define MASK_ROCC_RS2    0x01f00000
+
+#define MASK_ROCC_GENERIC (MASK_ROCC_FUNCT7 | MASK_ROCC_XFLAGS | MASK_ROCC_OPCODE)
+#define MASK_ROCC_REG_ALL (MASK_ROCC_RS1 | MASK_ROCC_RS2 | MASK_ROCC_RD)
+
+#define MATCH_ROCC_OPCODE 0x005b
+#define MATCH_ROCC_XD  0x4000
+#define MATCH_ROCC_XS1 0x2000
+#define MATCH_ROCC_XS2 0x1000
+
+#define MATCH_DBG_POSTCODE (0x42000000 | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_DBG_POSTCODE (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RD | \
+                MASK_ROCC_RS2)
+
+#define MATCH_NOC_FENCE (0x44000000 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_NOC_FENCE (MASK_ROCC_GENERIC | \
+                MASK_ROCC_REG_ALL)
+
+#define MATCH_LLK_INTF_WRITE (0x46000000 | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_XS2 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_LLK_INTF_WRITE (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RD)
+
+#define MATCH_LLK_INTF_READ (0x46000000 | \
+                MATCH_ROCC_XD | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_LLK_INTF_READ (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RS2)
+
+#define MATCH_FDS_INTF_WRITE (0x48000000 | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_XS2 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_FDS_INTF_WRITE (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RD)
+
+#define MATCH_FDS_INTF_READ (0x48000000 | \
+                MATCH_ROCC_XD | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_FDS_INTF_READ (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RS2)
+
 #define MATCH_CMDBUF_WR_REG            0x0000200b
 #define MASK_CMDBUF_WR_REG             0x0000707f
 
