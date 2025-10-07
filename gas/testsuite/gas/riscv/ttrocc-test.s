@@ -73,3 +73,8 @@ target:
     tt.rocc.llk_intf_read                a0, a1
     tt.rocc.fds_intf_write               a1, a2
     tt.rocc.fds_intf_read                a0, a1
+
+    tt.rocc.cs_alloc                     a0
+    tt.rocc.cs_dealloc                   a1
+    tt.rocc.cs_save                      a1
+    tt.rocc.cs_restore                   a1

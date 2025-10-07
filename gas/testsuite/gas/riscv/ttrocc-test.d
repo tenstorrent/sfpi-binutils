@@ -62,3 +62,7 @@ Disassembly of section .text:
 [ 	]+cc:[ 	]+4605e55b[ 	]+tt.rocc.llk_intf_read[ 	]+a0,a1
 [ 	]+d0:[ 	]+48c5b05b[ 	]+tt.rocc.fds_intf_write[ 	]+a1,a2
 [ 	]+d4:[ 	]+4805e55b[ 	]+tt.rocc.fds_intf_read[ 	]+a0,a1
+[ 	]+d8:[ 	]+0600455b[ 	]+tt.rocc.cs_alloc[ 	]+a0
+[ 	]+dc:[ 	]+0405a05b[ 	]+tt.rocc.cs_dealloc[ 	]+a1
+[ 	]+e0:[ 	]+0205a05b[ 	]+tt.rocc.cs_save[ 	]+a1
+[ 	]+e4:[ 	]+0005a05b[ 	]+tt.rocc.cs_restore[ 	]+a1

@@ -3473,12 +3473,16 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vcompress.vm",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,Vs", MATCH_VCOMPRESSVM, MASK_VCOMPRESSVM, match_opcode, 0},
 
 /* Vendor-specific (Tenstorrent) ROCC instructions */
-{"tt.rocc.dbg_postcode",	              0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_DBG_POSTCODE, MASK_TTROCC_DBG_POSTCODE, match_opcode, 0},
-{"tt.rocc.noc_fence",	                  0, INSN_CLASS_XTTROCC, "", MATCH_TTROCC_NOC_FENCE, MASK_TTROCC_NOC_FENCE, match_opcode, 0},
+{"tt.rocc.dbg_postcode",	        0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_DBG_POSTCODE, MASK_TTROCC_DBG_POSTCODE, match_opcode, 0},
+{"tt.rocc.noc_fence",	                0, INSN_CLASS_XTTROCC, "", MATCH_TTROCC_NOC_FENCE, MASK_TTROCC_NOC_FENCE, match_opcode, 0},
 {"tt.rocc.llk_intf_write",              0, INSN_CLASS_XTTROCC, "s,t", MATCH_TTROCC_LLK_INTF_WRITE, MASK_TTROCC_LLK_INTF_WRITE, match_opcode, 0},
 {"tt.rocc.llk_intf_read",               0, INSN_CLASS_XTTROCC, "d,s", MATCH_TTROCC_LLK_INTF_READ, MASK_TTROCC_LLK_INTF_READ, match_opcode, 0},
 {"tt.rocc.fds_intf_write",              0, INSN_CLASS_XTTROCC, "s,t", MATCH_TTROCC_FDS_INTF_WRITE, MASK_TTROCC_FDS_INTF_WRITE, match_opcode, 0},
 {"tt.rocc.fds_intf_read",               0, INSN_CLASS_XTTROCC, "d,s", MATCH_TTROCC_FDS_INTF_READ, MASK_TTROCC_FDS_INTF_READ, match_opcode, 0},
+{"tt.rocc.cs_alloc",                    0, INSN_CLASS_XTTROCC, "d", MATCH_TTROCC_CS_ALLOC, MASK_TTROCC_CS_ALLOC, match_opcode, 0},
+{"tt.rocc.cs_dealloc",                  0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_CS_DEALLOC, MASK_TTROCC_CS_DEALLOC, match_opcode, 0},
+{"tt.rocc.cs_save",                     0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_CS_SAVE, MASK_TTROCC_CS_SAVE, match_opcode, 0},
+{"tt.rocc.cs_restore",                  0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_CS_RESTORE, MASK_TTROCC_CS_RESTORE, match_opcode, 0},
 {"tt.rocc.cmdbuf_issue_write2_trans",   0, INSN_CLASS_XTTROCC, "Jxd0,s,t", MATCH_TTROCC_CMDBUF_ISSUE_WRITE2_TRANS, MASK_TTROCC_CMDBUF_ISSUE_WRITE2_TRANS, match_opcode, 0},
 {"tt.rocc.cmdbuf_issue_write1_trans",   0, INSN_CLASS_XTTROCC, "Jxd0,s", MATCH_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, MASK_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, match_opcode, 0},
 {"tt.rocc.cmdbuf_issue_read2_trans",    0, INSN_CLASS_XTTROCC, "Jxd0,s,t", MATCH_TTROCC_CMDBUF_ISSUE_READ2_TRANS, MASK_TTROCC_CMDBUF_ISSUE_READ2_TRANS, match_opcode, 0},
