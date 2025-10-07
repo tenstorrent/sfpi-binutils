@@ -66,3 +66,10 @@ target:
 
     tt.rocc.cmdbuf_issue_write2_trans    0,a1,a2
     tt.rocc.cmdbuf_issue_write2_trans    1,a1,a2
+
+    tt.rocc.dbg_postcode                 a1
+    tt.rocc.noc_fence
+    tt.rocc.llk_intf_write               a1, a2
+    tt.rocc.llk_intf_read                a0, a1
+    tt.rocc.fds_intf_write               a1, a2
+    tt.rocc.fds_intf_read                a0, a1

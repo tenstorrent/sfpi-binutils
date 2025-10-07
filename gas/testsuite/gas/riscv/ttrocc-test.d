@@ -56,3 +56,9 @@ Disassembly of section .text:
 [ 	]+b4:[ 	]+ee05a00b[ 	]+tt.rocc.cmdbuf_issue_write1_trans[ 	]+1,a1
 [ 	]+b8:[ 	]+6ec5b00b[ 	]+tt.rocc.cmdbuf_issue_write2_trans[ 	]+0,a1,a2
 [ 	]+bc:[ 	]+eec5b00b[ 	]+tt.rocc.cmdbuf_issue_write2_trans[ 	]+1,a1,a2
+[ 	]+c0:[ 	]+4205a05b[ 	]+tt.rocc.dbg_postcode[ 	]+a1
+[ 	]+c4:[ 	]+4400005b[ 	]+tt.rocc.noc_fence
+[ 	]+c8:[ 	]+46c5b05b[ 	]+tt.rocc.llk_intf_write[ 	]+a1,a2
+[ 	]+cc:[ 	]+4605e55b[ 	]+tt.rocc.llk_intf_read[ 	]+a0,a1
+[ 	]+d0:[ 	]+48c5b05b[ 	]+tt.rocc.fds_intf_write[ 	]+a1,a2
+[ 	]+d4:[ 	]+4805e55b[ 	]+tt.rocc.fds_intf_read[ 	]+a0,a1
