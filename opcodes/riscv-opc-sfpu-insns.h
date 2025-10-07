@@ -285,6 +285,10 @@
 {"ttrocc.llk_intf_read",           0, INSN_CLASS_XTTROCC, "d,s", MATCH_LLK_INTF_READ, MASK_LLK_INTF_READ, match_opcode, 0},
 {"ttrocc.fds_intf_write",          0, INSN_CLASS_XTTROCC, "s,t", MATCH_FDS_INTF_WRITE, MASK_FDS_INTF_WRITE, match_opcode, 0},
 {"ttrocc.fds_intf_read",           0, INSN_CLASS_XTTROCC, "d,s", MATCH_FDS_INTF_READ, MASK_FDS_INTF_READ, match_opcode, 0},
+{"ttrocc.cs_alloc",                0, INSN_CLASS_XTTROCC, "d", MATCH_CS_ALLOC, MASK_CS_ALLOC, match_opcode, 0},
+{"ttrocc.cs_dealloc",              0, INSN_CLASS_XTTROCC, "s", MATCH_CS_DEALLOC, MASK_CS_DEALLOC, match_opcode, 0},
+{"ttrocc.cs_save",                 0, INSN_CLASS_XTTROCC, "s", MATCH_CS_SAVE, MASK_CS_SAVE, match_opcode, 0},
+{"ttrocc.cs_restore",              0, INSN_CLASS_XTTROCC, "s", MATCH_CS_RESTORE, MASK_CS_RESTORE, match_opcode, 0},
 
 {"ttrocc.cmdbuf_get_vc_space",	   0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_CMDBUF_GET_VC_SPACE, MASK_CMDBUF_GET_VC_SPACE, match_opcode, 0},
 {"ttrocc.cmdbuf_get_vc_space_vc",  0, INSN_CLASS_XTTROCC, "d,Jxd0,s", MATCH_CMDBUF_GET_VC_SPACE_VC, MASK_CMDBUF_GET_VC_SPACE_VC, match_opcode, 0},

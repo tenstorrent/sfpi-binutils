@@ -32,3 +32,7 @@ target:
     ttrocc.fds_intf_write         a1, a2
     ttrocc.fds_intf_read          a0, a1
 
+    ttrocc.cs_alloc               a0
+    ttrocc.cs_dealloc             a1
+    ttrocc.cs_save                a1
+    ttrocc.cs_restore             a1

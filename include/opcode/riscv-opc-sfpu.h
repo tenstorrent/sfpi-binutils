@@ -347,6 +347,34 @@
 #define MASK_FDS_INTF_READ (MASK_ROCC_GENERIC | \
                 MASK_ROCC_RS2)
 
+#define MATCH_CS_ALLOC (0x06000000 | \
+                MATCH_ROCC_XD | \
+                MATCH_ROCC_OPCODE)
+#define MASK_CS_ALLOC (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RS1 | \
+                MASK_ROCC_RS2)
+
+#define MATCH_CS_DEALLOC (0x04000000 | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_CS_DEALLOC (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RD | \
+                MASK_ROCC_RS2)
+
+#define MATCH_CS_SAVE (0x02000000 | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_CS_SAVE (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RD | \
+                MASK_ROCC_RS2)
+
+#define MATCH_CS_RESTORE (0x00000000 | \
+                MATCH_ROCC_XS1 | \
+                MATCH_ROCC_OPCODE)
+#define MASK_CS_RESTORE (MASK_ROCC_GENERIC | \
+                MASK_ROCC_RD | \
+                MASK_ROCC_RS2)
+
 #define MATCH_CMDBUF_WR_REG            0x0000200b
 #define MASK_CMDBUF_WR_REG             0x0000707f
 

@@ -32,3 +32,7 @@ Disassembly of section .text:
 [ 	]+54:[ 	]+4605e55b[ 	]+ttrocc.llk_intf_read[ 	]+a0,a1
 [ 	]+58:[ 	]+48c5b05b[ 	]+ttrocc.fds_intf_write[ 	]+a1,a2
 [ 	]+5c:[ 	]+4805e55b[ 	]+ttrocc.fds_intf_read[ 	]+a0,a1
+[ 	]+60:[ 	]+0600455b[ 	]+ttrocc.cs_alloc[ 	]+a0
+[ 	]+64:[ 	]+0405a05b[ 	]+ttrocc.cs_dealloc[ 	]+a1
+[ 	]+68:[ 	]+0205a05b[ 	]+ttrocc.cs_save[ 	]+a1
+[ 	]+6c:[ 	]+0005a05b[ 	]+ttrocc.cs_restore[ 	]+a1
