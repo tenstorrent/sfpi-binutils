@@ -26,3 +26,9 @@ Disassembly of section .text:
 [ 	]+3c:[ 	]+fc05e50b[ 	]+ttrocc.cmdbuf_get_vc_space_vc[ 	]+a0,1,a1
 [ 	]+40:[ 	]+7a00450b[ 	]+ttrocc.cmdbuf_wr_sent[ 	]+a0,0
 [ 	]+44:[ 	]+fa00450b[ 	]+ttrocc.cmdbuf_wr_sent[ 	]+a0,1
+[ 	]+48:[ 	]+4205a05b[ 	]+ttrocc.dbg_postcode[ 	]+a1
+[ 	]+4c:[ 	]+4400005b[ 	]+ttrocc.noc_fence
+[ 	]+50:[ 	]+46c5b05b[ 	]+ttrocc.llk_intf_write[ 	]+a1,a2
+[ 	]+54:[ 	]+4605e55b[ 	]+ttrocc.llk_intf_read[ 	]+a0,a1
+[ 	]+58:[ 	]+48c5b05b[ 	]+ttrocc.fds_intf_write[ 	]+a1,a2
+[ 	]+5c:[ 	]+4805e55b[ 	]+ttrocc.fds_intf_read[ 	]+a0,a1

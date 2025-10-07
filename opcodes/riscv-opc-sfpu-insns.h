@@ -279,6 +279,13 @@
 {"ttstreamwait",  0, INSN_CLASS_XTTBH, "Juj,Jxbz,Jxb0,Jxb1",    MATCH_SFPSTREAMWAIT, MASK_SFPSTREAMWAIT, sfp_match_opcode, INSN_ALIAS },
 {"ttstreamwrcfg", 0, INSN_CLASS_XTTBH, "Jxb2,Jxb3,Jxb4",        MATCH_SFPSTREAMWRCFG, MASK_SFPSTREAMWRCFG, sfp_match_opcode, INSN_ALIAS },
 
+{"ttrocc.dbg_postcode",	           0, INSN_CLASS_XTTROCC, "s", MATCH_DBG_POSTCODE, MASK_DBG_POSTCODE, match_opcode, 0},
+{"ttrocc.noc_fence",	           0, INSN_CLASS_XTTROCC, "", MATCH_NOC_FENCE, MASK_NOC_FENCE, match_opcode, 0},
+{"ttrocc.llk_intf_write",          0, INSN_CLASS_XTTROCC, "s,t", MATCH_LLK_INTF_WRITE, MASK_LLK_INTF_WRITE, match_opcode, 0},
+{"ttrocc.llk_intf_read",           0, INSN_CLASS_XTTROCC, "d,s", MATCH_LLK_INTF_READ, MASK_LLK_INTF_READ, match_opcode, 0},
+{"ttrocc.fds_intf_write",          0, INSN_CLASS_XTTROCC, "s,t", MATCH_FDS_INTF_WRITE, MASK_FDS_INTF_WRITE, match_opcode, 0},
+{"ttrocc.fds_intf_read",           0, INSN_CLASS_XTTROCC, "d,s", MATCH_FDS_INTF_READ, MASK_FDS_INTF_READ, match_opcode, 0},
+
 {"ttrocc.cmdbuf_get_vc_space",	   0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_CMDBUF_GET_VC_SPACE, MASK_CMDBUF_GET_VC_SPACE, match_opcode, 0},
 {"ttrocc.cmdbuf_get_vc_space_vc",  0, INSN_CLASS_XTTROCC, "d,Jxd0,s", MATCH_CMDBUF_GET_VC_SPACE_VC, MASK_CMDBUF_GET_VC_SPACE_VC, match_opcode, 0},
 {"ttrocc.cmdbuf_wr_sent",	   0, INSN_CLASS_XTTROCC, "d,Jxd0", MATCH_CMDBUF_WR_SENT, MASK_CMDBUF_WR_SENT, match_opcode, 0},

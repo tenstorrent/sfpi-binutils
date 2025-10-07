@@ -24,3 +24,11 @@ target:
 
     ttrocc.cmdbuf_wr_sent         a0, 0
     ttrocc.cmdbuf_wr_sent         a0, 1
+
+    ttrocc.dbg_postcode           a1
+    ttrocc.noc_fence
+    ttrocc.llk_intf_write         a1, a2
+    ttrocc.llk_intf_read          a0, a1
+    ttrocc.fds_intf_write         a1, a2
+    ttrocc.fds_intf_read          a0, a1
+
