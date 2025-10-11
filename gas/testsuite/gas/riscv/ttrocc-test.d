@@ -66,3 +66,18 @@ Disassembly of section .text:
 [ 	]+dc:[ 	]+0405a05b[ 	]+tt.rocc.cs_dealloc[ 	]+a1
 [ 	]+e0:[ 	]+0205a05b[ 	]+tt.rocc.cs_save[ 	]+a1
 [ 	]+e4:[ 	]+0005a05b[ 	]+tt.rocc.cs_restore[ 	]+a1
+[ 	]+e8:[ 	]+8405a02b[ 	]+tt.rocc.scmdbuf_wr_reg[ 	]+a1
+[ 	]+ec:[ 	]+8600452b[ 	]+tt.rocc.scmdbuf_rd_reg[ 	]+a0
+[ 	]+f0:[ 	]+fc00452b[ 	]+tt.rocc.scmdbuf_get_vc_space[ 	]+a0
+[ 	]+f4:[ 	]+fc05e52b[ 	]+tt.rocc.scmdbuf_get_vc_space_vc[ 	]+a0,a1
+[ 	]+f8:[ 	]+fa00452b[ 	]+tt.rocc.scmdbuf_wr_sent[ 	]+a0
+[ 	]+fc:[ 	]+fa05e52b[ 	]+tt.rocc.scmdbuf_wr_sent_trid[ 	]+a0,a1
+[ 	]+100:[ 	]+f800452b[ 	]+tt.rocc.scmdbuf_tr_ack[ 	]+a0
+[ 	]+104:[ 	]+f805e52b[ 	]+tt.rocc.scmdbuf_tr_ack_trid[ 	]+a0,a1
+[ 	]+108:[ 	]+f600002b[ 	]+tt.rocc.scmdbuf_reset
+[ 	]+10c:[ 	]+fe00002b[ 	]+tt.rocc.scmdbuf_issue_trans
+[ 	]+110:[ 	]+fe05a02b[ 	]+tt.rocc.scmdbuf_issue_inline_trans[ 	]+a1
+[ 	]+114:[ 	]+fec5b02b[ 	]+tt.rocc.scmdbuf_issue_inline_addr_trans[ 	]+a1,a2
+[ 	]+118:[ 	]+f005a02b[ 	]+tt.rocc.scmdbuf_issue_read1_trans[ 	]+a1
+[ 	]+11c:[ 	]+ee05a02b[ 	]+tt.rocc.scmdbuf_issue_write1_trans[ 	]+a1
+[ 	]+120:[ 	]+eec5b02b[ 	]+tt.rocc.scmdbuf_issue_write2_trans[ 	]+a1,a2
