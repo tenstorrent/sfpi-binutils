@@ -1543,6 +1543,12 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		      case '1':
 			print (info->stream, dis_style_immediate, "%ld", EXTRACT_OPERAND (REG_VALUE, l));
 			break;
+		      case '2':
+			print (info->stream, dis_style_immediate, "%ld", EXTRACT_OPERAND (CMDBUF_ADDRGEN, l));
+			break;
+		      case '3':
+			print (info->stream, dis_style_immediate, "%ld", EXTRACT_OPERAND (REG_ADDRGEN, l));
+			break;
 			  }
 			break;
 

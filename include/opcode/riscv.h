@@ -136,6 +136,10 @@ static inline unsigned int riscv_insn_length (insn_t insn)
   (RV_X(x, 31, 1))
 #define EXTRACT_REG_VALUE(x) \
   (RV_X(x, 25, 6))
+#define EXTRACT_CMDBUF_ADDRGEN(x) \
+  (RV_X(x, 30, 1))
+#define EXTRACT_REG_ADDRGEN(x) \
+  (RV_X(x, 25, 5))
 
 #define ENCODE_ITYPE_IMM(x) \
   (RV_X(x, 0, 12) << 20)
@@ -208,6 +212,10 @@ static inline unsigned int riscv_insn_length (insn_t insn)
   (RV_X(x, 0, 1) << 31)
 #define ENCODE_REG_VALUE(x) \
   (RV_X(x, 0, 6) << 25)
+#define ENCODE_CMDBUF_ADDRGEN(x) \
+  (RV_X(x, 0, 1) << 30)
+#define ENCODE_REG_ADDRGEN(x) \
+  (RV_X(x, 0, 5) << 25)
 
 #define VALID_ITYPE_IMM(x) (EXTRACT_ITYPE_IMM(ENCODE_ITYPE_IMM(x)) == (x))
 #define VALID_STYPE_IMM(x) (EXTRACT_STYPE_IMM(ENCODE_STYPE_IMM(x)) == (x))

@@ -94,3 +94,13 @@ target:
     tt.rocc.scmdbuf_issue_read1_trans       a1
     tt.rocc.scmdbuf_issue_write1_trans      a1
     tt.rocc.scmdbuf_issue_write2_trans      a1,a2
+
+    tt.rocc.addrgen_wr_reg                  x0, 1, 2, a1, x0
+    tt.rocc.addrgen_rd_reg                  a0, 0, 1, x0, x0
+    tt.rocc.addrgen_reset                   1
+    tt.rocc.addrgen_reset_counters          0, x0
+    tt.rocc.addrgen_peek_src                a0, 0
+    tt.rocc.addrgen_pop_src                 a0, 1
+    tt.rocc.addrgen_pop_x_src               a0, 0, a1
+    tt.rocc.addrgen_pop_dest                a0, 0
+    tt.rocc.addrgen_pop_x_dest              a0, 0, a1
