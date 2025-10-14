@@ -483,13 +483,4 @@
 #define OP_SH_POOL_ADDR_MODE		15
 #define OP_MASK_POOL_ADDR_MODE     	0x7
 
-#define OP_SH_CMDBUF		31
-#define OP_MASK_CMDBUF        	0x1
-#define OP_SH_REG_VALUE       	25
-#define OP_MASK_REG_VALUE     	0x3f
-#define OP_SH_CMDBUF_ADDRGEN  	30
-#define OP_MASK_CMDBUF_ADDRGEN  0x1
-#define OP_SH_REG_ADDRGEN  	25
-#define OP_MASK_REG_ADDRGEN     0x1f
-
 #endif  // RISCV_SFPU_H
