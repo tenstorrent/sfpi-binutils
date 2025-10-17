@@ -79,8 +79,8 @@ target:
     tt.rocc.cs_save                         a1
     tt.rocc.cs_restore                      a1
 
-    tt.rocc.scmdbuf_wr_reg                  x0, a1, x0
-    tt.rocc.scmdbuf_rd_reg                  a0, x0, x0
+    tt.rocc.scmdbuf_wr_reg                  x0, 2, a1, x0
+    tt.rocc.scmdbuf_rd_reg                  a0, 3, x0, x0
     tt.rocc.scmdbuf_get_vc_space            a0
     tt.rocc.scmdbuf_get_vc_space_vc         a0,a1
     tt.rocc.scmdbuf_wr_sent                 a0
