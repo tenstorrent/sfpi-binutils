@@ -90,3 +90,10 @@ Disassembly of section .text:
 [ 	]+13c:[ 	]+3e05e52b[ 	]+tt.rocc.addrgen_pop_x_src[ 	]+a0,0,a1
 [ 	]+140:[ 	]+3c00e52b[ 	]+tt.rocc.addrgen_pop_dest[ 	]+a0,0
 [ 	]+144:[ 	]+3c05e52b[ 	]+tt.rocc.addrgen_pop_x_dest[ 	]+a0,0,a1
+[ 	]+148:[ 	]+72c5f52b[ 	]+tt.rocc.addrgen_pop_both[ 	]+a0,1,a1,a2
+[ 	]+14c:[ 	]+3800002b[ 	]+tt.rocc.addrgen_push_src[ 	]+0
+[ 	]+150:[ 	]+7805a02b[ 	]+tt.rocc.addrgen_push_src_pop_x[ 	]+1,a1
+[ 	]+154:[ 	]+3600002b[ 	]+tt.rocc.addrgen_push_dest[ 	]+0
+[ 	]+158:[ 	]+3605a02b[ 	]+tt.rocc.addrgen_push_dest_pop_x[ 	]+0,a1
+[ 	]+15c:[ 	]+7a00002b[ 	]+tt.rocc.addrgen_push_both[ 	]+1
+[ 	]+160:[ 	]+3ac5b02b[ 	]+tt.rocc.addrgen_push_both_pop_x[ 	]+0,a1,a2

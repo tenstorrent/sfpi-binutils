@@ -104,3 +104,10 @@ target:
     tt.rocc.addrgen_pop_x_src               a0, 0, a1
     tt.rocc.addrgen_pop_dest                a0, 0
     tt.rocc.addrgen_pop_x_dest              a0, 0, a1
+    tt.rocc.addrgen_pop_both                a0, 1, a1, a2
+    tt.rocc.addrgen_push_src                0
+    tt.rocc.addrgen_push_src_pop_x          1,a1
+    tt.rocc.addrgen_push_dest               0
+    tt.rocc.addrgen_push_dest_pop_x         0,a1
+    tt.rocc.addrgen_push_both               1
+    tt.rocc.addrgen_push_both_pop_x         0,a1, a2
