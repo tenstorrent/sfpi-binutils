@@ -220,10 +220,12 @@
 
 	sfptransp
 
-	sfploadmacro L0,0,0,0
-	sfploadmacro L3,8191,9,3
-	sfploadmacro L4,0,12,4
-	sfploadmacro L7,8191,15,7
+	sfploadmacro 0,L0,0,0,0
+	sfploadmacro 3,L0,0,0,0
+	sfploadmacro 0,L7,1,0,0
+	sfploadmacro 0,L0,1022,0,0
+	sfploadmacro 0,L0,0,15,0
+	sfploadmacro 0,L0,0,0,7
 
 	sfpstochrnd L0,L0,L0,0,0,0
 	sfpstochrnd L7,L15,L15,1,1,31
@@ -347,11 +349,11 @@
 	ttatcas 0,0,0,0,0,0
 	ttatcas 1,0,0,0,0,0
 	ttatcas 0,15,0,0,0,0
-	ttatcas 0,0,511,0,0,0
+	ttatcas 0,0,15,0,0,0
 	ttatcas 0,0,0,3,0,0
 	ttatcas 0,0,0,0,63,0
 	ttatcas 0,0,0,0,0,63
-	ttatcas 1,15,511,3,63,63
+	ttatcas 1,15,15,3,63,63
 
 	ttatgetm 0
 	ttatgetm 16777215
@@ -368,11 +370,11 @@
 	ttatincgetptr 1,0,0,0,0,0,0
 	ttatincgetptr 0,1,0,0,0,0,0
 	ttatincgetptr 0,0,15,0,0,0,0
-	ttatincgetptr 0,0,0,511,0,0,0
+	ttatincgetptr 0,0,0,15,0,0,0
 	ttatincgetptr 0,0,0,0,3,0,0
 	ttatincgetptr 0,0,0,0,0,63,0
 	ttatincgetptr 0,0,0,0,0,0,63
-	ttatincgetptr 1,1,15,511,3,63,63
+	ttatincgetptr 1,1,15,15,3,63,63
 
 	ttatrelm 0
 	ttatrelm 16777215
@@ -393,17 +395,17 @@
 
 	ttconv3s1 0,0,0,0
 	ttconv3s1 3,0,0,0
-	ttconv3s1 0,63,0,0
-	ttconv3s1 0,0,3,0
+	ttconv3s1 0,31,0,0
+	ttconv3s1 0,0,7,0
 	ttconv3s1 0,0,0,16383
-	ttconv3s1 3,63,7,16383
+	ttconv3s1 3,31,7,16383
 
 	ttconv3s2 0,0,0,0
 	ttconv3s2 3,0,0,0
-	ttconv3s2 0,63,0,0
-	ttconv3s2 0,0,3,0
+	ttconv3s2 0,31,0,0
+	ttconv3s2 0,0,7,0
 	ttconv3s2 0,0,0,16383
-	ttconv3s2 3,63,7,16383
+	ttconv3s2 3,31,7,16383
 
 	ttdmanop
 
@@ -648,10 +650,10 @@
 	ttsemget 3145727
 
 	ttseminit 0,0,0
-	ttseminit 63,0,0
-	ttseminit 0,63,0
+	ttseminit 15,0,0
+	ttseminit 0,15,0
 	ttseminit 0,0,12287
-	ttseminit 63,63,12287
+	ttseminit 15,15,12287
 
 	ttsempost 0
 	ttsempost 3145727
