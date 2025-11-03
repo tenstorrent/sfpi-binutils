@@ -3494,6 +3494,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"tt.rocc.scmdbuf_issue_inline_trans",	    0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_SCMDBUF_ISSUE_INLINE_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_INLINE_TRANS, match_opcode, 0},
 {"tt.rocc.scmdbuf_issue_inline_addr_trans", 0, INSN_CLASS_XTTROCC, "s,t", MATCH_TTROCC_SCMDBUF_ISSUE_INLINE_ADDR_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_INLINE_ADDR_TRANS, match_opcode, 0},
 {"tt.rocc.scmdbuf_issue_read1_trans",	    0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_SCMDBUF_ISSUE_READ1_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_READ1_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_read2_trans",	    0, INSN_CLASS_XTTROCC, "s,t", MATCH_TTROCC_SCMDBUF_ISSUE_READ2_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_READ2_TRANS, match_opcode, 0},
 {"tt.rocc.scmdbuf_issue_write1_trans",	    0, INSN_CLASS_XTTROCC, "s", MATCH_TTROCC_SCMDBUF_ISSUE_WRITE1_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_WRITE1_TRANS, match_opcode, 0},
 {"tt.rocc.scmdbuf_issue_write2_trans",	    0, INSN_CLASS_XTTROCC, "s,t", MATCH_TTROCC_SCMDBUF_ISSUE_WRITE2_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_WRITE2_TRANS, match_opcode, 0},
 {"tt.rocc.scmdbuf_wr_reg",		    0, INSN_CLASS_XTTROCC, "d,J25u6,s,t", MATCH_TTROCC_SCMDBUF_WR_REG, MASK_TTROCC_SCMDBUF_WR_REG, match_opcode, 0},

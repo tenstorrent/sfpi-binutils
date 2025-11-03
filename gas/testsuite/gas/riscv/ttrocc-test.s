@@ -92,6 +92,7 @@ target:
     tt.rocc.scmdbuf_issue_inline_trans      a1
     tt.rocc.scmdbuf_issue_inline_addr_trans a1,a2
     tt.rocc.scmdbuf_issue_read1_trans       a1
+    tt.rocc.scmdbuf_issue_read2_trans       a1,a2
     tt.rocc.scmdbuf_issue_write1_trans      a1
     tt.rocc.scmdbuf_issue_write2_trans      a1,a2
 
