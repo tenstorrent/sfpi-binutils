@@ -1641,19 +1641,17 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		break;
 
 	      case 'd':
+	      case 'l':
 	      case 'o':
 	      case 's':
 	      case 'u':
 		{
+		  char c = *oparg;
 		  unsigned bits;
 		  oparg = strdec (oparg + 1, &bits) - 1;
-
-		  if (*(oparg + 1)== 'l')
-		    {
-		      oparg++;
-		      while ((unsigned)(*(oparg + 1) - '0') < 10) oparg++;
-		    }
-
+		  if (c == 'l')
+		    /* Deduce the width from the limit.  */
+		    bits = 8 * sizeof (bits) - __builtin_clz (bits - 1);
 		  if (pos + bits > 32)
 		    goto unknown_validate_operand;
 		  USE_IMM (bits, pos);
@@ -4006,6 +4004,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			break;
 
 		      case 'd': // Deferred checking
+		      case 'l': // Decimal limit, (inferred width)
 		      case 'o': // Overloaded encoding
 		      case 's': // Signed
 		      case 'u': // Unsigned
@@ -4014,20 +4013,23 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  char c = *oparg;
 			  unsigned bits;
 			  oparg = strdec (oparg + 1, &bits) - 1;
-			  unsigned lim = 1u << bits;
+			  unsigned lim;
 
-			  if (*(oparg + 1) == 'l')
+			  if (c == 'l')
 			    {
-				    oparg++;
-				    oparg = strdec (oparg + 1, &lim) - 1;
+			      lim = bits;
+			      /* Deduce width from limit.  */
+			      bits = 8 * sizeof (bits) - __builtin_clz (bits - 1);
 			    }
+			  else
+			    lim = 1u << bits;
 			  if (!bits && val)
 			    as_bad (_("placeholder immediate `%ld' not zero"), (long)val);
 			  else if ((c == 's' || c == 'o')
 				   && (val < -(int)(lim >> 1) || val >= (int)lim))
 			    as_bad (_("immediate operand  `%ld' not in range [%d,%d]"),
 				    (long)val, -(lim >> 1), lim - 1);
-			  else if (c == 'u' && (val < 0 || val >= lim))
+			  else if ((c == 'u' || c == 'l') && (val < 0 || val >= lim))
 			    as_bad (_("immediate operand `%ld' not in range [0,%u]"),
 				    (long)val, lim - 1);
 			  else if (c == 'o'
