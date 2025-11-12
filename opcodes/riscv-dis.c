@@ -728,6 +728,13 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  char c = *oparg;
 		  unsigned bits;
 		  oparg = strdec (oparg + 1, &bits) - 1;
+
+		  if (*(oparg + 1) == 'l')
+		    {
+		      oparg++;
+		      while ((unsigned)(*(oparg + 1) - '0') < 10) oparg++;
+		    }
+
 		  val = EXTRACT_U_IMM (bits, pos, l);
 		  if ((c == 's' || c == 'o') && bits == 16)
 		    // Heuristic to preserve wierd behaviour
