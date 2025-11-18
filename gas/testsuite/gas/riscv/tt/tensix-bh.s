@@ -8,8 +8,6 @@
 	sfpload L0,0,1,0
 	sfpload L0,0,2,0
 	sfpload L0,0,3,0
-	sfpload L0,0,4,0
-	sfpload L0,0,5,0
 	sfpload L0,0,6,0
 	sfpload L0,0,7,0
 	sfpload L0,0,8,0
@@ -41,8 +39,6 @@
 	sfpstore 0,L0,8,0
 	sfpstore 0,L0,9,0
 	sfpstore 0,L0,10,0
-	sfpstore 0,L0,12,0
-	sfpstore 0,L0,13,0
 	sfpstore 0,L0,14,0
 	sfpstore 0,L0,15,0
 	sfpstore 0,L0,0,7
