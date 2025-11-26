@@ -99,3 +99,15 @@ Disassembly of section .text:
 [ 	]+160:[ 	]+480fe05b[ 	]+tt.rocc.fds_intf_read[ 	]+zero,t6
 [ 	]+164:[ 	]+48006fdb[ 	]+tt.rocc.fds_intf_read[ 	]+t6,zero
 [ 	]+168:[ 	]+480fefdb[ 	]+tt.rocc.fds_intf_read[ 	]+t6,t6
+[ 	]+16c:[ 	]+4ec5b05b[ 	]+tt.rocc.wr_tiles_to_process_thres_tr_ack[ 	]+a1,a2
+[ 	]+170:[ 	]+4f18305b[ 	]+tt.rocc.wr_tiles_to_process_thres_tr_ack[ 	]+a6,a7
+[ 	]+174:[ 	]+4cc5b05b[ 	]+tt.rocc.wr_tiles_to_process_thres_wr_sent[ 	]+a1,a2
+[ 	]+178:[ 	]+4d18305b[ 	]+tt.rocc.wr_tiles_to_process_thres_wr_sent[ 	]+a6,a7
+[ 	]+17c:[ 	]+4ac5b05b[ 	]+tt.rocc.wr_tiles_to_process_thres_idma_tr_ack[ 	]+a1,a2
+[ 	]+180:[ 	]+4b18305b[ 	]+tt.rocc.wr_tiles_to_process_thres_idma_tr_ack[ 	]+a6,a7
+[ 	]+184:[ 	]+4e05e55b[ 	]+tt.rocc.rd_tiles_to_process_thres_tr_ack[ 	]+a0,a1
+[ 	]+188:[ 	]+4e08e85b[ 	]+tt.rocc.rd_tiles_to_process_thres_tr_ack[ 	]+a6,a7
+[ 	]+18c:[ 	]+4c05e55b[ 	]+tt.rocc.rd_tiles_to_process_thres_wr_sent[ 	]+a0,a1
+[ 	]+190:[ 	]+4c08e85b[ 	]+tt.rocc.rd_tiles_to_process_thres_wr_sent[ 	]+a6,a7
+[ 	]+194:[ 	]+4a05e55b[ 	]+tt.rocc.rd_tiles_to_process_thres_idma_tr_ack[ 	]+a0,a1
+[ 	]+198:[ 	]+4a08e85b[ 	]+tt.rocc.rd_tiles_to_process_thres_idma_tr_ack[ 	]+a6,a7

@@ -95,3 +95,21 @@ target:
     tt.rocc.fds_intf_read                  x0, x31
     tt.rocc.fds_intf_read                  x31, x0
     tt.rocc.fds_intf_read                  x31, x31
+
+    tt.rocc.wr_tiles_to_process_thres_tr_ack       a1,a2
+    tt.rocc.wr_tiles_to_process_thres_tr_ack       a6,a7
+
+    tt.rocc.wr_tiles_to_process_thres_wr_sent      a1,a2
+    tt.rocc.wr_tiles_to_process_thres_wr_sent      a6,a7
+
+    tt.rocc.wr_tiles_to_process_thres_idma_tr_ack  a1,a2
+    tt.rocc.wr_tiles_to_process_thres_idma_tr_ack  a6,a7
+
+    tt.rocc.rd_tiles_to_process_thres_tr_ack       a0,a1
+    tt.rocc.rd_tiles_to_process_thres_tr_ack       a6,a7
+
+    tt.rocc.rd_tiles_to_process_thres_wr_sent      a0,a1
+    tt.rocc.rd_tiles_to_process_thres_wr_sent      a6,a7
+
+    tt.rocc.rd_tiles_to_process_thres_idma_tr_ack  a0,a1
+    tt.rocc.rd_tiles_to_process_thres_idma_tr_ack  a6,a7
