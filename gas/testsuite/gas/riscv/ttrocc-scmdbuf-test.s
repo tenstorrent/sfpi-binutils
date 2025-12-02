@@ -43,3 +43,30 @@ target:
 
     tt.rocc.scmdbuf_issue_write2_trans      a0,a7
     tt.rocc.scmdbuf_issue_write2_trans      a7,a0
+
+    tt.rocc.scmdbuf_read_tiles_to_process_tr_ack      a0
+    tt.rocc.scmdbuf_read_tiles_to_process_tr_ack      a6
+
+    tt.rocc.scmdbuf_read_tiles_to_process_tr_ack_tr_id a0,a1
+    tt.rocc.scmdbuf_read_tiles_to_process_tr_ack_tr_id a6,a7
+
+    tt.rocc.scmdbuf_read_tiles_to_process_wr_sent a0
+    tt.rocc.scmdbuf_read_tiles_to_process_wr_sent a6
+
+    tt.rocc.scmdbuf_read_tiles_to_process_wr_sent_tr_id a0,a1
+    tt.rocc.scmdbuf_read_tiles_to_process_wr_sent_tr_id a6,a7
+
+    tt.rocc.scmdbuf_read_tiles_to_process_idma_tr_ack a0
+    tt.rocc.scmdbuf_read_tiles_to_process_idma_tr_ack a6
+
+    tt.rocc.scmdbuf_read_tiles_to_process_idma_tr_ack_tr_id a0,a1
+    tt.rocc.scmdbuf_read_tiles_to_process_idma_tr_ack_tr_id a6,a7
+
+    tt.rocc.scmdbuf_clear_tiles_to_process_tr_ack a1
+    tt.rocc.scmdbuf_clear_tiles_to_process_tr_ack a7
+
+    tt.rocc.scmdbuf_clear_tiles_to_process_wr_sent a1
+    tt.rocc.scmdbuf_clear_tiles_to_process_wr_sent a7
+
+    tt.rocc.scmdbuf_clear_tiles_to_process_idma_tr_ack a1
+    tt.rocc.scmdbuf_clear_tiles_to_process_idma_tr_ack a7
