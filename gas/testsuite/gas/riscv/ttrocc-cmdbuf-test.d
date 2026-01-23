@@ -26,8 +26,8 @@ Disassembly of section .text:
 [ 	]+3c:[ 	]+7e00000b[ 	]+tt.rocc.cmdbuf_issue_trans[ 	]+0
 [ 	]+40:[ 	]+fe00000b[ 	]+tt.rocc.cmdbuf_issue_trans[ 	]+1
 [ 	]+44:[ 	]+7e08a00b[ 	]+tt.rocc.cmdbuf_issue_inline_trans[ 	]+0,a7
-[ 	]+48:[ 	]+ff08b00b[ 	]+tt.rocc.cmdbuf_issue_addr_trans[ 	]+1,a7,a6
-[ 	]+4c:[ 	]+7ef8300b[ 	]+tt.rocc.cmdbuf_issue_addr_trans[ 	]+0,a6,a5
+[ 	]+48:[ 	]+ff08b00b[ 	]+tt.rocc.cmdbuf_issue_inline_addr_trans[ 	]+1,a7,a6
+[ 	]+4c:[ 	]+7ef8300b[ 	]+tt.rocc.cmdbuf_issue_inline_addr_trans[ 	]+0,a6,a5
 [ 	]+50:[ 	]+f008a00b[ 	]+tt.rocc.cmdbuf_issue_read1_trans[ 	]+1,a7
 [ 	]+54:[ 	]+7008200b[ 	]+tt.rocc.cmdbuf_issue_read1_trans[ 	]+0,a6
 [ 	]+58:[ 	]+7118300b[ 	]+tt.rocc.cmdbuf_issue_read2_trans[ 	]+0,a6,a7

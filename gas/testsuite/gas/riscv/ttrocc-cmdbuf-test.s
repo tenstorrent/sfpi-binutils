@@ -32,8 +32,8 @@ target:
 
     tt.rocc.cmdbuf_issue_inline_trans       0,a7
 
-    tt.rocc.cmdbuf_issue_addr_trans         1,a7,a6
-    tt.rocc.cmdbuf_issue_addr_trans         0,a6,a5
+    tt.rocc.cmdbuf_issue_inline_addr_trans         1,a7,a6
+    tt.rocc.cmdbuf_issue_inline_addr_trans         0,a6,a5
 
     tt.rocc.cmdbuf_issue_read1_trans        1,a7
     tt.rocc.cmdbuf_issue_read1_trans        0,a6
