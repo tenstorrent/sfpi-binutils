@@ -68,9 +68,9 @@
 .*:49: Error: immediate operand .-1. not in range .0,1.
 .*:49: Error: illegal operands .tt.rocc.cmdbuf_issue_inline_trans -1,a1.
 .*:51: Error: immediate operand .2. not in range .0,1.
-.*:51: Error: illegal operands .tt.rocc.cmdbuf_issue_addr_trans 2,a1,a2.
+.*:51: Error: illegal operands .tt.rocc.cmdbuf_issue_inline_addr_trans 2,a1,a2.
 .*:52: Error: immediate operand .-1. not in range .0,1.
-.*:52: Error: illegal operands .tt.rocc.cmdbuf_issue_addr_trans -1,a1,a2.
+.*:52: Error: illegal operands .tt.rocc.cmdbuf_issue_inline_addr_trans -1,a1,a2.
 .*:54: Error: immediate operand .2. not in range .0,1.
 .*:54: Error: illegal operands .tt.rocc.cmdbuf_issue_read1_trans 2,a1.
 .*:55: Error: immediate operand .-1. not in range .0,1.

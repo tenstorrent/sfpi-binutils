@@ -3535,7 +3535,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"tt.rocc.cmdbuf_issue_write1_trans",       0, INSN_CLASS_XTTROCC, "J31u1,s", MATCH_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, MASK_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, match_opcode, 0},
 {"tt.rocc.cmdbuf_issue_read2_trans",        0, INSN_CLASS_XTTROCC, "J31u1,s,t", MATCH_TTROCC_CMDBUF_ISSUE_READ2_TRANS, MASK_TTROCC_CMDBUF_ISSUE_READ2_TRANS, match_opcode, 0},
 {"tt.rocc.cmdbuf_issue_read1_trans",        0, INSN_CLASS_XTTROCC, "J31u1,s", MATCH_TTROCC_CMDBUF_ISSUE_READ1_TRANS, MASK_TTROCC_CMDBUF_ISSUE_READ1_TRANS, match_opcode, 0},
-{"tt.rocc.cmdbuf_issue_addr_trans",         0, INSN_CLASS_XTTROCC, "J31u1,s,t", MATCH_TTROCC_CMDBUF_ISSUE_ADDR_TRANS, MASK_TTROCC_CMDBUF_ISSUE_ADDR_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_inline_addr_trans",  0, INSN_CLASS_XTTROCC, "J31u1,s,t", MATCH_TTROCC_CMDBUF_ISSUE_INLINE_ADDR_TRANS, MASK_TTROCC_CMDBUF_ISSUE_INLINE_ADDR_TRANS, match_opcode, 0},
 {"tt.rocc.cmdbuf_issue_inline_trans",       0, INSN_CLASS_XTTROCC, "J31u1,s", MATCH_TTROCC_CMDBUF_ISSUE_INLINE_TRANS, MASK_TTROCC_CMDBUF_ISSUE_INLINE_TRANS, match_opcode, 0},
 {"tt.rocc.cmdbuf_issue_trans",	            0, INSN_CLASS_XTTROCC, "J31u1", MATCH_TTROCC_CMDBUF_ISSUE_TRANS, MASK_TTROCC_CMDBUF_ISSUE_TRANS, match_opcode, 0},
 {"tt.rocc.cmdbuf_idma_tr_ack_trid",         0, INSN_CLASS_XTTROCC, "d,J31u1,s", MATCH_TTROCC_CMDBUF_IDMA_TR_ACK_TRID, MASK_TTROCC_CMDBUF_IDMA_TR_ACK_TRID, match_opcode, 0},
