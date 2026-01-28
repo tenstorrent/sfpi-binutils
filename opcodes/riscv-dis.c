@@ -1003,11 +1003,14 @@ riscv_disassemble_insn (bfd_vma memaddr,
 	tt_class = INSN_CLASS_XTTTENSIXWH;
       else if  (riscv_subset_supports (&riscv_rps_dis, "xtttensixbh"))
 	tt_class = INSN_CLASS_XTTTENSIXBH;
+      else if  (riscv_subset_supports (&riscv_rps_dis, "xtttensixqsr"))
+	tt_class = INSN_CLASS_XTTTENSIXQSR;
 
       for (op = riscv_opcodes; op->name; op++)
 	{
 	  if (op->insn_class == INSN_CLASS_XTTTENSIXWH
-	      || op->insn_class == INSN_CLASS_XTTTENSIXBH)
+	      || op->insn_class == INSN_CLASS_XTTTENSIXBH
+	      || op->insn_class == INSN_CLASS_XTTTENSIXQSR)
 	    {
 	      if (tt_class == op->insn_class
 		  && !riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)])
@@ -1547,7 +1550,8 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
       static int is_tt = -1;
       if (is_tt < 0)
 	is_tt = riscv_subset_supports (&riscv_rps_dis, "xtttensixwh")
-	  || riscv_subset_supports (&riscv_rps_dis, "xtttensixbh");
+	  || riscv_subset_supports (&riscv_rps_dis, "xtttensixbh")
+	  || riscv_subset_supports (&riscv_rps_dis, "xtttensixqsr");
       dump_size = is_tt ? 4 : riscv_insn_length (insn);
       riscv_disassembler = riscv_disassemble_insn;
     }
