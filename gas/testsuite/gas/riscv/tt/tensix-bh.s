@@ -772,8 +772,6 @@
 
 	tttbufcmd
 
-	tttrnspsrca
-
 	tttrnspsrcb
 
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,0
