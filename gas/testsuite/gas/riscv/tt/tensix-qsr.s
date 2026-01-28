@@ -226,11 +226,14 @@
 	sfpstochrnd L0,L0,L0,0,0,0
 	sfpstochrnd L7,L15,L15,1,1,31
 
-	sfparecip L0,L0,0
-	sfparecip L0,L0,1
-	sfparecip L0,L0,2
-	sfparecip L7,L0,0
-	sfparecip L0,L15,0
+	sfpnonlinear L0,L0,0
+	sfpnonlinear L0,L0,1
+	sfpnonlinear L0,L0,2
+	sfpnonlinear L0,L0,3
+	sfpnonlinear L0,L0,4
+	sfpnonlinear L0,L0,5
+	sfpnonlinear L7,L0,0
+	sfpnonlinear L0,L15,0
 
 	sfpgt L0,L0,0,0
 	sfpgt L7,L0,0,0
@@ -328,20 +331,6 @@
 	ttaddrcrzw 0,0,0,0,0,63
 	ttaddrcrzw 7,63,7,7,7,63
 
-	ttapool3s1 0,0,0,0
-	ttapool3s1 3,0,0,0
-	ttapool3s1 0,127,0,0
-	ttapool3s1 0,0,1,0
-	ttapool3s1 0,0,0,16383
-	ttapool3s1 3,127,1,16383
-
-	ttapool3s2 0,0,0,0
-	ttapool3s2 3,0,0,0
-	ttapool3s2 0,127,0,0
-	ttapool3s2 0,0,1,0
-	ttapool3s2 0,0,0,16383
-	ttapool3s2 3,127,1,16383
-
 	ttatcas 0,0,0,0,0,0
 	ttatcas 1,0,0,0,0,0
 	ttatcas 0,15,0,0,0,0
@@ -421,6 +410,15 @@
 	ttelwadd 0,0,0,0,16383
 	ttelwadd 3,1,3,31,16383
 
+	ttelwadddi 0,0,0,0,0,0
+	ttelwadddi 3,0,0,0,0,0
+	ttelwadddi 0,7,0,0,0,0
+	ttelwadddi 0,0,15,0,0,0
+	ttelwadddi 0,0,0,15,0,0
+	ttelwadddi 0,0,0,0,7,0
+	ttelwadddi 0,0,0,0,0,255
+	ttelwadddi 3,7,15,15,7,255
+
 	ttelwmul 0,0,0,0,0
 	ttelwmul 3,0,0,0,0
 	ttelwmul 0,1,0,0,0
@@ -429,6 +427,15 @@
 	ttelwmul 0,0,0,0,16383
 	ttelwmul 3,1,3,31,16383
 
+	ttelwmuldi 0,0,0,0,0,0
+	ttelwmuldi 3,0,0,0,0,0
+	ttelwmuldi 0,7,0,0,0,0
+	ttelwmuldi 0,0,15,0,0,0
+	ttelwmuldi 0,0,0,15,0,0
+	ttelwmuldi 0,0,0,0,7,0
+	ttelwmuldi 0,0,0,0,0,255
+	ttelwmuldi 3,7,15,15,7,255
+
 	ttelwsub 0,0,0,0,0
 	ttelwsub 3,0,0,0,0
 	ttelwsub 0,1,0,0,0
@@ -436,6 +443,15 @@
 	ttelwsub 0,0,0,15,0
 	ttelwsub 0,0,0,0,16383
 	ttelwsub 3,1,3,31,16383
+
+	ttelwsubdi 0,0,0,0,0,0
+	ttelwsubdi 3,0,0,0,0,0
+	ttelwsubdi 0,7,0,0,0,0
+	ttelwsubdi 0,0,15,0,0,0
+	ttelwsubdi 0,0,0,15,0,0
+	ttelwsubdi 0,0,0,0,7,0
+	ttelwsubdi 0,0,0,0,0,255
+	ttelwsubdi 3,7,15,15,7,255
 
 	ttflushdma 0
 	ttflushdma 16777215
@@ -447,11 +463,6 @@
 	ttgapool 0,0,0,1,0
 	ttgapool 0,0,0,0,16383
 	ttgapool 3,7,15,1,16383
-
-	ttgatesrcrst 0,0
-	ttgatesrcrst 8388607,0
-	ttgatesrcrst 0,1
-	ttgatesrcrst 8388607,1
 
 	ttgmpool 0,0,0,0,0
 	ttgmpool 3,0,0,0,0
@@ -489,13 +500,6 @@
 	ttloadreg 15,0
 	ttloadreg 0,16383
 	ttloadreg 15,16383
-
-	ttmfconv3s1 0,0,0,0
-	ttmfconv3s1 3,0,0,0
-	ttmfconv3s1 0,31,0,0
-	ttmfconv3s1 0,0,3,0
-	ttmfconv3s1 0,0,0,16383
-	ttmfconv3s1 3,31,7,16383
 
 	ttmop 0,0,0
 	ttmop 1,0,0
@@ -553,26 +557,21 @@
 	ttmovdbga2d 0,0,0,0,1
 	ttmovdbga2d 1,63,7,3,1
 
-	ttmpool3s1 0,0,0,0
-	ttmpool3s1 3,0,0,0
-	ttmpool3s1 0,127,0,0
-	ttmpool3s1 0,0,1,0
-	ttmpool3s1 0,0,0,16383
-	ttmpool3s1 3,127,1,16383
-
-	ttmpool3s2 0,0,0,0
-	ttmpool3s2 3,0,0,0
-	ttmpool3s2 0,127,0,0
-	ttmpool3s2 0,0,1,0
-	ttmpool3s2 0,0,0,16383
-	ttmpool3s2 3,127,1,16383
-
 	ttmvmul 0,0,0,0
 	ttmvmul 3,0,0,0
 	ttmvmul 0,7,0,0
 	ttmvmul 0,0,15,0
 	ttmvmul 0,0,0,16383
 	ttmvmul 3,7,31,16383
+
+	ttmvmuldi 0,0,0,0,0,0
+	ttmvmuldi 3,0,0,0,0,0
+	ttmvmuldi 0,7,0,0,0,0
+	ttmvmuldi 0,0,15,0,0,0
+	ttmvmuldi 0,0,0,15,0,0
+	ttmvmuldi 0,0,0,0,7,0
+	ttmvmuldi 0,0,0,0,0,255
+	ttmvmuldi 3,7,15,15,7,255
 
 	ttpacr 0,0,0,0,0,0,0,0,0,0,0,0
 	ttpacr 7,0,0,0,0,0,0,0,0,0,0,0
@@ -771,10 +770,6 @@
 	ttstorereg 15,16383
 
 	tttbufcmd
-
-	tttrnspsrca
-
-	tttrnspsrcb
 
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,0
 	ttunpacr 1,0,0,0,0,0,0,0,0,0,0,0,0

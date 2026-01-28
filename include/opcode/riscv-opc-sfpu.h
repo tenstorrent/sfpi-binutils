@@ -63,8 +63,10 @@
 #define  MASK_SFPCONV3S2	0xffffffff
 #define MATCH_SFPMPOOL3S1	0x24000003
 #define  MASK_SFPMPOOL3S1	0xffffffff
-#define MATCH_SFPAPOOL3S1	0x25000003
+#define MATCH_SFPAPOOL3S1	0x25000003 // wh, bh
 #define  MASK_SFPAPOOL3S1	0xffffffff
+#define MATCH_SFPMVMULDI	0x25000003 // qsr
+#define  MASK_SFPMVMULDI	0xffffffff
 #define MATCH_SFPMVMUL		0x26000003
 #define  MASK_SFPMVMUL		0xffffffff
 #define MATCH_SFPELWMUL		0x27000003
@@ -76,10 +78,14 @@
 
 #define MATCH_SFPELWSUB		0x30000003
 #define  MASK_SFPELWSUB		0xffffffff
-#define MATCH_SFPMPOOL3S2	0x31000003
+#define MATCH_SFPMPOOL3S2	0x31000003 // wh, bh
 #define  MASK_SFPMPOOL3S2	0xffffffff
-#define MATCH_SFPAPOOL3S2	0x32000003
+#define MATCH_SFPELWADDDI	0x31000003 // qst
+#define  MASK_SFPELWADDDI	0xffffffff
+#define MATCH_SFPAPOOL3S2	0x32000003 // wh, bh
 #define  MASK_SFPAPOOL3S2	0xffffffff
+#define MATCH_SFPELWSUBDI	0x32000003 // qsr
+#define  MASK_SFPELWSUBDI	0xffffffff
 #define MATCH_SFPGMPOOL		0x33000003
 #define  MASK_SFPGMPOOL		0xffffffff
 #define MATCH_SFPGAPOOL		0x34000003
@@ -94,8 +100,10 @@
 #define  MASK_SFPINCRWC		0xffffffff
 #define MATCH_SFP_SETIBRWC	0x39000003
 #define  MASK_SFP_SETIBRWC	0xffffffff
-#define MATCH_SFPMFCONV3S1	0x3a000003
+#define MATCH_SFPMFCONV3S1	0x3a000003 // wh, bh
 #define  MASK_SFPMFCONV3S1	0xffffffff
+#define MATCH_SFPELWMULDI	0x3a000003 // qsr
+#define  MASK_SFPELWMULDI	0xffffffff
 
 #define MATCH_SFPXMOV		0x40000003
 #define  MASK_SFPXMOV		0xffffffff
@@ -254,8 +262,10 @@
 #define  MASK_SFPGT		0xffffffff
 #define MATCH_SFPMUL24		0x98000003
 #define  MASK_SFPMUL24		0xffffffff
-#define MATCH_SFPARECIP		0x99000003
+#define MATCH_SFPARECIP		0x99000003 // bh
 #define  MASK_SFPARECIP		0xffffffff
+#define MATCH_SFPNONLINEAR	0x99000003 // qsr
+#define  MASK_SFPNONLINEAR	0xffffffff
 
 #define MATCH_SFPATGETM		0xa0000003
 #define  MASK_SFPATGETM		0xffffffff

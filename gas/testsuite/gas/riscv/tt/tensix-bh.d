@@ -656,7 +656,6 @@ Disassembly of section .text:
 [	 ]+[0-9a-f]+:[	 ]+9c00fffd[	 ]+ttstorereg[	 ]+0,16383
 [	 ]+[0-9a-f]+:[	 ]+9cf0fffd[	 ]+ttstorereg[	 ]+15,16383
 [	 ]+[0-9a-f]+:[	 ]+2c000001[	 ]+tttbufcmd
-[	 ]+[0-9a-f]+:[	 ]+50000000[	 ]+tttrnspsrca
 [	 ]+[0-9a-f]+:[	 ]+58000000[	 ]+tttrnspsrcb
 [	 ]+[0-9a-f]+:[	 ]+08000001[	 ]+ttunpacr[	 ]+0,0,0,0,0,0,0,0,0,0,0,0,0
 [	 ]+[0-9a-f]+:[	 ]+0a000001[	 ]+ttunpacr[	 ]+1,0,0,0,0,0,0,0,0,0,0,0,0
