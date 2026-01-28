@@ -1509,6 +1509,7 @@ static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xttrocc",		ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xtttensixbh",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
+  {"xtttensixqsr",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xtttensixwh",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
@@ -2807,6 +2808,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xttrocc");
     case INSN_CLASS_XTTTENSIXBH:
       return riscv_subset_supports (rps, "xtttensixbh");
+    case INSN_CLASS_XTTTENSIXQSR:
+      return riscv_subset_supports (rps, "xtttensixqsr");
     case INSN_CLASS_XTTTENSIXWH:
       return riscv_subset_supports (rps, "xtttensixwh");
     case INSN_CLASS_XVENTANACONDOPS:
@@ -3118,6 +3121,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xttrocc";
     case INSN_CLASS_XTTTENSIXBH:
       return "xtttensixbh";
+    case INSN_CLASS_XTTTENSIXQSR:
+      return "xtttensixqsr";
     case INSN_CLASS_XTTTENSIXWH:
       return "xtttensixwh";
     case INSN_CLASS_XSFCEASE:

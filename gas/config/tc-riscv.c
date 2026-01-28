@@ -743,14 +743,20 @@ riscv_target_format (void)
     return xlen == 64 ? "elf64-littleriscv" : "elf32-littleriscv";
 }
 
+static inline bool
+is_tensix (enum riscv_insn_class insn_class)
+{
+  return (insn_class == INSN_CLASS_XTTTENSIXWH
+	  || insn_class == INSN_CLASS_XTTTENSIXBH
+	  || insn_class == INSN_CLASS_XTTTENSIXQSR);
+}
 /* Return the length of instruction INSN.  */
 
 static inline unsigned int
 insn_length (const struct riscv_cl_insn *insn)
 {
-  return (insn->insn_mo->insn_class == INSN_CLASS_XTTTENSIXWH
-	  || insn->insn_mo->insn_class == INSN_CLASS_XTTTENSIXBH
-	  ? 4 : riscv_insn_length (insn->insn_opcode));
+  return is_tensix (insn->insn_mo->insn_class)
+	  ? 4 : riscv_insn_length (insn->insn_opcode);
 }
 
 /* Initialise INSN from opcode entry MO.  Leave its position unspecified.  */
@@ -767,8 +773,7 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
 
   /*  Zero out the lower most two bits as they were set to indicate the
       instruction as a 4 byte instruction */
-  if (mo->insn_class == INSN_CLASS_XTTTENSIXWH
-      || mo->insn_class == INSN_CLASS_XTTTENSIXBH)
+  if (is_tensix (mo->insn_class))
     insn->insn_opcode &= 0xfffffffc;
 }
 
@@ -1506,9 +1511,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
   insn_t required_bits;
 
   if (length == 0)
-    length = (opc->insn_class == INSN_CLASS_XTTTENSIXWH
-	      || opc->insn_class == INSN_CLASS_XTTTENSIXBH
-	      ? 4 : riscv_insn_length (opc->match));
+    length = is_tensix (opc->insn_class)
+	      ? 4 : riscv_insn_length (opc->match);
   /* We don't support instructions longer than 64-bits yet.  */
   if (length > 8)
     length = 8;
@@ -2095,8 +2099,7 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	}
     }
 
-  if (ip->insn_mo->insn_class == INSN_CLASS_XTTTENSIXWH ||
-      ip->insn_mo->insn_class == INSN_CLASS_XTTTENSIXBH)
+  if (is_tensix (ip->insn_mo->insn_class))
     ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
