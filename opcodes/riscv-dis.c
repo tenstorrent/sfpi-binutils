@@ -986,17 +986,14 @@ riscv_disassemble_insn (bfd_vma memaddr,
 {
   const struct riscv_opcode *op;
   static bool init = false;
-  static const struct riscv_opcode *riscv_hash[OP_MASK_SFPU_OP + 1];
+  static const struct riscv_opcode *riscv_hash[OP_MASK_OP + 1];
   static const struct riscv_opcode *riscv_hash_tt[OP_MASK_SFPU_OP + 1];
   struct riscv_private_data *pd = info->private_data;
   int insnlen, i;
   bool printed;
 
 #define OP_HASH_IDX(i) ((i) & ((tt_class ? 4 : riscv_insn_length (i)) == 2 ? 0x3 : OP_MASK_OP))
-#define SFPU_OP_HASH_IDX(i) \
-        (((i) & 0xffffff00) == (MATCH_SFPNOP & 0xffffff00) ? \
-	  SFP_OPCODE_END - SFP_OPCODE_START + OP_MASK_OP + 1 : \
-          (((i) >> OP_SH_SFPU_OP) & OP_MASK_SFPU_OP) - SFP_OPCODE_START + OP_MASK_OP + 1)
+#define SFPU_OP_HASH_IDX(i) (((i) >> OP_SH_SFPU_OP) & OP_MASK_SFPU_OP)
   static enum riscv_insn_class tt_class = 0;
 
   /* Build a hash table to shorten the search time.  */
@@ -1009,22 +1006,17 @@ riscv_disassemble_insn (bfd_vma memaddr,
 
       for (op = riscv_opcodes; op->name; op++)
 	{
-	  if (tt_class && tt_class == op->insn_class)
+	  if (op->insn_class == INSN_CLASS_XTTTENSIXWH
+	      || op->insn_class == INSN_CLASS_XTTTENSIXBH)
 	    {
-	      if (strncmp(op->name, "sfp", 3) != 0
-		  || strncmp(op->name, "tt", 2) != 0) {
-		if (!riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)])
-		  riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)] = op;
-	      }
-	      else if (!riscv_hash[OP_HASH_IDX (op->match)])
-		riscv_hash[OP_HASH_IDX (op->match)] = op;
+	      if (tt_class == op->insn_class
+		  && !riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)])
+		riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)] = op;
+	      continue;
 	    }
-	  else if (op->insn_class != INSN_CLASS_XTTTENSIXWH
-		   && op->insn_class != INSN_CLASS_XTTTENSIXBH)
-	    {
-	      if (!riscv_hash[OP_HASH_IDX (op->match)])
-		riscv_hash[OP_HASH_IDX (op->match)] = op;
-	    }
+
+	  if (!riscv_hash[OP_HASH_IDX (op->match)])
+	    riscv_hash[OP_HASH_IDX (op->match)] = op;
 	}
 
       init = true;
