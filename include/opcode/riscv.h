@@ -383,7 +383,9 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define OP_MASK_XSO1            0x1
 #define OP_SH_XSO1              26
 
-#include "opcode/riscv-sfpu.h"
+/* Tensix fields/  */
+#define OP_SH_SFPU_OP	24
+#define OP_MASK_SFPU_OP	0xff
 
 /* ABI names for selected x-registers.  */
 
