@@ -103,11 +103,6 @@
 {"sfpcast",    0, INSN_CLASS_XTTTENSIXWH,   "J4R8,J8R,J0m3",      MATCH_SFPCAST,   MASK_SFPCAST,   sfp_match_opcode, 0 },
 {"sfpcast",    0, INSN_CLASS_XTTTENSIXBH,   "J4R8,J8R,J0mf",      MATCH_SFPCAST,   MASK_SFPCAST,   sfp_match_opcode, 0 },
 {"sfpcast",    0, INSN_CLASS_XTTTENSIXQSR,  "J4R8,J8R,J0mf",      MATCH_SFPCAST,   MASK_SFPCAST,   sfp_match_opcode, 0 },
-//{"sfpshft2",   0, INSN_CLASS_XTTTENSIXWH,   "J4R8,J8R,J0m2",      MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
-//{"sfpshft2",   0, INSN_CLASS_XTTTENSIXBH,   "J4R8,J8R,J0m2",      MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
-//{"sfpshft2",   0, INSN_CLASS_XTTTENSIXQSR,  "J4R8,J8R,J0m2",      MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
-// FIXME: Something wrong here, (1) WH vs BH asymetry, and (2)
-// disassembles to above.
 {"sfpshft2",   0, INSN_CLASS_XTTTENSIXWH,   "J4R8,J8R,J12d12,J0m7f",  MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
 {"sfpshft2",   0, INSN_CLASS_XTTTENSIXBH,   "J4R8,J8R,J12d12,J0m7f",  MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
 {"sfpshft2",   0, INSN_CLASS_XTTTENSIXQSR,  "J4R8,J8R,J12d12,J0m7f",  MATCH_SFPSHFT2,  MASK_SFPSHFT2,  sfp_match_opcode, 0 },
