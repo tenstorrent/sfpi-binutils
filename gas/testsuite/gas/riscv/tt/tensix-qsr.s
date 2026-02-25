@@ -1,47 +1,49 @@
 	.attribute arch, "rv32i2p0_xtttensixqsr"
 
-	sfpload L0,0,0,0
-	sfpload L7,0,0,0
-	sfpload L0,-0x1000,0,0
-	sfpload L0,0xfff,0,0
-	sfpload L0,0x1fff,0,0
-	sfpload L0,0,1,0
-	sfpload L0,0,2,0
-	sfpload L0,0,3,0
-	sfpload L0,0,6,0
-	sfpload L0,0,7,0
-	sfpload L0,0,8,0
-	sfpload L0,0,9,0
-	sfpload L0,0,10,0
-	sfpload L0,0,12,0
-	sfpload L0,0,13,0
-	sfpload L0,0,14,0
-	sfpload L0,0,15,0
-	sfpload L0,0,0,7
+	sfpload L0,0,0,0,0
+	sfpload L7,0,0,0,0
+	sfpload L0,-0x400,0,0,0
+	sfpload L0,0x3ff,0,0,0
+	sfpload L0,0x7ff,0,0,0
+	sfpload L0,0,1,0,0
+	sfpload L0,0,2,0,0
+	sfpload L0,0,3,0,0
+	sfpload L0,0,6,0,0
+	sfpload L0,0,7,0,0
+	sfpload L0,0,8,0,0
+	sfpload L0,0,9,0,0
+	sfpload L0,0,10,0,0
+	sfpload L0,0,12,0,0
+	sfpload L0,0,13,0,0
+	sfpload L0,0,14,0,0
+	sfpload L0,0,15,0,0
+	sfpload L0,0,0,7,0
+	sfpload L0,0,0,0,1
 
 	sfploadi L0,-32768,0
 	sfploadi L3,-8192,4
 	sfploadi L4,8191,8
 	sfploadi L7,32767,10
 
-	sfpstore 0,L0,0,0
-	sfpstore 0,L15,0,0
-	sfpstore -0x1000,L0,0,0
-	sfpstore 0x0fff,L0,0,0
-	sfpstore 0x1fff,L0,0,0
-	sfpstore 0,L0,1,0
-	sfpstore 0,L0,2,0
-	sfpstore 0,L0,3,0
-	sfpstore 0,L0,4,0
-	sfpstore 0,L0,5,0
-	sfpstore 0,L0,6,0
-	sfpstore 0,L0,7,0
-	sfpstore 0,L0,8,0
-	sfpstore 0,L0,9,0
-	sfpstore 0,L0,10,0
-	sfpstore 0,L0,14,0
-	sfpstore 0,L0,15,0
-	sfpstore 0,L0,0,7
+	sfpstore 0,L0,0,0,0
+	sfpstore 0,L15,0,0,0
+	sfpstore -0x400,L0,0,0,0
+	sfpstore 0x03ff,L0,0,0,0
+	sfpstore 0x7ff,L0,0,0,0
+	sfpstore 0,L0,1,0,0
+	sfpstore 0,L0,2,0,0
+	sfpstore 0,L0,3,0,0
+	sfpstore 0,L0,4,0,0
+	sfpstore 0,L0,5,0,0
+	sfpstore 0,L0,6,0,0
+	sfpstore 0,L0,7,0,0
+	sfpstore 0,L0,8,0,0
+	sfpstore 0,L0,9,0,0
+	sfpstore 0,L0,10,0,0
+	sfpstore 0,L0,14,0,0
+	sfpstore 0,L0,15,0,0
+	sfpstore 0,L0,0,7,0
+	sfpstore 0,L0,0,0,1
 
 	sfplut L0,0
 	sfplut L7,4
@@ -167,7 +169,11 @@
 
 	ttnop
 
-	sfpnop
+	sfpnop 0,0,0
+	sfpnop 1,0,0
+	sfpnop 0,1,0
+	sfpnop 0,0,1
+	sfpnop 1,1,1
 
 	ttincrwc 0,0,0,0
 	ttincrwc 63,0,0,0
@@ -176,12 +182,14 @@
 	ttincrwc 0,0,0,15
 	ttincrwc 63,15,15,15
 
-	ttreplay 0,0,0,0
-	ttreplay 1023,0,0,0
-	ttreplay 0,1023,0,0
-	ttreplay 0,0,7,0
-	ttreplay 0,0,0,1
-	ttreplay 1023,1023,7,1
+	ttreplay 0,0,0,0,0,0
+	ttreplay 1023,0,0,0,0,0
+	ttreplay 0,1023,0,0,0,0
+	ttreplay 0,0,1,0,0,0
+	ttreplay 0,0,0,1,0,0
+	ttreplay 0,0,0,0,1,0
+	ttreplay 0,0,0,0,0,1
+	ttreplay 1023,1023,1,1,1,1
 
 	sfpxor L4,L8
 
@@ -216,12 +224,13 @@
 
 	sfptransp
 
-	sfploadmacro 0,L0,0,0,0
-	sfploadmacro 3,L0,0,0,0
-	sfploadmacro 0,L7,1,0,0
-	sfploadmacro 0,L0,1022,0,0
-	sfploadmacro 0,L0,0,15,0
-	sfploadmacro 0,L0,0,0,7
+	sfploadmacro 0,L0,0,0,0,0
+	sfploadmacro 3,L0,0,0,0,0
+	sfploadmacro 0,L7,0,0,0,0
+	sfploadmacro 0,L0,1023,0,0,0
+	sfploadmacro 0,L0,0,15,0,0
+	sfploadmacro 0,L0,0,0,7,0
+	sfploadmacro 0,L0,0,0,0,1
 
 	sfpstochrnd L0,L0,L0,0,0,0
 	sfpstochrnd L7,L15,L15,1,1,31
@@ -331,50 +340,49 @@
 	ttaddrcrzw 0,0,0,0,0,63
 	ttaddrcrzw 7,63,7,7,7,63
 
-	ttatcas 0,0,0,0,0,0
-	ttatcas 1,0,0,0,0,0
-	ttatcas 0,15,0,0,0,0
-	ttatcas 0,0,15,0,0,0
-	ttatcas 0,0,0,3,0,0
-	ttatcas 0,0,0,0,63,0
-	ttatcas 0,0,0,0,0,63
-	ttatcas 1,15,15,3,63,63
+	ttatcas 0,0,0,0
+	ttatcas 15,0,0,0
+	ttatcas 0,15,0,0
+	ttatcas 0,0,3,0
+	ttatcas 0,0,0,63
+	ttatcas 15,15,3,63
 
 	ttatgetm 0
-	ttatgetm 16777215
+	ttatgetm 65535
 
-	ttatincget 0,0,0,0,0
-	ttatincget 1,0,0,0,0
-	ttatincget 0,15,0,0,0
-	ttatincget 0,0,3,0,0
-	ttatincget 0,0,0,63,0
-	ttatincget 0,0,0,0,63
-	ttatincget 1,15,3,63,63
+	ttatincget 0,0,0,0
+	ttatincget 15,0,0,0
+	ttatincget 0,3,0,0
+	ttatincget 0,0,63,0
+	ttatincget 0,0,0,63
+	ttatincget 15,3,63,63
 
-	ttatincgetptr 0,0,0,0,0,0,0
-	ttatincgetptr 1,0,0,0,0,0,0
-	ttatincgetptr 0,1,0,0,0,0,0
-	ttatincgetptr 0,0,15,0,0,0,0
-	ttatincgetptr 0,0,0,15,0,0,0
-	ttatincgetptr 0,0,0,0,3,0,0
-	ttatincgetptr 0,0,0,0,0,63,0
-	ttatincgetptr 0,0,0,0,0,0,63
-	ttatincgetptr 1,1,15,15,3,63,63
+	ttatincgetptr 0,0,0,0,0,0
+	ttatincgetptr 1,0,0,0,0,0
+	ttatincgetptr 0,15,0,0,0,0
+	ttatincgetptr 0,0,15,0,0,0
+	ttatincgetptr 0,0,0,3,0,0
+	ttatincgetptr 0,0,0,0,63,0
+	ttatincgetptr 0,0,0,0,0,63
+	ttatincgetptr 1,15,15,3,63,63
 
 	ttatrelm 0
-	ttatrelm 16777215
+	ttatrelm 65535
 
-	ttatswap 0,0,0,0
-	ttatswap 1,0,0,0
-	ttatswap 0,15,0,0
-	ttatswap 0,0,63,0
-	ttatswap 0,0,0,63
-	ttatswap 1,15,63,63
+	ttatswap 0,0,0
+	ttatswap 511,0,0
+	ttatswap 0,255,0
+	ttatswap 0,0,63
+	ttatswap 511,255,63
 
-	ttcleardvalid 0,0
-	ttcleardvalid 3,0
-	ttcleardvalid 0,4194303
-	ttcleardvalid 3,4194303
+	ttcleardvalid 0,0,0,0,0,0
+	ttcleardvalid 3,0,0,0,0,0
+	ttcleardvalid 0,3,0,0,0,0
+	ttcleardvalid 0,0,15,0,0,0
+	ttcleardvalid 0,0,0,15,0,0
+	ttcleardvalid 0,0,0,0,15,0
+	ttcleardvalid 0,0,0,0,0,3
+	ttcleardvalid 3,3,15,15,15,3
 
 	ttclrexphist
 
@@ -406,9 +414,9 @@
 	ttelwadd 3,0,0,0,0
 	ttelwadd 0,1,0,0,0
 	ttelwadd 0,0,3,0,0
-	ttelwadd 0,0,0,15,0
-	ttelwadd 0,0,0,0,16383
-	ttelwadd 3,1,3,31,16383
+	ttelwadd 0,0,0,7,0
+	ttelwadd 0,0,0,0,0x7ff
+	ttelwadd 3,1,3,7,0x7ff
 
 	ttelwadddi 0,0,0,0,0,0
 	ttelwadddi 3,0,0,0,0,0
@@ -423,9 +431,9 @@
 	ttelwmul 3,0,0,0,0
 	ttelwmul 0,1,0,0,0
 	ttelwmul 0,0,3,0,0
-	ttelwmul 0,0,0,15,0
-	ttelwmul 0,0,0,0,16383
-	ttelwmul 3,1,3,31,16383
+	ttelwmul 0,0,0,7,0
+	ttelwmul 0,0,0,0,0x7ff
+	ttelwmul 3,1,3,7,0x7ff
 
 	ttelwmuldi 0,0,0,0,0,0
 	ttelwmuldi 3,0,0,0,0,0
@@ -440,9 +448,9 @@
 	ttelwsub 3,0,0,0,0
 	ttelwsub 0,1,0,0,0
 	ttelwsub 0,0,3,0,0
-	ttelwsub 0,0,0,15,0
-	ttelwsub 0,0,0,0,16383
-	ttelwsub 3,1,3,31,16383
+	ttelwsub 0,0,0,7,0
+	ttelwsub 0,0,0,0,0x7ff
+	ttelwsub 3,1,3,7,0x7ff
 
 	ttelwsubdi 0,0,0,0,0,0
 	ttelwsubdi 3,0,0,0,0,0
@@ -459,18 +467,18 @@
 	ttgapool 0,0,0,0,0
 	ttgapool 3,0,0,0,0
 	ttgapool 0,7,0,0,0
-	ttgapool 0,0,15,0,0
+	ttgapool 0,0,7,0,0
 	ttgapool 0,0,0,1,0
-	ttgapool 0,0,0,0,16383
-	ttgapool 3,7,15,1,16383
+	ttgapool 0,0,0,0,0x7ff
+	ttgapool 3,7,7,1,0x7ff
 
 	ttgmpool 0,0,0,0,0
 	ttgmpool 3,0,0,0,0
 	ttgmpool 0,7,0,0,0
-	ttgmpool 0,0,15,0,0
+	ttgmpool 0,0,7,0,0
 	ttgmpool 0,0,0,1,0
-	ttgmpool 0,0,0,0,16383
-	ttgmpool 3,7,15,1,16383
+	ttgmpool 0,0,0,0,0x7ff
+	ttgmpool 3,7,7,1,0x7ff
 
 	ttincadcxy 0,0,0,0,0
 	ttincadcxy 7,0,0,0,0
@@ -501,11 +509,12 @@
 	ttloadreg 0,16383
 	ttloadreg 15,16383
 
-	ttmop 0,0,0
-	ttmop 1,0,0
-	ttmop 0,127,0
-	ttmop 0,0,32767
-	ttmop 1,127,32767
+	ttmop 0,0,0,0
+	ttmop 1,0,0,0
+	ttmop 0,1,0,0
+	ttmop 0,0,127,0
+	ttmop 0,0,0,32767
+	ttmop 1,1,127,32767
 
 	ttmopcfg 0
 	ttmopcfg 16777215
@@ -515,8 +524,8 @@
 	ttmova2d 0,63,0,0,0
 	ttmova2d 0,0,7,0,0
 	ttmova2d 0,0,0,3,0
-	ttmova2d 0,0,0,0,4095
-	ttmova2d 1,63,7,3,4095
+	ttmova2d 0,0,0,0,2047
+	ttmova2d 1,63,7,3,2047
 
 	ttmovb2a 0,0,0,0
 	ttmovb2a 7,0,0,0
@@ -525,13 +534,14 @@
 	ttmovb2a 0,0,0,4095
 	ttmovb2a 7,7,3,4095
 
-	ttmovb2d 0,0,0,0,0
-	ttmovb2d 1,0,0,0,0
-	ttmovb2d 0,63,0,0,0
-	ttmovb2d 0,0,7,0,0
-	ttmovb2d 0,0,0,7,0
-	ttmovb2d 0,0,0,0,2047
-	ttmovb2d 1,63,7,7,2047
+	ttmovb2d 0,0,0,0,0,0
+	ttmovb2d 1,0,0,0,0,0
+	ttmovb2d 0,63,0,0,0,0
+	ttmovb2d 0,0,7,0,0,0
+	ttmovb2d 0,0,0,3,0,0
+	ttmovb2d 0,0,0,0,1,0
+	ttmovb2d 0,0,0,0,0,2047
+	ttmovb2d 1,63,7,3,1,2047
 
 	ttmovd2a 0,0,0,0,0
 	ttmovd2a 1,0,0,0,0
@@ -541,28 +551,29 @@
 	ttmovd2a 0,0,0,0,1
 	ttmovd2a 1,63,7,3,1
 
-	ttmovd2b 0,0,0,0,0
-	ttmovd2b 1,0,0,0,0
-	ttmovd2b 0,63,0,0,0
-	ttmovd2b 0,0,7,0,0
-	ttmovd2b 0,0,0,3,0
-	ttmovd2b 0,0,0,0,1
-	ttmovd2b 1,63,7,3,1
+	ttmovd2b 0,0,0,0,0,0
+	ttmovd2b 1,0,0,0,0,0
+	ttmovd2b 0,63,0,0,0,0
+	ttmovd2b 0,0,7,0,0,0
+	ttmovd2b 0,0,0,3,0,0
+	ttmovd2b 0,0,0,0,1,0
+	ttmovd2b 0,0,0,0,0,2047
+	ttmovd2b 1,63,7,3,1,2047
 
 	ttmovdbga2d 0,0,0,0,0
 	ttmovdbga2d 1,0,0,0,0
 	ttmovdbga2d 0,63,0,0,0
 	ttmovdbga2d 0,0,7,0,0
 	ttmovdbga2d 0,0,0,3,0
-	ttmovdbga2d 0,0,0,0,1
-	ttmovdbga2d 1,63,7,3,1
+	ttmovdbga2d 0,0,0,0,2047
+	ttmovdbga2d 1,63,7,3,2047
 
 	ttmvmul 0,0,0,0
 	ttmvmul 3,0,0,0
 	ttmvmul 0,7,0,0
-	ttmvmul 0,0,15,0
-	ttmvmul 0,0,0,16383
-	ttmvmul 3,7,31,16383
+	ttmvmul 0,0,7,0
+	ttmvmul 0,0,0,0x7ff
+	ttmvmul 3,7,7,0x7ff
 
 	ttmvmuldi 0,0,0,0,0,0
 	ttmvmuldi 3,0,0,0,0,0
@@ -641,23 +652,29 @@
 
 	ttrstdma
 
-	ttsemget 0
-	ttsemget 3145727
+	ttsemget 0,0
+	ttsemget 31,0
+	ttsemget 0,127
+	ttsemget 31,127
 
-	ttseminit 0,0,0
-	ttseminit 15,0,0
-	ttseminit 0,15,0
-	ttseminit 0,0,12287
-	ttseminit 15,15,12287
+	ttseminit 0,0,0,0
+	ttseminit 15,0,0,0
+	ttseminit 0,15,0,0
+	ttseminit 0,0,31,0
+	ttseminit 0,0,0,127
+	ttseminit 15,15,31,127
 
-	ttsempost 0
-	ttsempost 3145727
+	ttsempost 0,0
+	ttsempost 31,0
+	ttsempost 0,127
+	ttsempost 31,127
 
-	ttsemwait 0,0,0
-	ttsemwait 511,0,0
-	ttsemwait 0,8191,0
-	ttsemwait 0,0,3
-	ttsemwait 511,8191,3
+	ttsemwait 0,0,0,0
+	ttsemwait 511,0,0,0
+	ttsemwait 0,3,0,0
+	ttsemwait 0,0,31,0
+	ttsemwait 0,0,0,127
+	ttsemwait 511,3,31,127
 
 	ttsetadc 0,0,0,0
 	ttsetadc 7,0,0,0
@@ -714,7 +731,7 @@
 	ttsetc16 255,65535
 
 	ttsetdvalid 0
-	ttsetdvalid 65535
+	ttsetdvalid 31
 
 	ttsetibrwc 0,0,0
 	ttsetibrwc 15,0,0
@@ -729,14 +746,12 @@
 	ttsetpkedgof 0,0,0,15
 	ttsetpkedgof 4095,15,15,15
 
-	ttsetrwc 0,0,0,0,0,0
-	ttsetrwc 3,0,0,0,0,0
-	ttsetrwc 0,15,0,0,0,0
-	ttsetrwc 0,0,15,0,0,0
-	ttsetrwc 0,0,0,15,0,0
-	ttsetrwc 0,0,0,0,15,0
-	ttsetrwc 0,0,0,0,0,63
-	ttsetrwc 3,15,15,15,15,63
+	ttsetrwc 0,0,0,0
+	ttsetrwc 3,0,0,0
+	ttsetrwc 0,15,0,0
+	ttsetrwc 0,0,0xfff,0
+	ttsetrwc 0,0,0,63
+	ttsetrwc 3,15,0xfff,63
 
 	ttshiftxa 0,0
 	ttshiftxa 262143,0
@@ -749,20 +764,21 @@
 	ttshiftxb 0,0,1023
 	ttshiftxb 1023,15,1023
 
-	ttstallwait 0,0
-	ttstallwait 511,0
-	ttstallwait 0,255
-	ttstallwait 511,255
+	ttstallwait 0,0,0,0
+	ttstallwait 511,0,0,0
+	ttstallwait 0,31,0,0
+	ttstallwait 0,0,31,0
+	ttstallwait 0,0,0,31
+	ttstallwait 511,31,31,31
 
-	ttstoreind 0,0,0,0,0,0,0
-	ttstoreind 1,0,0,0,0,0,0
-	ttstoreind 0,1,0,0,0,0,0
-	ttstoreind 0,0,1,0,0,0,0
-	ttstoreind 0,0,0,127,0,0,0
-	ttstoreind 0,0,0,0,3,0,0
-	ttstoreind 0,0,0,0,0,63,0
-	ttstoreind 0,0,0,0,0,0,63
-	ttstoreind 1,1,1,127,3,63,63
+	ttstoreind 0,0,0,0,0,0
+	ttstoreind 3,0,0,0,0,0
+	ttstoreind 0,1,0,0,0,0
+	ttstoreind 0,0,127,0,0,0
+	ttstoreind 0,0,0,3,0,0
+	ttstoreind 0,0,0,0,63,0
+	ttstoreind 0,0,0,0,0,63
+	ttstoreind 3,1,127,3,63,63
 
 	ttstorereg 0,0
 	ttstorereg 15,0
@@ -787,17 +803,14 @@
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,1
  	ttunpacr 1,255,3,7,3,1,1,1,1,1,1,1,1
 
-	ttunpacrnop 0,0,0,0,0,0,0,0,0
-	ttunpacrnop 1,0,0,0,0,0,0,0,0
-	ttunpacrnop 0,127,0,0,0,0,0,0,0
-	ttunpacrnop 0,0,15,0,0,0,0,0,0
-	ttunpacrnop 0,0,0,15,0,0,0,0,0
-	ttunpacrnop 0,0,0,0,3,0,0,0,0
-	ttunpacrnop 0,0,0,0,0,1,0,0,0
-	ttunpacrnop 0,0,0,0,0,0,1,0,0
-	ttunpacrnop 0,0,0,0,0,0,0,3,0
-	ttunpacrnop 0,0,0,0,0,0,0,0,3
-	ttunpacrnop 1,127,15,15,3,1,1,3,3
+	ttunpacrnop 0,0,0,0,0,0
+	ttunpacrnop 3,0,0,0,0,0
+	ttunpacrnop 0,1,0,0,0,0
+	ttunpacrnop 0,0,1,0,0,0
+	ttunpacrnop 0,0,0,1,0,0
+	ttunpacrnop 0,0,0,0,3,0
+	ttunpacrnop 0,0,0,0,0,3
+	ttunpacrnop 3,1,1,1,3,3
 
 	ttwrcfg 0,0,0
 	ttwrcfg 255,0,0
@@ -818,35 +831,39 @@
 	ttzeroacc 0,0,0,0,16383
 	ttzeroacc 31,1,1,7,16383
 
-	ttzerosrc 0,0,0,0
-	ttzerosrc 1048575,0,0,0
-	ttzerosrc 0,1,0,0
-	ttzerosrc 0,0,1,0
-	ttzerosrc 0,0,0,3
-	ttzerosrc 1048575,1,1,3
+	ttzerosrc 0,0,0,0,0,0,0
+	ttzerosrc 1,0,0,0,0,0,0
+	ttzerosrc 0,1,0,0,0,0,0
+	ttzerosrc 0,0,1,0,0,0,0
+	ttzerosrc 0,0,0,1,0,0,0
+	ttzerosrc 0,0,0,0,1,0,0
+	ttzerosrc 0,0,0,0,0,1,0
+	ttzerosrc 0,0,0,0,0,0,3
+	ttzerosrc 1,1,1,1,1,1,3
 
 	ttcfgshiftmask 0,0,0,0,0,0
-	ttcfgshiftmask 1,0,0,0,0,0
-	ttcfgshiftmask 0,7,0,0,0,0
-	ttcfgshiftmask 0,0,31,0,0,0
+	ttcfgshiftmask 255,0,0,0,0,0
+	ttcfgshiftmask 0,1,0,0,0,0
+	ttcfgshiftmask 0,0,7,0,0,0
 	ttcfgshiftmask 0,0,0,31,0,0
-	ttcfgshiftmask 0,0,0,0,3,0
-	ttcfgshiftmask 0,0,0,0,0,255
-	ttcfgshiftmask 1,7,31,31,3,255
+	ttcfgshiftmask 0,0,0,0,31,0
+	ttcfgshiftmask 0,0,0,0,0,3
+	ttcfgshiftmask 255,1,7,31,31,3
 
-	ttmovdbgb2d 0,0,0,0,0
-	ttmovdbgb2d 1,0,0,0,0
-	ttmovdbgb2d 0,63,0,0,0
-	ttmovdbgb2d 0,0,7,0,0
-	ttmovdbgb2d 0,0,0,7,0
-	ttmovdbgb2d 0,0,0,0,2047
-	ttmovdbgb2d 1,63,7,7,2047
+	ttmovdbgb2d 0,0,0,0,0,0
+	ttmovdbgb2d 1,0,0,0,0,0
+	ttmovdbgb2d 0,63,0,0,0,0
+	ttmovdbgb2d 0,0,7,0,0,0
+	ttmovdbgb2d 0,0,0,3,0,0
+	ttmovdbgb2d 0,0,0,0,1,0
+	ttmovdbgb2d 0,0,0,0,0,2047
+	ttmovdbgb2d 1,63,7,3,1,2047
 
 	ttresourcedecl 0,0,0
-	ttresourcedecl 2047,0,0
-	ttresourcedecl 0,511,0
-	ttresourcedecl 0,0,15
-	ttresourcedecl 2047,511,15
+	ttresourcedecl 15,0,0
+	ttresourcedecl 0,1023,0
+	ttresourcedecl 0,0,31
+	ttresourcedecl 15,1023,31
 
 	ttstreamwait 0,0,0,0
 	ttstreamwait 511,0,0,0
