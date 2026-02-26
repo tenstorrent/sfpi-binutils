@@ -414,10 +414,10 @@ match_rs2_x1x5_opcode (const struct riscv_opcode *op,
 }
 
 static int
-sfp_match_opcode (const struct riscv_opcode *op __attribute__((unused)),
-                  insn_t insn __attribute__((unused)))
+sfp_match_opcode (const struct riscv_opcode *op,
+                  insn_t insn)
 {
-  return 1;
+  return match_opcode (op, insn);
 }
 
 static int

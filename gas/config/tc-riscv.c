@@ -1473,7 +1473,7 @@ reglist_lookup (char **s, unsigned *reg_list)
 
 #define USE_BITS(mask,shift) (used_bits |= ((insn_t)(mask) << (shift)))
 #define USE_IMM(n, s) \
-  (used_bits |= ((insn_t)((1ull<<n)-1) << (s)))
+  (used_bits |= ((insn_t)((1ull<<(n))-1) << (s)))
 
 // Someone complained that stroul was inefficiently slow
 static const char *
@@ -1624,6 +1624,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		  if (lim > 16)
 		    goto unknown_validate_operand;
 		  USE_IMM (c == 'S' ? 2 : 4, pos);
+		  if (c == 'S')
+		    USE_IMM (1, 0);
 		}
 		break;
 
@@ -3008,9 +3010,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      if (insn->pinfo != INSN_MACRO)
 		{
 		  /* For .insn, insn->match and insn->mask are 0.  */
-		  if (riscv_insn_length ((insn->match == 0 && insn->mask == 0)
-					 ? ip->insn_opcode
-					 : insn->match) == 2
+		  if ((insn->pinfo & INSN_TYPE) != INSN_SFPU
+		      && riscv_insn_length ((insn->match == 0 && insn->mask == 0)
+					    ? ip->insn_opcode
+					    : insn->match) == 2
 		      && !riscv_opts.rvc)
 		    break;
 

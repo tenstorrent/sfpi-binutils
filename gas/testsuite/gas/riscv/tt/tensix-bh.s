@@ -24,24 +24,24 @@
 	sfploadi L4,8191,8
 	sfploadi L7,32767,10
 
-	sfpstore 0,L0,0,0
-	sfpstore 0,L15,0,0
-	sfpstore -0x1000,L0,0,0
-	sfpstore 0x0fff,L0,0,0
-	sfpstore 0x1fff,L0,0,0
-	sfpstore 0,L0,1,0
-	sfpstore 0,L0,2,0
-	sfpstore 0,L0,3,0
-	sfpstore 0,L0,4,0
-	sfpstore 0,L0,5,0
-	sfpstore 0,L0,6,0
-	sfpstore 0,L0,7,0
-	sfpstore 0,L0,8,0
-	sfpstore 0,L0,9,0
-	sfpstore 0,L0,10,0
-	sfpstore 0,L0,14,0
-	sfpstore 0,L0,15,0
-	sfpstore 0,L0,0,7
+	sfpstore L0,0,0,0
+	sfpstore L15,0,0,0
+	sfpstore L0,-0x1000,0,0
+	sfpstore L0,0x0fff,0,0
+	sfpstore L0,0x1fff,0,0
+	sfpstore L0,0,1,0
+	sfpstore L0,0,2,0
+	sfpstore L0,0,3,0
+	sfpstore L0,0,4,0
+	sfpstore L0,0,5,0
+	sfpstore L0,0,6,0
+	sfpstore L0,0,7,0
+	sfpstore L0,0,8,0
+	sfpstore L0,0,9,0
+	sfpstore L0,0,10,0
+	sfpstore L0,0,14,0
+	sfpstore L0,0,15,0
+	sfpstore L0,0,0,7
 
 	sfplut L0,0
 	sfplut L7,4

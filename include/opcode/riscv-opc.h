@@ -5101,7 +5101,6 @@ DECLARE_INSN(ssamoswap_w, MATCH_SSAMOSWAP_W, MASK_SSAMOSWAP_W)
 DECLARE_INSN(ssamoswap_d, MATCH_SSAMOSWAP_D, MASK_SSAMOSWAP_D)
 /* Zicfilp instructions.  */
 DECLARE_INSN(lpad, MATCH_LPAD, MASK_LPAD)
-#include "riscv-opc-sfpu-insns.h"
 #endif /* DECLARE_INSN */
 #ifdef DECLARE_CSR
 /* Unprivileged Counter/Timers CSRs.  */
