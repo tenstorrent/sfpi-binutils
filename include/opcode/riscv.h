@@ -633,6 +633,9 @@ struct riscv_opcode
 #define INSN_JSR		0x00000006
 /* Instruction is a data reference.  */
 #define INSN_DREF		0x00000008
+
+#define INSN_SFPU		0x0000000a
+
 /* Instruction is allowed when eew >= 64.  */
 #define INSN_V_EEW64		0x10000000
 
@@ -644,6 +647,7 @@ struct riscv_opcode
 #define INSN_4_BYTE		0x00000030
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
+
 
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */

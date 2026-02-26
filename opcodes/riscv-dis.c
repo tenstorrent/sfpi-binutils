@@ -1008,9 +1008,7 @@ riscv_disassemble_insn (bfd_vma memaddr,
 
       for (op = riscv_opcodes; op->name; op++)
 	{
-	  if (op->insn_class == INSN_CLASS_XTTTENSIXWH
-	      || op->insn_class == INSN_CLASS_XTTTENSIXBH
-	      || op->insn_class == INSN_CLASS_XTTTENSIXQSR)
+	  if ((op->pinfo & INSN_TYPE) == INSN_SFPU)
 	    {
 	      if (tt_class == op->insn_class
 		  && !riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)])

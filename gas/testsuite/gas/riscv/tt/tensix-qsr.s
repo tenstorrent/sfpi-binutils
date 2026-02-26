@@ -1,49 +1,47 @@
 	.attribute arch, "rv32i2p0_xtttensixqsr"
 
-	sfpload L0,0,0,0,0
-	sfpload L7,0,0,0,0
-	sfpload L0,-0x400,0,0,0
-	sfpload L0,0x3ff,0,0,0
-	sfpload L0,0x7ff,0,0,0
-	sfpload L0,0,1,0,0
-	sfpload L0,0,2,0,0
-	sfpload L0,0,3,0,0
-	sfpload L0,0,6,0,0
-	sfpload L0,0,7,0,0
-	sfpload L0,0,8,0,0
-	sfpload L0,0,9,0,0
-	sfpload L0,0,10,0,0
-	sfpload L0,0,12,0,0
-	sfpload L0,0,13,0,0
-	sfpload L0,0,14,0,0
-	sfpload L0,0,15,0,0
-	sfpload L0,0,0,7,0
-	sfpload L0,0,0,0,1
+	sfpload L0,0,0,0,0,0
+	sfpload L7,0,0,0,0,0
+	sfpload L0,0x3ff,0,0,0,0
+	sfpload L0,0,1,0,0,0
+	sfpload L0,0,2,0,0,0
+	sfpload L0,0,3,0,0,0
+	sfpload L0,0,6,0,0,0
+	sfpload L0,0,7,0,0,0
+	sfpload L0,0,8,0,0,0
+	sfpload L0,0,9,0,0,0
+	sfpload L0,0,10,0,0,0
+	sfpload L0,0,12,0,0,0
+	sfpload L0,0,13,0,0,0
+	sfpload L0,0,14,0,0,0
+	sfpload L0,0,15,0,0,0
+	sfpload L0,0,0,7,0,0
+	sfpload L0,0,0,0,1,0
+	sfpload L0,0,0,0,0,1
 
 	sfploadi L0,-32768,0
 	sfploadi L3,-8192,4
 	sfploadi L4,8191,8
 	sfploadi L7,32767,10
 
-	sfpstore 0,L0,0,0,0
-	sfpstore 0,L15,0,0,0
-	sfpstore -0x400,L0,0,0,0
-	sfpstore 0x03ff,L0,0,0,0
-	sfpstore 0x7ff,L0,0,0,0
-	sfpstore 0,L0,1,0,0
-	sfpstore 0,L0,2,0,0
-	sfpstore 0,L0,3,0,0
-	sfpstore 0,L0,4,0,0
-	sfpstore 0,L0,5,0,0
-	sfpstore 0,L0,6,0,0
-	sfpstore 0,L0,7,0,0
-	sfpstore 0,L0,8,0,0
-	sfpstore 0,L0,9,0,0
-	sfpstore 0,L0,10,0,0
-	sfpstore 0,L0,14,0,0
-	sfpstore 0,L0,15,0,0
-	sfpstore 0,L0,0,7,0
-	sfpstore 0,L0,0,0,1
+	sfpstore L0,0,0,0,0,0
+	sfpstore L15,0,0,0,0,0
+	sfpstore L0,0x03ff,0,0,0,0
+	sfpstore L0,0,1,0,0,0
+	sfpstore L0,0,2,0,0,0
+	sfpstore L0,0,3,0,0,0
+	sfpstore L0,0,4,0,0,0
+	sfpstore L0,0,5,0,0,0
+	sfpstore L0,0,6,0,0,0
+	sfpstore L0,0,7,0,0,0
+	sfpstore L0,0,8,0,0,0
+	sfpstore L0,0,9,0,0,0
+	sfpstore L0,0,10,0,0,0
+	sfpstore L0,0,14,0,0,0
+	sfpstore L0,0,15,0,0,0
+	sfpstore L0,0,0,7,0,0
+	sfpstore L0,0,0,0,1,0
+	sfpstore L0,0,0,0,0,1
 
 	sfplut L0,0
 	sfplut L7,4
@@ -169,11 +167,12 @@
 
 	ttnop
 
-	sfpnop 0,0,0
-	sfpnop 1,0,0
-	sfpnop 0,1,0
-	sfpnop 0,0,1
-	sfpnop 1,1,1
+	sfpnop
+	sfpbankdone 0,0,0
+	sfpbankdone 1,0,0
+	sfpbankdone 0,1,0
+	sfpbankdone 0,0,1
+	sfpbankdone 1,1,1
 
 	ttincrwc 0,0,0,0
 	ttincrwc 63,0,0,0
@@ -234,6 +233,12 @@
 
 	sfpstochrnd L0,L0,L0,0,0,0
 	sfpstochrnd L7,L15,L15,1,1,31
+
+	sfparecip L0,L0,0
+	sfparecip L0,L0,1
+	sfparecip L0,L0,2
+	sfparecip L7,L0,0
+	sfparecip L0,L15,0
 
 	sfpnonlinear L0,L0,0
 	sfpnonlinear L0,L0,1
