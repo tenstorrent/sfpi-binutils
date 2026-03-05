@@ -160,6 +160,7 @@ All available -march extensions for RISC-V:
 	xtheadsync                              1.0
 	xtheadvector                            1.0
 	xtheadzvamo                             1.0
+	xttcache                                1.0
 	xttroccqsr                              1.0
 	xtttensixbh                             1.0
 	xtttensixqsr                            1.0

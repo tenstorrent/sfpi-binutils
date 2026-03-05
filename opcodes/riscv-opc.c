@@ -3561,6 +3561,10 @@ const struct riscv_opcode riscv_opcodes[] =
 {"tt.rocc.cmdbuf_wr_reg",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1,J25l49,s,t", MATCH_TTROCC_CMDBUF_WR_REG, MASK_TTROCC_CMDBUF_WR_REG, match_opcode, 0},
 {"tt.rocc.cmdbuf_rd_reg",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1,J25l49,s,t", MATCH_TTROCC_CMDBUF_RD_REG, MASK_TTROCC_CMDBUF_RD_REG, match_opcode, 0},
 
+/* Vendor-specific (Tenstorrent) cache instructions */
+{"tt.cache.cflush.d.l1",   0, INSN_CLASS_XTTCACHE, "s", MATCH_TTCACHE_CFLUSH_D_L1,    MASK_TTCACHE_CFLUSH_D_L1,   match_opcode, 0},
+{"tt.cache.cdiscard.d.l1", 0, INSN_CLASS_XTTCACHE, "s", MATCH_TTCACHE_CDISCARD_D_L1,  MASK_TTCACHE_CDISCARD_D_L1, match_opcode, 0},
+
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 {"vt.maskc",   64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKC, MASK_VT_MASKC, match_opcode, 0 },
 {"vt.maskcn",  64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKCN, MASK_VT_MASKCN, match_opcode, 0 },
