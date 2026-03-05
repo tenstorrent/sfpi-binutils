@@ -1,4 +1,4 @@
-#as: -march=rv32im_xttrocc
+#as: -march=rv32im_xttroccqsr
 #source: ttrocc-cs-test.s
 #objdump: -d
 

@@ -1,4 +1,4 @@
-#as: -march=rv32im_xttrocc
+#as: -march=rv32im_xttroccqsr
 #source: ttrocc-scmdbuf-test.s
 #objdump: -d
 

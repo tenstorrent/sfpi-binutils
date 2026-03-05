@@ -3874,6 +3874,11 @@
 #define MASK_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_WR_SENT 0xfff07fff
 #define MATCH_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_IDMA_TR_ACK 0xe200202b
 #define MASK_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_IDMA_TR_ACK 0xfff07fff
+/* Vendor-specific (Tenstorrent) CACHE instructions */
+#define MATCH_TTCACHE_CFLUSH_D_L1 0xfc000073
+#define MASK_TTCACHE_CFLUSH_D_L1  0xfff07fff
+#define MATCH_TTCACHE_CDISCARD_D_L1 0xfc200073
+#define MASK_TTCACHE_CDISCARD_D_L1  0xfff07fff
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 #define MATCH_VT_MASKC 0x607b
 #define MASK_VT_MASKC 0xfe00707f
