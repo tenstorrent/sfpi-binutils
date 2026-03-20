@@ -232,7 +232,7 @@
 	sfploadmacro 0,L0,0,0,0,1
 
 	sfpstochrnd L0,L0,L0,0,0,0
-	sfpstochrnd L7,L15,L15,1,1,31
+	sfpstochrnd L7,L15,L15,31,13,2
 
 	sfparecip L0,L0,0
 	sfparecip L0,L0,1

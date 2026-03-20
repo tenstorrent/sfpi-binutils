@@ -737,8 +737,9 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  if ((c == 's' || c == 'o') && bits == 16)
 		    // Heuristic to preserve wierd behaviour
 		    val = (short)val;
-		  if (c == 'd')
+		  if (c == 'd' && bits == 12)
 		    {
+		      // Special case 12-bit deferred immediate
 		      print (info->stream, dis_style_immediate, "0x%03X", val);
 		      goto tensix_next;
 		    }

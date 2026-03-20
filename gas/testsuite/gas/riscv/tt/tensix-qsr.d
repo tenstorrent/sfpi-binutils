@@ -200,7 +200,7 @@ Disassembly of section .text:
 [	 ]+[0-9a-f]+:[	 ]+4c038002[	 ]+sfploadmacro[	 ]+0,L0,0,0,7,0
 [	 ]+[0-9a-f]+:[	 ]+4c002002[	 ]+sfploadmacro[	 ]+0,L0,0,0,0,1
 [	 ]+[0-9a-f]+:[	 ]+38000002[	 ]+sfpstochrnd[	 ]+L0,L0,L0,0,0,0
-[	 ]+[0-9a-f]+:[	 ]+38fffdc6[	 ]+sfpstochrnd[	 ]+L7,L15,L15,1,1,31
+[	 ]+[0-9a-f]+:[	 ]+397ffdf6[	 ]+sfpstochrnd[	 ]+L7,L15,L15,31,13,2
 [	 ]+[0-9a-f]+:[	 ]+64000002[	 ]+sfpnonlinear[	 ]+L0,L0,0
 [	 ]+[0-9a-f]+:[	 ]+64000006[	 ]+sfpnonlinear[	 ]+L0,L0,1
 [	 ]+[0-9a-f]+:[	 ]+6400000a[	 ]+sfpnonlinear[	 ]+L0,L0,2
