@@ -219,7 +219,7 @@
 	sfploadmacro 0,L0,0,0,3
 
 	sfpstochrnd L0,L0,L0,0,0,0
-	sfpstochrnd L7,L15,L15,1,1,31
+	sfpstochrnd L7,L15,L15,31,12,1
 
 	ttadddmareg 0,0,0,0
 	ttadddmareg 1,0,0,0

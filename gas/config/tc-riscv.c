@@ -2943,7 +2943,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   /* Indicate we are assembling instruction with CSR.  */
   bool insn_with_csr = false;
   /* To hold the value of imm12_math till the time the last operand has been read */
-  int imm12_math_op;
+  int tt_imm_val = 0;
+  unsigned tt_imm_bits = 0;
 
   /* Parse the name of the instruction.  Terminate the string if whitespace
      is found so that str_hash_find only sees the name part of the string.  */
@@ -2960,7 +2961,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   probing_insn_operands = true;
 
   asargStart = asarg;
-  imm12_math_op = 0;
   for ( ; insn && insn->name && strcmp (insn->name, str) == 0; insn++)
     {
       if ((insn->xlen_requirement != 0) && (xlen != insn->xlen_requirement))
@@ -3980,7 +3980,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 			  if ((1u << val) & mask_zero)
 			    {
-			      if (imm12_math_op != 0)
+			      if (tt_imm_val != 0)
 				{
 				  as_bad (_("imm12_math operand `%ld' not 0"), (long)val);
 				  break;
@@ -3988,11 +3988,11 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    }
 			  else if ((1u << val) & mask_range)
 			    {
-			      int lim = 1 << (12 - is_signed);
-			      if (imm12_math_op < (is_signed ? -lim : 0)
-				  || imm12_math_op >= lim)
+			      int lim = 1 << (tt_imm_bits - is_signed);
+			      if (tt_imm_val < (is_signed ? -lim : 0)
+				  || tt_imm_val >= lim)
 				{
-				  as_bad (_("imm12_math operand `%ld' not in range [%d,%d]"),
+				  as_bad (_("immediate operand `%ld' not in range [%d,%d]"),
 					  (long)val, is_signed ? -lim : 0, lim - 1);
 				  break;
 				}
@@ -4046,7 +4046,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			  else
 			    {
 			      if (c == 'd')
-				imm12_math_op = val;
+				{
+				  tt_imm_val = val;
+				  tt_imm_bits = bits;
+				}
 			      INSERT_IMM (bits, pos, *ip, val);
 			      imm_expr->X_op = O_absent;
 			      asarg = expr_parse_end;
