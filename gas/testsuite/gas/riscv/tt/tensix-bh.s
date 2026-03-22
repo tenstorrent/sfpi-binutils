@@ -100,11 +100,29 @@
 	sfpabs L0,L0,0
 	sfpabs L7,L15,1
 
-	sfpand L0,L15
+	sfpand L0,L0,L0,0
+	sfpand L7,L0,L0,0
+	sfpand L0,L15,L0,0
+	sfpand L0,L0,L15,0
+	sfpand L0,L0,L0,1
+	sfpand L7,L15,L15,1
 
-	sfpor L7,L0
+	sfpor L0,L0,L0,0
+	sfpor L7,L0,L0,0
+	sfpor L0,L15,L0,0
+	sfpor L0,L0,L15,0
+	sfpor L0,L0,L0,1
+	sfpor L7,L15,L15,1
 
-	sfpnot L4,L8
+	sfpxor L0,L0
+	sfpxor L7,L0
+	sfpxor L0,L15
+	sfpxor L7,L15
+
+	sfpnot L0,L0
+	sfpnot L7,L0
+	sfpnot L0,L15
+	sfpnot L7,L15
 
 	sfplz L0,L0,0
 	sfplz L7,L15,14
@@ -182,8 +200,6 @@
 	ttreplay 0,0,7,0
 	ttreplay 0,0,0,1
 	ttreplay 1023,1023,7,1
-
-	sfpxor L4,L8
 
 	sfpcast L0,L0,0
 	sfpcast L7,L0,0
