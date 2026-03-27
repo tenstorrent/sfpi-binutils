@@ -100,19 +100,15 @@
 	sfpabs L0,L0,0
 	sfpabs L7,L15,1
 
-	sfpand L0,L0,L0,0
-	sfpand L7,L0,L0,0
-	sfpand L0,L15,L0,0
-	sfpand L0,L0,L15,0
-	sfpand L0,L0,L0,1
-	sfpand L7,L15,L15,1
+	sfpand L0,L0
+	sfpand L7,L0
+	sfpand L0,L15
+	sfpand L7,L15
 
-	sfpor L0,L0,L0,0
-	sfpor L7,L0,L0,0
-	sfpor L0,L15,L0,0
-	sfpor L0,L0,L15,0
-	sfpor L0,L0,L0,1
-	sfpor L7,L15,L15,1
+	sfpor L0,L0
+	sfpor L7,L0
+	sfpor L0,L15
+	sfpor L7,L15
 
 	sfpxor L0,L0
 	sfpxor L7,L0
