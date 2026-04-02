@@ -201,6 +201,7 @@ Disassembly of section .text:
 [	 ]+[0-9a-f]+:[	 ]+47fffffa[	 ]+sfpconfig[	 ]+15,65535,14
 [	 ]+[0-9a-f]+:[	 ]+48003c02[	 ]+sfpswap[	 ]+L0,L15,0
 [	 ]+[0-9a-f]+:[	 ]+480001c6[	 ]+sfpswap[	 ]+L7,L0,1
+[	 ]+[0-9a-f]+:[	 ]+48001fc6[	 ]+sfpswap[	 ]+L15,L7,1
 [	 ]+[0-9a-f]+:[	 ]+54000002[	 ]+sfplutfp32[	 ]+L0,0
 [	 ]+[0-9a-f]+:[	 ]+540001fa[	 ]+sfplutfp32[	 ]+L7,14
 [	 ]+[0-9a-f]+:[	 ]+30000002[	 ]+sfptransp

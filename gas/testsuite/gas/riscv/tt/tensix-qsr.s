@@ -229,6 +229,7 @@
 
 	sfpswap L0,L15,0
 	sfpswap L7,L0,1
+	sfpswap L15,L7,1
 
 	sfplutfp32 L0,0
 	sfplutfp32 L7,14
