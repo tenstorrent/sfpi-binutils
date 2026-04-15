@@ -3999,7 +3999,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    }
 			  else
 			    {
-			      as_bad (_("unsupported value `%ld' for mod1 operand"), (long)val);
+			      as_bad (_("unsupported value `%ld' for mod operand (permitted mask is %#04x"), (long)val,
+				      mask_zero | mask_range);
 			      break;
 			    }
 			  INSERT_IMM (4, pos, *ip, val);
