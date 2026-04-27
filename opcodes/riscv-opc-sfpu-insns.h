@@ -102,7 +102,9 @@
 {"sfpbankdone",   XTTQSR,  "J2u1,J1u1,J0u1",		MATCH_SFPWNOP,	0xfffff8|SUFFIX},
 {"ttincrwc",      XTTWH,   "J18s6,J14s4,J10s4,J6s4",	MATCH_SFPINCRWC,	0x3f|SUFFIX},
 {"ttincrwc",      XTTBH,   "J18s6,J14s4,J10s4,J6s4",	MATCH_SFPINCRWC,	0x3f|SUFFIX},
-{"ttincrwc",      XTTQSR,  "J18s6,J13s5,J8s5,J0s8",	MATCH_SFPINCRWC,	SUFFIX},
+// Quasar reordered the operand, because of course.  Keep the same
+// source ordering.
+{"ttincrwc",      XTTQSR,  "J18s6,J0s8,J8s5,J13s5",	MATCH_SFPINCRWC,	SUFFIX},
 {"ttreplay",      XTTWH,   "J14u10,J4u10,J1u3,J0u1",	MATCH_SFPREPLAY,	SUFFIX},
 {"ttreplay",      XTTBH,   "J14u10,J4u10,J1u3,J0u1",	MATCH_SFPREPLAY,	SUFFIX},
 {"ttreplay",      XTTQSR,  "J14u10,J4u10,J3u1,J2u1,J1u1,J0u1",	MATCH_SFPREPLAY,	SUFFIX},
