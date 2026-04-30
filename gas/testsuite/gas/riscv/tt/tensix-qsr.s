@@ -286,76 +286,6 @@
 	sfple L0,L0,0,8
 	sfple L0,L0,0,15
 
-	ttadddmareg 0,0,0,0
-	ttadddmareg 1,0,0,0
-	ttadddmareg 0,63,0,0
-	ttadddmareg 0,0,63,0
-	ttadddmareg 0,0,0,63
-	ttadddmareg 1,63,63,63
-
-	ttsubdmareg 0,0,0,0
-	ttsubdmareg 1,0,0,0
-	ttsubdmareg 0,63,0,0
-	ttsubdmareg 0,0,63,0
-	ttsubdmareg 0,0,0,63
-	ttsubdmareg 1,63,63,63
-
-	ttmuldmareg 0,0,0,0
-	ttmuldmareg 1,0,0,0
-	ttmuldmareg 0,63,0,0
-	ttmuldmareg 0,0,63,0
-	ttmuldmareg 0,0,0,63
-	ttmuldmareg 1,63,63,63
-
-	ttsetdmareg 0,0,0,0
-	ttsetdmareg 3,0,0,0
-	ttsetdmareg 0,16383,0,0
-	ttsetdmareg 0,0,1,0
-	ttsetdmareg 0,0,0,127
-	ttsetdmareg 3,16383,1,127
-
-	ttshiftdmareg 0,0,0,0,0
-	ttshiftdmareg 1,0,0,0,0
-	ttshiftdmareg 0,31,0,0,0
-	ttshiftdmareg 0,0,63,0,0
-	ttshiftdmareg 0,0,0,63,0
-	ttshiftdmareg 0,0,0,0,63
-	ttshiftdmareg 1,31,63,63,63
-
-	ttcmpdmareg 0,0,0,0,0
-	ttcmpdmareg 1,0,0,0,0
-	ttcmpdmareg 0,31,0,0,0
-	ttcmpdmareg 0,0,63,0,0
-	ttcmpdmareg 0,0,0,63,0
-	ttcmpdmareg 0,0,0,0,63
-	ttcmpdmareg 1,31,63,63,63
-
-	ttbitwopdmareg 0,0,0,0,0
-	ttbitwopdmareg 1,0,0,0,0
-	ttbitwopdmareg 0,31,0,0,0
-	ttbitwopdmareg 0,0,63,0,0
-	ttbitwopdmareg 0,0,0,63,0
-	ttbitwopdmareg 0,0,0,0,63
-	ttbitwopdmareg 1,31,63,63,63
-
-	ttaddrcrxy 0,0,0,0,0,0
-	ttaddrcrxy 7,0,0,0,0,0
-	ttaddrcrxy 0,63,0,0,0,0
-	ttaddrcrxy 0,0,7,0,0,0
-	ttaddrcrxy 0,0,0,7,0,0
-	ttaddrcrxy 0,0,0,0,7,0
-	ttaddrcrxy 0,0,0,0,0,63
-	ttaddrcrxy 7,63,7,7,7,63
-
-	ttaddrcrzw 0,0,0,0,0,0
-	ttaddrcrzw 7,0,0,0,0,0
-	ttaddrcrzw 0,63,0,0,0,0
-	ttaddrcrzw 0,0,7,0,0,0
-	ttaddrcrzw 0,0,0,7,0,0
-	ttaddrcrzw 0,0,0,0,7,0
-	ttaddrcrzw 0,0,0,0,0,63
-	ttaddrcrzw 7,63,7,7,7,63
-
 	ttatcas 0,0,0,0
 	ttatcas 15,0,0,0
 	ttatcas 0,15,0,0
@@ -400,31 +330,7 @@
 	ttcleardvalid 0,0,0,0,0,3
 	ttcleardvalid 3,3,15,15,15,3
 
-	ttclrexphist
-
-	ttconv3s1 0,0,0,0
-	ttconv3s1 3,0,0,0
-	ttconv3s1 0,31,0,0
-	ttconv3s1 0,0,7,0
-	ttconv3s1 0,0,0,16383
-	ttconv3s1 3,31,7,16383
-
-	ttconv3s2 0,0,0,0
-	ttconv3s2 3,0,0,0
-	ttconv3s2 0,31,0,0
-	ttconv3s2 0,0,7,0
-	ttconv3s2 0,0,0,16383
-	ttconv3s2 3,31,7,16383
-
 	ttdmanop
-
-	ttdotpv 0,0,0,0,0
-	ttdotpv 3,0,0,0,0
-	ttdotpv 0,1,0,0,0
-	ttdotpv 0,0,3,0,0
-	ttdotpv 0,0,0,15,0
-	ttdotpv 0,0,0,0,16383
-	ttdotpv 3,1,3,31,16383
 
 	ttelwadd 0,0,0,0,0
 	ttelwadd 3,0,0,0,0
@@ -477,9 +383,6 @@
 	ttelwsubdi 0,0,0,0,0,255
 	ttelwsubdi 3,7,15,15,7,255
 
-	ttflushdma 0
-	ttflushdma 16777215
-
 	ttgapool 0,0,0,0,0
 	ttgapool 3,0,0,0,0
 	ttgapool 0,7,0,0,0
@@ -495,22 +398,6 @@
 	ttgmpool 0,0,0,1,0
 	ttgmpool 0,0,0,0,0x7ff
 	ttgmpool 3,7,7,1,0x7ff
-
-	ttincadcxy 0,0,0,0,0
-	ttincadcxy 7,0,0,0,0
-	ttincadcxy 0,63,0,0,0
-	ttincadcxy 0,0,7,0,0
-	ttincadcxy 0,0,0,7,0
-	ttincadcxy 0,0,0,0,7
-	ttincadcxy 7,63,7,7,7
-
-	ttincadczw 0,0,0,0,0
-	ttincadczw 7,0,0,0,0
-	ttincadczw 0,63,0,0,0
-	ttincadczw 0,0,7,0,0
-	ttincadczw 0,0,0,7,0
-	ttincadczw 0,0,0,0,7
-	ttincadczw 7,63,7,7,7
 
 	ttloadind 0,0,0,0,0
 	ttloadind 3,0,0,0,0
@@ -600,47 +487,10 @@
 	ttmvmuldi 0,0,0,0,0,255
 	ttmvmuldi 3,7,15,15,7,255
 
-	ttpacr 0,0,0,0,0,0,0,0,0,0,0,0
-	ttpacr 7,0,0,0,0,0,0,0,0,0,0,0
-	ttpacr 0,7,0,0,0,0,0,0,0,0,0,0
-	ttpacr 0,0,1,0,0,0,0,0,0,0,0,0
-	ttpacr 0,0,0,3,0,0,0,0,0,0,0,0
-	ttpacr 0,0,0,0,3,0,0,0,0,0,0,0
-	ttpacr 0,0,0,0,0,1,0,0,0,0,0,0
-	ttpacr 0,0,0,0,0,0,15,0,0,0,0,0
-	ttpacr 0,0,0,0,0,0,0,1,0,0,0,0
-	ttpacr 0,0,0,0,0,0,0,0,7,0,0,0
-	ttpacr 0,0,0,0,0,0,0,0,0,3,0,0
-	ttpacr 0,0,0,0,0,0,0,0,0,0,1,0
-	ttpacr 0,0,0,0,0,0,0,0,0,0,0,1
-	ttpacr 7,7,1,3,3,1,15,1,7,3,1,1
-
-	ttpacrsetreg 0,0,0,0,0,0,0,0
-	ttpacrsetreg 1,0,0,0,0,0,0,0
-	ttpacrsetreg 0,1,0,0,0,0,0,0
-	ttpacrsetreg 0,0,1023,0,0,0,0,0
-	ttpacrsetreg 0,0,0,3,0,0,0,0
-	ttpacrsetreg 0,0,0,0,3,0,0,0
-	ttpacrsetreg 0,0,0,0,0,63,0,0
-	ttpacrsetreg 0,0,0,0,0,0,1,0
-	ttpacrsetreg 0,0,0,0,0,0,0,1
-	ttpacrsetreg 1,1,1023,3,3,63,1,1
-
-	ttrareb
-
 	ttrdcfg 0,0
 	ttrdcfg 255,0
 	ttrdcfg 0,32767
 	ttrdcfg 255,32767
-
-	ttreg2flop 0,0,0,0,0,0
-	ttreg2flop 3,0,0,0,0,0
-	ttreg2flop 0,3,0,0,0,0
-	ttreg2flop 0,0,3,0,0,0
-	ttreg2flop 0,0,0,3,0,0
-	ttreg2flop 0,0,0,0,767,0
-	ttreg2flop 0,0,0,0,0,63
-	ttreg2flop 3,3,3,3,767,63
 
 	ttrmwcib0 0,0,0
 	ttrmwcib0 255,0,0
@@ -666,8 +516,6 @@
 	ttrmwcib3 0,0,255
 	ttrmwcib3 255,255,255
 
-	ttrstdma
-
 	ttsemget 0,0
 	ttsemget 31,0
 	ttsemget 0,127
@@ -692,75 +540,8 @@
 	ttsemwait 0,0,0,127
 	ttsemwait 511,3,31,127
 
-	ttsetadc 0,0,0,0
-	ttsetadc 7,0,0,0
-	ttsetadc 0,1,0,0
-	ttsetadc 0,0,3,0
-	ttsetadc 0,0,0,16383
-	ttsetadc 7,1,3,16383
-
-	ttsetadcxx 0,0,0
-	ttsetadcxx 7,0,0
-	ttsetadcxx 0,2047,0
-	ttsetadcxx 0,0,1023
-	ttsetadcxx 7,2047,1023
-
-	ttsetadcxy 0,0,0,0,0,0
-	ttsetadcxy 7,0,0,0,0,0
-	ttsetadcxy 0,63,0,0,0,0
-	ttsetadcxy 0,0,7,0,0,0
-	ttsetadcxy 0,0,0,7,0,0
-	ttsetadcxy 0,0,0,0,7,0
-	ttsetadcxy 0,0,0,0,0,63
-	ttsetadcxy 7,63,7,7,7,63
-
-	ttsetadczw 0,0,0,0,0,0
-	ttsetadczw 7,0,0,0,0,0
-	ttsetadczw 0,63,0,0,0,0
-	ttsetadczw 0,0,7,0,0,0
-	ttsetadczw 0,0,0,7,0,0
-	ttsetadczw 0,0,0,0,7,0
-	ttsetadczw 0,0,0,0,0,63
-	ttsetadczw 7,63,7,7,7,63
-
-	ttsetashrmh 0,0
-	ttsetashrmh 8388607,0
-	ttsetashrmh 0,1
-	ttsetashrmh 8388607,1
-
-	ttsetashrmh0 0,0
-	ttsetashrmh0 8388607,0
-	ttsetashrmh0 0,1
-	ttsetashrmh0 8388607,1
-
-	ttsetashrmh1 0,0
-	ttsetashrmh1 8388607,0
-	ttsetashrmh1 0,1
-	ttsetashrmh1 8388607,1
-
-	ttsetashrmv 0
-	ttsetashrmv 16777215
-
-	ttsetc16 0,0
-	ttsetc16 255,0
-	ttsetc16 0,65535
-	ttsetc16 255,65535
-
 	ttsetdvalid 0
 	ttsetdvalid 31
-
-	ttsetibrwc 0,0,0
-	ttsetibrwc 15,0,0
-	ttsetibrwc 0,4095,0
-	ttsetibrwc 0,0,63
-	ttsetibrwc 15,4095,63
-
-	ttsetpkedgof 0,0,0,0
-	ttsetpkedgof 4095,0,0,0
-	ttsetpkedgof 0,15,0,0
-	ttsetpkedgof 0,0,15,0
-	ttsetpkedgof 0,0,0,15
-	ttsetpkedgof 4095,15,15,15
 
 	ttsetrwc 0,0,0,0
 	ttsetrwc 3,0,0,0
@@ -768,11 +549,6 @@
 	ttsetrwc 0,0,0xfff,0
 	ttsetrwc 0,0,0,63
 	ttsetrwc 3,15,0xfff,63
-
-	ttshiftxa 0,0
-	ttshiftxa 262143,0
-	ttshiftxa 0,3
-	ttshiftxa 262143,3
 
 	ttshiftxb 0,0,0
 	ttshiftxb 1023,0,0
@@ -801,43 +577,20 @@
 	ttstorereg 0,16383
 	ttstorereg 15,16383
 
-	tttbufcmd
-
-	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,0
-	ttunpacr 1,0,0,0,0,0,0,0,0,0,0,0,0
-	ttunpacr 0,255,0,0,0,0,0,0,0,0,0,0,0
-	ttunpacr 0,0,3,0,0,0,0,0,0,0,0,0,0
-	ttunpacr 0,0,0,7,0,0,0,0,0,0,0,0,0
-	ttunpacr 0,0,0,0,3,0,0,0,0,0,0,0,0
-	ttunpacr 0,0,0,0,0,1,0,0,0,0,0,0,0
-	ttunpacr 0,0,0,0,0,0,1,0,0,0,0,0,0
-	ttunpacr 0,0,0,0,0,0,0,1,0,0,0,0,0
-	ttunpacr 0,0,0,0,0,0,0,0,1,0,0,0,0
-	ttunpacr 0,0,0,0,0,0,0,0,0,1,0,0,0
-	ttunpacr 0,0,0,0,0,0,0,0,0,0,1,0,0
-	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,1,0
-	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,1
- 	ttunpacr 1,255,3,7,3,1,1,1,1,1,1,1,1
-
-	ttunpacrnop 0,0,0,0,0,0
-	ttunpacrnop 3,0,0,0,0,0
-	ttunpacrnop 0,1,0,0,0,0
-	ttunpacrnop 0,0,1,0,0,0
-	ttunpacrnop 0,0,0,1,0,0
-	ttunpacrnop 0,0,0,0,3,0
-	ttunpacrnop 0,0,0,0,0,3
-	ttunpacrnop 3,1,1,1,3,3
+	ttunpacr_nop 0,0,0,0,0,0
+	ttunpacr_nop 3,0,0,0,0,0
+	ttunpacr_nop 0,1,0,0,0,0
+	ttunpacr_nop 0,0,1,0,0,0
+	ttunpacr_nop 0,0,0,1,0,0
+	ttunpacr_nop 0,0,0,0,3,0
+	ttunpacr_nop 0,0,0,0,0,3
+	ttunpacr_nop 3,1,1,1,3,3
 
 	ttwrcfg 0,0,0
 	ttwrcfg 255,0,0
 	ttwrcfg 0,1,0
 	ttwrcfg 0,0,32767
 	ttwrcfg 255,1,32767
-
-	ttxmov 0,0
-	ttxmov 1,0
-	ttxmov 0,8388607
-	ttxmov 1,8388607
 
 	ttzeroacc 0,0,0,0,0
 	ttzeroacc 31,0,0,0,0
@@ -881,15 +634,531 @@
 	ttresourcedecl 0,0,31
 	ttresourcedecl 15,1023,31
 
-	ttstreamwait 0,0,0,0
-	ttstreamwait 511,0,0,0
-	ttstreamwait 0,2047,0,0
-	ttstreamwait 0,0,1,0
-	ttstreamwait 0,0,0,7
-	ttstreamwait 511,2047,1,7
+# new insns
 
-	ttstreamwrcfg 0,0,0
-	ttstreamwrcfg 7,0,0
-	ttstreamwrcfg 0,1023,0
-	ttstreamwrcfg 0,0,2047
-	ttstreamwrcfg 7,1023,2047
+	ttaddgpr 0,0,0,0
+	ttaddgpr 1,0,0,0
+	ttaddgpr 0,63,0,0
+	ttaddgpr 0,0,63,0
+	ttaddgpr 0,0,0,63
+	ttaddgpr 1,63,63,63
+
+	ttbitwopgpr 0,0,0,0,0
+	ttbitwopgpr 1,0,0,0,0
+	ttbitwopgpr 0,31,0,0,0
+	ttbitwopgpr 0,0,63,0,0
+	ttbitwopgpr 0,0,0,63,0
+	ttbitwopgpr 0,0,0,0,63
+	ttbitwopgpr 1,31,63,63,63
+
+	ttcmpgpr 0,0,0,0,0
+	ttcmpgpr 1,0,0,0,0
+	ttcmpgpr 0,31,0,0,0
+	ttcmpgpr 0,0,63,0,0
+	ttcmpgpr 0,0,0,63,0
+	ttcmpgpr 0,0,0,0,63
+	ttcmpgpr 1,31,63,63,63
+
+	ttmulgpr 0,0,0,0
+	ttmulgpr 1,0,0,0
+	ttmulgpr 0,63,0,0
+	ttmulgpr 0,0,63,0
+	ttmulgpr 0,0,0,63
+	ttmulgpr 1,63,63,63
+
+	ttsetgpr 0,0,0,0
+	ttsetgpr 3,16383,0,0
+	ttsetgpr 0,0,1,0
+	ttsetgpr 0,0,0,63
+	ttsetgpr 3,16383,1,63
+
+	ttshiftgpr 0,0,0,0,0
+	ttshiftgpr 1,0,0,0,0
+	ttshiftgpr 0,31,0,0,0
+	ttshiftgpr 0,0,63,0,0
+	ttshiftgpr 0,0,0,63,0
+	ttshiftgpr 0,0,0,0,63
+	ttshiftgpr 1,31,63,63,63
+
+	ttsubgpr 0,0,0,0
+	ttsubgpr 1,0,0,0
+	ttsubgpr 0,63,0,0
+	ttsubgpr 0,0,63,0
+	ttsubgpr 0,0,0,63
+	ttsubgpr 1,63,63,63
+
+	ttcommit_shadow 0
+	ttcommit_shadow (1<<20)-1
+
+	tthalt
+
+	ttinc_dst_tile_Face_row_idx 0,0,0
+	ttinc_dst_tile_Face_row_idx 3,0,0
+	ttinc_dst_tile_Face_row_idx 0,7,0
+	ttinc_dst_tile_Face_row_idx 0,0,(1<<18)-1
+	ttinc_dst_tile_Face_row_idx 3,7,(1<<18)-1
+
+	ttinc_src_tile_Face_row_idx 0,0,0
+	ttinc_src_tile_Face_row_idx 3,0,0
+	ttinc_src_tile_Face_row_idx 0,7,0
+	ttinc_src_tile_Face_row_idx 0,0,(1<<18)-1
+	ttinc_src_tile_Face_row_idx 3,7,(1<<18)-1
+
+	ttset_dst_tile_Face_row_idx 0,0,0
+	ttset_dst_tile_Face_row_idx 3,0,0
+	ttset_dst_tile_Face_row_idx 0,7,0
+	ttset_dst_tile_Face_row_idx 0,0,(1<<18)-1
+	ttset_dst_tile_Face_row_idx 3,7,(1<<18)-1
+
+	ttset_src_tile_Face_row_idx 0,0,0
+	ttset_src_tile_Face_row_idx 3,0,0
+	ttset_src_tile_Face_row_idx 0,7,0
+	ttset_src_tile_Face_row_idx 0,0,(1<<18)-1
+	ttset_src_tile_Face_row_idx 3,7,(1<<18)-1
+
+	ttpacr_stride 0,0,0,0,0,0,0,0
+	ttpacr_stride 63,0,0,0,0,0,0,0
+	ttpacr_stride 0,1,0,0,0,0,0,0
+	ttpacr_stride 0,0,7,0,0,0,0,0
+	ttpacr_stride 0,0,0,1,0,0,0,0
+	ttpacr_stride 0,0,0,0,63,0,0,0
+	ttpacr_stride 0,0,0,0,0,31,0,0
+	ttpacr_stride 0,0,0,0,0,0,1,0
+	ttpacr_stride 0,0,0,0,0,0,0,1
+	ttpacr_stride 63,1,7,1,63,31,1,1
+
+	ttpacr_untilize 0,0,0,0,0,0
+	ttpacr_untilize 3,0,0,0,0,0
+	ttpacr_untilize 0,3,0,0,0,0
+	ttpacr_untilize 0,0,3,0,0,0
+	ttpacr_untilize 0,0,0,1,0,0
+	ttpacr_untilize 0,0,0,0,31,0
+	ttpacr_untilize 0,0,0,0,0,1
+	ttpacr_untilize 3,3,3,1,31,1
+
+	ttpacr0_face 0,0,0,0,0,0
+	ttpacr0_face 3,0,0,0,0,0
+	ttpacr0_face 0,3,0,0,0,0
+	ttpacr0_face 0,0,7,0,0,0
+	ttpacr0_face 0,0,0,3,0,0
+	ttpacr0_face 0,0,0,0,31,0
+	ttpacr0_face 0,0,0,0,0,1
+	ttpacr0_face 3,3,7,3,31,1
+
+	ttpacr0_face_inc 0,0,0,0,0,0
+	ttpacr0_face_inc 3,0,0,0,0,0
+	ttpacr0_face_inc 0,3,0,0,0,0
+	ttpacr0_face_inc 0,0,7,0,0,0
+	ttpacr0_face_inc 0,0,0,3,0,0
+	ttpacr0_face_inc 0,0,0,0,31,0
+	ttpacr0_face_inc 0,0,0,0,0,1
+	ttpacr0_face_inc 3,3,7,3,31,1
+
+	ttpacr0_row 0,0,0,0,0,0,0,0
+	ttpacr0_row 15,0,0,0,0,0,0,0
+	ttpacr0_row 0,15,0,0,0,0,0,0
+	ttpacr0_row 0,0,3,0,0,0,0,0
+	ttpacr0_row 0,0,0,3,0,0,0,0
+	ttpacr0_row 0,0,0,0,7,0,0,0
+	ttpacr0_row 0,0,0,0,0,3,0,0
+	ttpacr0_row 0,0,0,0,0,0,31,0
+	ttpacr0_row 0,0,0,0,0,0,0,1
+	ttpacr0_row 15,15,3,3,7,3,31,1
+
+	ttpacr0_row_inc 0,0,0,0,0,0,0,0
+	ttpacr0_row_inc 15,0,0,0,0,0,0,0
+	ttpacr0_row_inc 0,15,0,0,0,0,0,0
+	ttpacr0_row_inc 0,0,3,0,0,0,0,0
+	ttpacr0_row_inc 0,0,0,3,0,0,0,0
+	ttpacr0_row_inc 0,0,0,0,7,0,0,0
+	ttpacr0_row_inc 0,0,0,0,0,3,0,0
+	ttpacr0_row_inc 0,0,0,0,0,0,31,0
+	ttpacr0_row_inc 0,0,0,0,0,0,0,1
+	ttpacr0_row_inc 15,15,3,3,7,3,31,1
+
+	ttpacr0_tile 0,0,0,0
+	ttpacr0_tile 255,0,0,0
+	ttpacr0_tile 0,511,0,0
+	ttpacr0_tile 0,0,31,0
+	ttpacr0_tile 0,0,0,1
+	ttpacr0_tile 255,511,31,1
+
+	ttpacr0_tile_inc 0,0,0,0
+	ttpacr0_tile_inc 255,0,0,0
+	ttpacr0_tile_inc 0,511,0,0
+	ttpacr0_tile_inc 0,0,31,0
+	ttpacr0_tile_inc 0,0,0,1
+	ttpacr0_tile_inc 255,511,31,1
+
+	ttpacr1_face 0,0,0,0,0,0
+	ttpacr1_face 3,0,0,0,0,0
+	ttpacr1_face 0,3,0,0,0,0
+	ttpacr1_face 0,0,7,0,0,0
+	ttpacr1_face 0,0,0,3,0,0
+	ttpacr1_face 0,0,0,0,31,0
+	ttpacr1_face 0,0,0,0,0,1
+	ttpacr1_face 3,3,7,3,31,1
+
+	ttpacr1_face_inc 0,0,0,0,0,0
+	ttpacr1_face_inc 3,0,0,0,0,0
+	ttpacr1_face_inc 0,3,0,0,0,0
+	ttpacr1_face_inc 0,0,7,0,0,0
+	ttpacr1_face_inc 0,0,0,3,0,0
+	ttpacr1_face_inc 0,0,0,0,31,0
+	ttpacr1_face_inc 0,0,0,0,0,1
+	ttpacr1_face_inc 3,3,7,3,31,1
+
+	ttpacr1_row 0,0,0,0,0,0,0,0
+	ttpacr1_row 15,0,0,0,0,0,0,0
+	ttpacr1_row 0,15,0,0,0,0,0,0
+	ttpacr1_row 0,0,3,0,0,0,0,0
+	ttpacr1_row 0,0,0,3,0,0,0,0
+	ttpacr1_row 0,0,0,0,7,0,0,0
+	ttpacr1_row 0,0,0,0,0,3,0,0
+	ttpacr1_row 0,0,0,0,0,0,31,0
+	ttpacr1_row 0,0,0,0,0,0,0,1
+	ttpacr1_row 15,15,3,3,7,3,31,1
+
+	ttpacr1_row_inc 0,0,0,0,0,0,0,0
+	ttpacr1_row_inc 15,0,0,0,0,0,0,0
+	ttpacr1_row_inc 0,15,0,0,0,0,0,0
+	ttpacr1_row_inc 0,0,3,0,0,0,0,0
+	ttpacr1_row_inc 0,0,0,3,0,0,0,0
+	ttpacr1_row_inc 0,0,0,0,7,0,0,0
+	ttpacr1_row_inc 0,0,0,0,0,3,0,0
+	ttpacr1_row_inc 0,0,0,0,0,0,31,0
+	ttpacr1_row_inc 0,0,0,0,0,0,0,1
+	ttpacr1_row_inc 15,15,3,3,7,3,31,1
+
+	ttpacr1_tile 0,0,0,0
+	ttpacr1_tile 255,0,0,0
+	ttpacr1_tile 0,511,0,0
+	ttpacr1_tile 0,0,31,0
+	ttpacr1_tile 0,0,0,1
+	ttpacr1_tile 255,511,31,1
+
+	ttpacr1_tile_inc 0,0,0,0
+	ttpacr1_tile_inc 255,0,0,0
+	ttpacr1_tile_inc 0,511,0,0
+	ttpacr1_tile_inc 0,0,31,0
+	ttpacr1_tile_inc 0,0,0,1
+	ttpacr1_tile_inc 255,511,31,1
+
+	ttpop_tiles 0,0,0
+	ttpop_tiles 7,0,0
+	ttpop_tiles 0,1023,0
+	ttpop_tiles 0,0,31
+	ttpop_tiles 7,1023,31
+
+	ttpush_tiles 0,0,0
+	ttpush_tiles 7,0,0
+	ttpush_tiles 0,1023,0
+	ttpush_tiles 0,0,31
+	ttpush_tiles 7,1023,31
+
+	ttrv_pacr x0,x0,x0
+	ttrv_pacr x31,x0,x0
+	ttrv_pacr x0,x31,x0
+	ttrv_pacr x0,x0,x31
+	ttrv_pacr x31,x31,x31
+
+	ttrv_unpacr x0,x0,x0
+	ttrv_unpacr x31,x0,x0
+	ttrv_unpacr x0,x31,x0
+	ttrv_unpacr x0,x0,x31
+	ttrv_unpacr x31,x31,x31
+
+	ttrv_wrcfg x0,x0,x0,0,0
+	ttrv_wrcfg x31,x0,x0,0,0
+	ttrv_wrcfg x0,x31,x0,0,0
+	ttrv_wrcfg x0,x0,x31,0,0
+	ttrv_wrcfg x0,x0,x0,255,0
+	ttrv_wrcfg x0,x0,x0,0,1
+	ttrv_wrcfg x31,x31,x31,255,1
+
+	ttunpacr_dest_face 0,0,0,0,0,0
+	ttunpacr_dest_face 3,0,0,0,0,0
+	ttunpacr_dest_face 0,3,0,0,0,0
+	ttunpacr_dest_face 0,0,3,0,0,0
+	ttunpacr_dest_face 0,0,0,7,0,0
+	ttunpacr_dest_face 0,0,0,0,31,0
+	ttunpacr_dest_face 0,0,0,0,0,1
+	ttunpacr_dest_face 3,3,3,7,31,1
+
+	ttunpacr_dest_face_inc 0,0,0,0,0,0
+	ttunpacr_dest_face_inc 3,0,0,0,0,0
+	ttunpacr_dest_face_inc 0,3,0,0,0,0
+	ttunpacr_dest_face_inc 0,0,3,0,0,0
+	ttunpacr_dest_face_inc 0,0,0,7,0,0
+	ttunpacr_dest_face_inc 0,0,0,0,31,0
+	ttunpacr_dest_face_inc 0,0,0,0,0,1
+	ttunpacr_dest_face_inc 3,3,3,7,31,1
+
+	ttunpacr_dest_row 0,0,0,0,0,0,0,0
+	ttunpacr_dest_row 15,0,0,0,0,0,0,0
+	ttunpacr_dest_row 0,15,0,0,0,0,0,0
+	ttunpacr_dest_row 0,0,3,0,0,0,0,0
+	ttunpacr_dest_row 0,0,0,3,0,0,0,0
+	ttunpacr_dest_row 0,0,0,0,3,0,0,0
+	ttunpacr_dest_row 0,0,0,0,0,7,0,0
+	ttunpacr_dest_row 0,0,0,0,0,0,31,0
+	ttunpacr_dest_row 0,0,0,0,0,0,0,1
+	ttunpacr_dest_row 15,15,3,3,3,7,31,1
+
+	ttunpacr_dest_row_inc 0,0,0,0,0,0,0,0
+	ttunpacr_dest_row_inc 15,0,0,0,0,0,0,0
+	ttunpacr_dest_row_inc 0,15,0,0,0,0,0,0
+	ttunpacr_dest_row_inc 0,0,3,0,0,0,0,0
+	ttunpacr_dest_row_inc 0,0,0,3,0,0,0,0
+	ttunpacr_dest_row_inc 0,0,0,0,3,0,0,0
+	ttunpacr_dest_row_inc 0,0,0,0,0,7,0,0
+	ttunpacr_dest_row_inc 0,0,0,0,0,0,31,0
+	ttunpacr_dest_row_inc 0,0,0,0,0,0,0,1
+	ttunpacr_dest_row_inc 15,15,3,3,3,7,31,1
+
+	ttunpacr_dest_stride 0,0,0,0,0,0,0
+	ttunpacr_dest_stride 15,0,0,0,0,0,0
+	ttunpacr_dest_stride 0,7,0,0,0,0,0
+	ttunpacr_dest_stride 0,0,1,0,0,0,0
+	ttunpacr_dest_stride 0,0,0,7,0,0,0
+	ttunpacr_dest_stride 0,0,0,0,63,0,0
+	ttunpacr_dest_stride 0,0,0,0,0,31,0
+	ttunpacr_dest_stride 0,0,0,0,0,0,1
+	ttunpacr_dest_stride 15,7,1,7,63,31,1
+
+	ttunpacr_dest_tile 0,0,0,0
+	ttunpacr_dest_tile 511,0,0,0
+	ttunpacr_dest_tile 0,255,0,0
+	ttunpacr_dest_tile 0,0,31,0
+	ttunpacr_dest_tile 0,0,0,1
+	ttunpacr_dest_tile 511,255,31,1
+
+	ttunpacr_dest_tile_inc 0,0,0,0
+	ttunpacr_dest_tile_inc 511,0,0,0
+	ttunpacr_dest_tile_inc 0,255,0,0
+	ttunpacr_dest_tile_inc 0,0,31,0
+	ttunpacr_dest_tile_inc 0,0,0,1
+	ttunpacr_dest_tile_inc 511,255,31,1
+
+	ttunpacr_tile_misc 0,0,0,0,0,0,0
+	ttunpacr_tile_misc 7,0,0,0,0,0,0
+	ttunpacr_tile_misc 0,63,0,0,0,0,0
+	ttunpacr_tile_misc 0,0,1,0,0,0,0
+	ttunpacr_tile_misc 0,0,0,3,0,0,0
+	ttunpacr_tile_misc 0,0,0,0,31,0,0
+	ttunpacr_tile_misc 0,0,0,0,0,31,0
+	ttunpacr_tile_misc 0,0,0,0,0,0,1
+	ttunpacr_tile_misc 7,63,1,3,31,31,1
+
+	ttunpacr_tileize 0,0,0,0,0,0
+	ttunpacr_tileize 3,0,0,0,0,0
+	ttunpacr_tileize 0,3,0,0,0,0
+	ttunpacr_tileize 0,0,3,0,0,0
+	ttunpacr_tileize 0,0,0,3,0,0
+	ttunpacr_tileize 0,0,0,0,31,0
+	ttunpacr_tileize 0,0,0,0,0,1
+	ttunpacr_tileize 3,3,3,3,31,1
+
+	ttunpacr0_face 0,0,0,0,0,0
+	ttunpacr0_face 3,0,0,0,0,0
+	ttunpacr0_face 0,3,0,0,0,0
+	ttunpacr0_face 0,0,3,0,0,0
+	ttunpacr0_face 0,0,0,7,0,0
+	ttunpacr0_face 0,0,0,0,31,0
+	ttunpacr0_face 0,0,0,0,0,1
+	ttunpacr0_face 3,3,3,7,31,1
+
+	ttunpacr0_face_inc 0,0,0,0,0,0
+	ttunpacr0_face_inc 3,0,0,0,0,0
+	ttunpacr0_face_inc 0,3,0,0,0,0
+	ttunpacr0_face_inc 0,0,3,0,0,0
+	ttunpacr0_face_inc 0,0,0,7,0,0
+	ttunpacr0_face_inc 0,0,0,0,31,0
+	ttunpacr0_face_inc 0,0,0,0,0,1
+	ttunpacr0_face_inc 3,3,3,7,31,1
+
+	ttunpacr0_row 0,0,0,0,0,0,0,0
+	ttunpacr0_row 15,0,0,0,0,0,0,0
+	ttunpacr0_row 0,15,0,0,0,0,0,0
+	ttunpacr0_row 0,0,3,0,0,0,0,0
+	ttunpacr0_row 0,0,0,3,0,0,0,0
+	ttunpacr0_row 0,0,0,0,3,0,0,0
+	ttunpacr0_row 0,0,0,0,0,7,0,0
+	ttunpacr0_row 0,0,0,0,0,0,31,0
+	ttunpacr0_row 0,0,0,0,0,0,0,1
+	ttunpacr0_row 15,15,3,3,3,7,31,1
+
+	ttunpacr0_row_inc 0,0,0,0,0,0,0,0
+	ttunpacr0_row_inc 15,0,0,0,0,0,0,0
+	ttunpacr0_row_inc 0,15,0,0,0,0,0,0
+	ttunpacr0_row_inc 0,0,3,0,0,0,0,0
+	ttunpacr0_row_inc 0,0,0,3,0,0,0,0
+	ttunpacr0_row_inc 0,0,0,0,3,0,0,0
+	ttunpacr0_row_inc 0,0,0,0,0,7,0,0
+	ttunpacr0_row_inc 0,0,0,0,0,0,31,0
+	ttunpacr0_row_inc 0,0,0,0,0,0,0,1
+	ttunpacr0_row_inc 15,15,3,3,3,7,31,1
+
+	ttunpacr0_stride 0,0,0,0,0,0,0
+	ttunpacr0_stride 15,0,0,0,0,0,0
+	ttunpacr0_stride 0,7,0,0,0,0,0
+	ttunpacr0_stride 0,0,1,0,0,0,0
+	ttunpacr0_stride 0,0,0,7,0,0,0
+	ttunpacr0_stride 0,0,0,0,63,0,0
+	ttunpacr0_stride 0,0,0,0,0,31,0
+	ttunpacr0_stride 0,0,0,0,0,0,1
+	ttunpacr0_stride 15,7,1,7,63,31,1
+
+	ttunpacr0_tile 0,0,0,0
+	ttunpacr0_tile 511,0,0,0
+	ttunpacr0_tile 0,255,0,0
+	ttunpacr0_tile 0,0,31,0
+	ttunpacr0_tile 0,0,0,1
+	ttunpacr0_tile 511,255,31,1
+
+	ttunpacr0_tile_inc 0,0,0,0
+	ttunpacr0_tile_inc 511,0,0,0
+	ttunpacr0_tile_inc 0,255,0,0
+	ttunpacr0_tile_inc 0,0,31,0
+	ttunpacr0_tile_inc 0,0,0,1
+	ttunpacr0_tile_inc 511,255,31,1
+
+	ttunpacr1_face 0,0,0,0,0,0
+	ttunpacr1_face 3,0,0,0,0,0
+	ttunpacr1_face 0,3,0,0,0,0
+	ttunpacr1_face 0,0,3,0,0,0
+	ttunpacr1_face 0,0,0,7,0,0
+	ttunpacr1_face 0,0,0,0,31,0
+	ttunpacr1_face 0,0,0,0,0,1
+	ttunpacr1_face 3,3,3,7,31,1
+
+	ttunpacr1_face_inc 0,0,0,0,0,0
+	ttunpacr1_face_inc 3,0,0,0,0,0
+	ttunpacr1_face_inc 0,3,0,0,0,0
+	ttunpacr1_face_inc 0,0,3,0,0,0
+	ttunpacr1_face_inc 0,0,0,7,0,0
+	ttunpacr1_face_inc 0,0,0,0,31,0
+	ttunpacr1_face_inc 0,0,0,0,0,1
+	ttunpacr1_face_inc 3,3,3,7,31,1
+
+	ttunpacr1_row 0,0,0,0,0,0,0,0
+	ttunpacr1_row 15,0,0,0,0,0,0,0
+	ttunpacr1_row 0,15,0,0,0,0,0,0
+	ttunpacr1_row 0,0,3,0,0,0,0,0
+	ttunpacr1_row 0,0,0,3,0,0,0,0
+	ttunpacr1_row 0,0,0,0,3,0,0,0
+	ttunpacr1_row 0,0,0,0,0,7,0,0
+	ttunpacr1_row 0,0,0,0,0,0,31,0
+	ttunpacr1_row 0,0,0,0,0,0,0,1
+	ttunpacr1_row 15,15,3,3,3,7,31,1
+
+	ttunpacr1_row_inc 0,0,0,0,0,0,0,0
+	ttunpacr1_row_inc 15,0,0,0,0,0,0,0
+	ttunpacr1_row_inc 0,15,0,0,0,0,0,0
+	ttunpacr1_row_inc 0,0,3,0,0,0,0,0
+	ttunpacr1_row_inc 0,0,0,3,0,0,0,0
+	ttunpacr1_row_inc 0,0,0,0,3,0,0,0
+	ttunpacr1_row_inc 0,0,0,0,0,7,0,0
+	ttunpacr1_row_inc 0,0,0,0,0,0,31,0
+	ttunpacr1_row_inc 0,0,0,0,0,0,0,1
+	ttunpacr1_row_inc 15,15,3,3,3,7,31,1
+
+	ttunpacr1_stride 0,0,0,0,0,0,0
+	ttunpacr1_stride 15,0,0,0,0,0,0
+	ttunpacr1_stride 0,7,0,0,0,0,0
+	ttunpacr1_stride 0,0,1,0,0,0,0
+	ttunpacr1_stride 0,0,0,7,0,0,0
+	ttunpacr1_stride 0,0,0,0,63,0,0
+	ttunpacr1_stride 0,0,0,0,0,31,0
+	ttunpacr1_stride 0,0,0,0,0,0,1
+	ttunpacr1_stride 15,7,1,7,63,31,1
+
+	ttunpacr1_tile 0,0,0,0
+	ttunpacr1_tile 511,0,0,0
+	ttunpacr1_tile 0,255,0,0
+	ttunpacr1_tile 0,0,31,0
+	ttunpacr1_tile 0,0,0,1
+	ttunpacr1_tile 511,255,31,1
+
+	ttunpacr1_tile_inc 0,0,0,0
+	ttunpacr1_tile_inc 511,0,0,0
+	ttunpacr1_tile_inc 0,255,0,0
+	ttunpacr1_tile_inc 0,0,31,0
+	ttunpacr1_tile_inc 0,0,0,1
+	ttunpacr1_tile_inc 511,255,31,1
+
+	ttunpacr2_face 0,0,0,0,0,0
+	ttunpacr2_face 3,0,0,0,0,0
+	ttunpacr2_face 0,3,0,0,0,0
+	ttunpacr2_face 0,0,3,0,0,0
+	ttunpacr2_face 0,0,0,7,0,0
+	ttunpacr2_face 0,0,0,0,31,0
+	ttunpacr2_face 0,0,0,0,0,1
+	ttunpacr2_face 3,3,3,7,31,1
+
+	ttunpacr2_face_inc 0,0,0,0,0,0
+	ttunpacr2_face_inc 3,0,0,0,0,0
+	ttunpacr2_face_inc 0,3,0,0,0,0
+	ttunpacr2_face_inc 0,0,3,0,0,0
+	ttunpacr2_face_inc 0,0,0,7,0,0
+	ttunpacr2_face_inc 0,0,0,0,31,0
+	ttunpacr2_face_inc 0,0,0,0,0,1
+	ttunpacr2_face_inc 3,3,3,7,31,1
+
+	ttunpacr2_row 0,0,0,0,0,0,0,0
+	ttunpacr2_row 15,0,0,0,0,0,0,0
+	ttunpacr2_row 0,15,0,0,0,0,0,0
+	ttunpacr2_row 0,0,3,0,0,0,0,0
+	ttunpacr2_row 0,0,0,3,0,0,0,0
+	ttunpacr2_row 0,0,0,0,3,0,0,0
+	ttunpacr2_row 0,0,0,0,0,7,0,0
+	ttunpacr2_row 0,0,0,0,0,0,31,0
+	ttunpacr2_row 0,0,0,0,0,0,0,1
+	ttunpacr2_row 15,15,3,3,3,7,31,1
+
+	ttunpacr2_row_inc 0,0,0,0,0,0,0,0
+	ttunpacr2_row_inc 15,0,0,0,0,0,0,0
+	ttunpacr2_row_inc 0,15,0,0,0,0,0,0
+	ttunpacr2_row_inc 0,0,3,0,0,0,0,0
+	ttunpacr2_row_inc 0,0,0,3,0,0,0,0
+	ttunpacr2_row_inc 0,0,0,0,3,0,0,0
+	ttunpacr2_row_inc 0,0,0,0,0,7,0,0
+	ttunpacr2_row_inc 0,0,0,0,0,0,31,0
+	ttunpacr2_row_inc 0,0,0,0,0,0,0,1
+	ttunpacr2_row_inc 15,15,3,3,3,7,31,1
+
+	ttunpacr2_stride 0,0,0,0,0,0,0
+	ttunpacr2_stride 15,0,0,0,0,0,0
+	ttunpacr2_stride 0,7,0,0,0,0,0
+	ttunpacr2_stride 0,0,1,0,0,0,0
+	ttunpacr2_stride 0,0,0,7,0,0,0
+	ttunpacr2_stride 0,0,0,0,63,0,0
+	ttunpacr2_stride 0,0,0,0,0,31,0
+	ttunpacr2_stride 0,0,0,0,0,0,1
+	ttunpacr2_stride 15,7,1,7,63,31,1
+
+	ttunpacr2_tile 0,0,0,0
+	ttunpacr2_tile 511,0,0,0
+	ttunpacr2_tile 0,255,0,0
+	ttunpacr2_tile 0,0,31,0
+	ttunpacr2_tile 0,0,0,1
+	ttunpacr2_tile 511,255,31,1
+
+	ttunpacr2_tile_inc 0,0,0,0
+	ttunpacr2_tile_inc 511,0,0,0
+	ttunpacr2_tile_inc 0,255,0,0
+	ttunpacr2_tile_inc 0,0,31,0
+	ttunpacr2_tile_inc 0,0,0,1
+	ttunpacr2_tile_inc 511,255,31,1
+
+	ttwait_free 0,0,0
+	ttwait_free 511,0,0
+	ttwait_free 0,1023,0
+	ttwait_free 0,0,31
+	ttwait_free 511,1023,31
+
+	ttwait_tiles 0,0,0
+	ttwait_tiles 511,0,0
+	ttwait_tiles 0,1023,0
+	ttwait_tiles 0,0,31
+	ttwait_tiles 511,1023,31

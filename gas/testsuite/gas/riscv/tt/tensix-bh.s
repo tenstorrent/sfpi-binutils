@@ -805,17 +805,17 @@
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,1
  	ttunpacr 1,255,3,7,3,1,1,1,1,1,1,1,1
 
-	ttunpacrnop 0,0,0,0,0,0,0,0,0
-	ttunpacrnop 1,0,0,0,0,0,0,0,0
-	ttunpacrnop 0,127,0,0,0,0,0,0,0
-	ttunpacrnop 0,0,15,0,0,0,0,0,0
-	ttunpacrnop 0,0,0,15,0,0,0,0,0
-	ttunpacrnop 0,0,0,0,3,0,0,0,0
-	ttunpacrnop 0,0,0,0,0,1,0,0,0
-	ttunpacrnop 0,0,0,0,0,0,1,0,0
-	ttunpacrnop 0,0,0,0,0,0,0,3,0
-	ttunpacrnop 0,0,0,0,0,0,0,0,3
-	ttunpacrnop 1,127,15,15,3,1,1,3,3
+	ttunpacr_nop 0,0,0,0,0,0,0,0,0
+	ttunpacr_nop 1,0,0,0,0,0,0,0,0
+	ttunpacr_nop 0,127,0,0,0,0,0,0,0
+	ttunpacr_nop 0,0,15,0,0,0,0,0,0
+	ttunpacr_nop 0,0,0,15,0,0,0,0,0
+	ttunpacr_nop 0,0,0,0,3,0,0,0,0
+	ttunpacr_nop 0,0,0,0,0,1,0,0,0
+	ttunpacr_nop 0,0,0,0,0,0,1,0,0
+	ttunpacr_nop 0,0,0,0,0,0,0,3,0
+	ttunpacr_nop 0,0,0,0,0,0,0,0,3
+	ttunpacr_nop 1,127,15,15,3,1,1,3,3
 
 	ttwrcfg 0,0,0
 	ttwrcfg 255,0,0

@@ -698,7 +698,11 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	    oparg = strdec (oparg + 1, &pos);
 	    switch (*oparg)
 	      {
-	      case 'R':
+	      case 'C':
+		val = EXTRACT_U_IMM (5, pos, l);
+		print (info->stream, dis_style_register, "%s", riscv_gpr_names[val]);
+		goto tensix_next;
+	      case 'L':
 		val = EXTRACT_U_IMM (4, pos, l);
 		goto tensix_reg;
 	      case 'S':
