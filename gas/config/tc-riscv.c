@@ -1615,7 +1615,10 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    oparg = strdec (oparg + 1, &pos);
 	    switch (*oparg)
 	      {
-	      case 'R':
+	      case 'C':
+		USE_IMM (5, pos);
+		break;
+	      case 'L':
 	      case 'S':
 		{
 		  char c = *oparg;
@@ -3920,6 +3923,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		oparg = strdec (oparg + 1, &pos);
 		if (*oparg >= 'A' && *oparg <= 'Z')
 		  {
+		    if (*oparg == 'C')
+		      {
+			// Core register
+			if (!reg_lookup (&asarg, RCLASS_GPR, &regno))
+			  break;
+			INSERT_IMM (5, pos, *ip, regno);
+			continue;
+		      }
+
 		    if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
 			|| regno >= 16)
 		      break;
@@ -3936,7 +3948,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 		    switch (c)
 		      {
-		      case 'R':
+		      case 'L':
 			INSERT_IMM (4, pos, *ip, regno);
 			continue;
 

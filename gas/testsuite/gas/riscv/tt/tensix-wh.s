@@ -750,10 +750,10 @@
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,1
  	ttunpacr 1,255,3,7,3,1,1,1,1,1,1,1,1
 
-	ttunpacrnop 0,0
-	ttunpacrnop 1,0
-	ttunpacrnop 0,1023
-	ttunpacrnop 1,1023
+	ttunpacr_nop 0,0
+	ttunpacr_nop 1,0
+	ttunpacr_nop 0,1023
+	ttunpacr_nop 1,1023
 
 	ttwrcfg 0,0,0
 	ttwrcfg 255,0,0
