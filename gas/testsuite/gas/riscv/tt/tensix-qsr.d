@@ -215,11 +215,6 @@ Disassembly of section .text:
 [	 ]+[0-9a-f]+:[	 ]+64000002[	 ]+sfpnonlinear[	 ]+L0,L0,0
 [	 ]+[0-9a-f]+:[	 ]+64000006[	 ]+sfpnonlinear[	 ]+L0,L0,1
 [	 ]+[0-9a-f]+:[	 ]+6400000a[	 ]+sfpnonlinear[	 ]+L0,L0,2
-[	 ]+[0-9a-f]+:[	 ]+640001c2[	 ]+sfpnonlinear[	 ]+L7,L0,0
-[	 ]+[0-9a-f]+:[	 ]+64003c02[	 ]+sfpnonlinear[	 ]+L0,L15,0
-[	 ]+[0-9a-f]+:[	 ]+64000002[	 ]+sfpnonlinear[	 ]+L0,L0,0
-[	 ]+[0-9a-f]+:[	 ]+64000006[	 ]+sfpnonlinear[	 ]+L0,L0,1
-[	 ]+[0-9a-f]+:[	 ]+6400000a[	 ]+sfpnonlinear[	 ]+L0,L0,2
 [	 ]+[0-9a-f]+:[	 ]+6400000e[	 ]+sfpnonlinear[	 ]+L0,L0,3
 [	 ]+[0-9a-f]+:[	 ]+64000012[	 ]+sfpnonlinear[	 ]+L0,L0,4
 [	 ]+[0-9a-f]+:[	 ]+64000016[	 ]+sfpnonlinear[	 ]+L0,L0,5

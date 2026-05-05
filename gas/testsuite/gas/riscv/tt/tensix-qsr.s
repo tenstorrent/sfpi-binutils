@@ -245,12 +245,6 @@
 	sfpstochrnd L0,L0,L0,0,0,0
 	sfpstochrnd L7,L15,L15,31,13,2
 
-	sfparecip L0,L0,0
-	sfparecip L0,L0,1
-	sfparecip L0,L0,2
-	sfparecip L7,L0,0
-	sfparecip L0,L15,0
-
 	sfpnonlinear L0,L0,0
 	sfpnonlinear L0,L0,1
 	sfpnonlinear L0,L0,2

@@ -20,9 +20,7 @@
 {"sfpand",        XTTWH,   "J4L8,J8L",			MATCH_SFPAND,	0xfff00f|SUFFIX},
 {"sfpand",        XTTBH,   "J4L8,J12L,J8L,J0m3",	MATCH_SFPAND,	0xff0000|SUFFIX},
 {"sfpand",        XTTQSR,  "J4L8,J8L",			MATCH_SFPAND,	0xfff00f|SUFFIX},
-{"sfpnonlinear",  XTTQSR,  "J4L8,J8L,J0m3f",		MATCH_SFPNONLINEAR,	0xfff000|SUFFIX},
 {"sfparecip",     XTTBH,   "J4L8,J8L,J0m7",		MATCH_SFPARECIP,	0xfff000|SUFFIX},
-{"sfparecip",     XTTQSR,  "J4L8,J8L,J0m7",		MATCH_SFPARECIP,	0xfff000|SUFFIX|INSN_ALIAS},
 
 {"sfpcast",       XTTWH,   "J4L8,J8L,J0m3",		MATCH_SFPCAST,	0xfff000|SUFFIX},
 {"sfpcast",       XTTBH,   "J4L8,J8L,J0mf",		MATCH_SFPCAST,	0xfff000|SUFFIX},
@@ -93,6 +91,7 @@
 {"sfpmuli",       XTTBH,   "J4L8,J8u16,J0m1111",	MATCH_SFPMULI,	SUFFIX},
 {"sfpmuli",       XTTQSR,  "J4L8,J8u16,J0m1111",	MATCH_SFPMULI,	SUFFIX},
 
+{"sfpnonlinear",  XTTQSR,  "J4L8,J8L,J0m3f",		MATCH_SFPNONLINEAR,	0xfff000|SUFFIX},
 {"sfpnop",        XTTWH,   "",				MATCH_SFPWNOP,	0xffffff|SUFFIX},
 {"sfpnop",        XTTBH,   "",				MATCH_SFPWNOP,	0xffffff|SUFFIX},
 {"sfpnop",        XTTQSR,  "",				MATCH_SFPWNOP,	0xffffff|SUFFIX|INSN_ALIAS},
