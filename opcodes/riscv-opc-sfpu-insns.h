@@ -51,9 +51,9 @@
 {"sfpgt",         XTTBH,   "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPGT,	SUFFIX},
 {"sfpgt",         XTTQSR,  "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPGT,	SUFFIX},
 
-{"sfpiadd",       XTTWH,   "J4L8,J8L,J12d12,J0m5555-2222",	MATCH_SFPIADD,	SUFFIX},
-{"sfpiadd",       XTTBH,   "J4L8,J8L,J12d12,J0m5555-2222",	MATCH_SFPIADD,	SUFFIX},
-{"sfpiadd",       XTTQSR,  "J4L8,J8L,J12d12,J0m5555-2222",	MATCH_SFPIADD,	SUFFIX},
+{"sfpiadd",       XTTWH,   "J4L8,J8L,J12d12,J0m555-222",	MATCH_SFPIADD,	SUFFIX},
+{"sfpiadd",       XTTBH,   "J4L8,J8L,J12d12,J0m555-222",	MATCH_SFPIADD,	SUFFIX},
+{"sfpiadd",       XTTQSR,  "J4L8,J8L,J12d12,J0m555-222",	MATCH_SFPIADD,	SUFFIX},
 
 {"sfple",         XTTBH,   "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPLE,	SUFFIX},
 {"sfple",         XTTQSR,  "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPLE,	SUFFIX},
