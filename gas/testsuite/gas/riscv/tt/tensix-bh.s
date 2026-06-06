@@ -77,9 +77,6 @@
 	sfpiadd L0,L0,0,8
 	sfpiadd L0,L0,0,9
 	sfpiadd L0,L0,0,10
-	sfpiadd L0,L0,0,12
-	sfpiadd L0,L0,0,13
-	sfpiadd L0,L0,0,14
 	sfpiadd L0,L0,-0x800,1
 	sfpiadd L0,L0,0x7ff,1
 
