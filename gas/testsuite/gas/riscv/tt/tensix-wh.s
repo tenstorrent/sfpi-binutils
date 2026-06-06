@@ -128,11 +128,11 @@
 	sfpmad L0,L0,L15,L0,0
 	sfpmad L7,L15,L0,L15,0
 
-	sfpadd L0,L0,L15,L0,0
-	sfpadd L7,L15,L0,L15,0
+	sfpadd L0,L15,L0,0
+	sfpadd L7,L0,L15,0
 
-	sfpmul L0,L0,L15,L0,0
-	sfpmul L7,L15,L0,L15,0
+	sfpmul L0,L0,L15,0
+	sfpmul L7,L15,L0,0
 
 	sfpencc 0,0
 	sfpencc 0,1

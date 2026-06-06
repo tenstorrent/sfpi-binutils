@@ -11,9 +11,10 @@
 {"sfpabs",        XTTWH,   "J4L8,J8L,J0m3",		MATCH_SFPABS,	0xfff000|SUFFIX},
 {"sfpabs",        XTTBH,   "J4L8,J8L,J0m3",		MATCH_SFPABS,	0xfff000|SUFFIX},
 {"sfpabs",        XTTQSR,  "J4L8,J8L,J0m3",		MATCH_SFPABS,	0xfff000|SUFFIX},
-{"sfpadd",        XTTWH,   "J4L8,J16L,J12L,J8L,J0m1",	MATCH_SFPADD,	0xf00000|SUFFIX},
-{"sfpadd",        XTTBH,   "J4L8,J16L,J12L,J8L,J0mf",	MATCH_SFPADD,	0xf00000|SUFFIX},
-{"sfpadd",        XTTQSR,  "J4L8,J16L,J12L,J8L,J0mf",	MATCH_SFPADD,	0xf00000|SUFFIX},
+/* Provide op_a as one. */
+{"sfpadd",        XTTWH,   "J4L8,J12L,J8L,J0m1",	MATCH_SFPADD|0xa0000,	0xff0000|SUFFIX},
+{"sfpadd",        XTTBH,   "J4L8,J12L,J8L,J0mf",	MATCH_SFPADD|0xa0000,	0xff0000|SUFFIX},
+{"sfpadd",        XTTQSR,  "J4L8,J12L,J8L,J0mf",	MATCH_SFPADD|0xa0000,	0xff0000|SUFFIX},
 {"sfpaddi",       XTTWH,   "J4L8,J8u16,J0m1111",	MATCH_SFPADDI,	SUFFIX},
 {"sfpaddi",       XTTBH,   "J4L8,J8u16,J0m1111",	MATCH_SFPADDI,	SUFFIX},
 {"sfpaddi",       XTTQSR,  "J4L8,J8u16,J0m1111",	MATCH_SFPADDI,	SUFFIX},
@@ -82,9 +83,10 @@
 {"sfpmov",        XTTWH,   "J4L8,J8L,J0m107",		MATCH_SFPMOV,	0xfff000|SUFFIX},
 {"sfpmov",        XTTBH,   "J4L8,J8L,J0m107",		MATCH_SFPMOV,	0xfff000|SUFFIX},
 {"sfpmov",        XTTQSR,  "J4L8,J8L,J0m107",		MATCH_SFPMOV,	0xfff000|SUFFIX},
-{"sfpmul",        XTTWH,   "J4L8,J16L,J12L,J8L,J0m1",	MATCH_SFPMUL,	0xf00000|SUFFIX},
-{"sfpmul",        XTTBH,   "J4L8,J16L,J12L,J8L,J0mf",	MATCH_SFPMUL,	0xf00000|SUFFIX},
-{"sfpmul",        XTTQSR,  "J4L8,J16L,J12L,J8L,J0mf",	MATCH_SFPMUL,	0xf00000|SUFFIX},
+/* Provide op_c operand (addend) as zero.  */
+{"sfpmul",        XTTWH,   "J4L8,J16L,J12L,J0m1",	MATCH_SFPMUL|0x900,	0xf00f00|SUFFIX},
+{"sfpmul",        XTTBH,   "J4L8,J16L,J12L,J0mf",	MATCH_SFPMUL|0x900,	0xf00f00|SUFFIX},
+{"sfpmul",        XTTQSR,  "J4L8,J16L,J12L,J0mf",	MATCH_SFPMUL|0x900,	0xf00f00|SUFFIX},
 /* Erratum, sfpmul24 pays attention to the op_c operand, so provide a
    zero there.  */
 {"sfpmul24",      XTTBH,   "J4L8,J16L,J12L,J0m3333",	MATCH_SFPMUL24|0x900,	0xf00f00|SUFFIX},
