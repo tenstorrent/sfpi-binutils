@@ -206,6 +206,8 @@
 	sfpcast L0,L0,1
 	sfpcast L0,L0,2
 	sfpcast L0,L0,3
+	sfpcast L0,L0,4
+	sfpcast L0,L0,5
 
 	sfpshft2 L0,L0,0,0
 	sfpshft2 L7,L0,0,0
