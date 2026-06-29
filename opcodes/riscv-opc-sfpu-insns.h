@@ -27,7 +27,7 @@
 
 {"sfpcast",       XTTWH,   "J4L8,J8L,J0m3",		MATCH_SFPCAST,	0xfff000|SUFFIX},
 {"sfpcast",       XTTBH,   "J4L8,J8L,J0mf",		MATCH_SFPCAST,	0xfff000|SUFFIX},
-{"sfpcast",       XTTQSR,  "J4L8,J8L,J0mf",		MATCH_SFPCAST,	0xfff000|SUFFIX},
+{"sfpcast",       XTTQSR,  "J4L8,J8L,J0m3f",		MATCH_SFPCAST,	0xfff000|SUFFIX},
 {"sfpcompc",      XTTWH,   "",				MATCH_SFPCOMPC,	0xffffff|SUFFIX},
 {"sfpcompc",      XTTBH,   "",				MATCH_SFPCOMPC,	0xffffff|SUFFIX},
 {"sfpcompc",      XTTQSR,  "",				MATCH_SFPCOMPC,	0xffffff|SUFFIX},
