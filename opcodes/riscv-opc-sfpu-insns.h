@@ -33,7 +33,7 @@
 {"sfpcompc",      XTTQSR,  "",				MATCH_SFPCOMPC,	0xffffff|SUFFIX},
 {"sfpconfig",     XTTWH,   "J4mf9ff,J8u16,J0md7ff",	MATCH_SFPCONFIG,	SUFFIX},
 {"sfpconfig",     XTTBH,   "J4mf9ff,J8u16,J0md7ff",	MATCH_SFPCONFIG,	SUFFIX},
-{"sfpconfig",     XTTQSR,  "J4mf9ff,J8u16,J0md7ff",	MATCH_SFPCONFIG,	SUFFIX},
+{"sfpconfig",     XTTQSR,  "J4mffff,J8u16,J0m03ff",	MATCH_SFPCONFIG,	SUFFIX},
 
 {"sfpdivp2",      XTTWH,   "J4L8,J8L,J12d12,J0m0-3",	MATCH_SFPDIVP2,	SUFFIX},
 {"sfpdivp2",      XTTBH,   "J4L8,J8L,J12d12,J0m0-3",	MATCH_SFPDIVP2,	SUFFIX},

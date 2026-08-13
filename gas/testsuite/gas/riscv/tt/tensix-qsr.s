@@ -225,8 +225,8 @@
 
 	sfpconfig 0,0,0
 	sfpconfig 8,65535,8
-	sfpconfig 11,0,12
-	sfpconfig 15,65535,14
+	sfpconfig 11,0,1
+	sfpconfig 15,65535,9
 
 	sfpswap L0,L15,0,0
 	sfpswap L7,L0,0,1
