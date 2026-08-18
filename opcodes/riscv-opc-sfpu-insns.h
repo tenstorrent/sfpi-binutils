@@ -49,15 +49,15 @@
 {"sfpexman",      XTTBH,   "J4L8,J8L,J0m3",		MATCH_SFPEXMAN,	0xfff000|SUFFIX},
 {"sfpexman",      XTTQSR,  "J4L8,J8L,J0m3",		MATCH_SFPEXMAN,	0xfff000|SUFFIX},
 
-{"sfpgt",         XTTBH,   "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPGT,	SUFFIX},
-{"sfpgt",         XTTQSR,  "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPGT,	SUFFIX},
+{"sfpgt",         XTTBH,   "J4L8,J8L,J12m1,J0mffff",	MATCH_SFPGT,	0xff0000|SUFFIX},
+{"sfpgt",         XTTQSR,  "J4L8,J8L,J12m3,J0mffff",	MATCH_SFPGT,	0xff0000|SUFFIX},
 
 {"sfpiadd",       XTTWH,   "J4L8,J8L,J12d12,J0m555-222",	MATCH_SFPIADD,	SUFFIX},
 {"sfpiadd",       XTTBH,   "J4L8,J8L,J12d12,J0m555-222",	MATCH_SFPIADD,	SUFFIX},
 {"sfpiadd",       XTTQSR,  "J4L,J8L,J12d12,J0m555-222",	MATCH_SFPIADD,	SUFFIX},
 
-{"sfple",         XTTBH,   "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPLE,	SUFFIX},
-{"sfple",         XTTQSR,  "J4L8,J8L,J12d12,J0mffff",	MATCH_SFPLE,	SUFFIX},
+{"sfple",         XTTBH,   "J4L8,J8L,J12m1,J0mffff",	MATCH_SFPLE,	0xff0000|SUFFIX},
+{"sfple",         XTTQSR,  "J4L8,J8L,J12m3,J0mffff",	MATCH_SFPLE,	0xff0000|SUFFIX},
 {"sfpload",	  XTTWH,   "J20L8,J0s14,J16mffff,J14u2",MATCH_SFPLOAD,	SUFFIX},
 {"sfpload",       XTTBH,   "J20L8,J0s13,J16mcfff,J13u3",MATCH_SFPLOAD,	SUFFIX},
 {"sfpload",       XTTQSR,  "J20L8,J0u10,J16mcfff,J13u3,J10u1,J11u1",	MATCH_SFPLOAD,	0x1000|SUFFIX},
@@ -142,7 +142,7 @@
 {"sfpstore",      XTTQSR,  "J20L,J0u10,J16mcfff,J13u3,J10u1,J11u1",	MATCH_SFPSTORE,	0x1000|SUFFIX},
 {"sfpswap",       XTTWH,   "J4L12,J8L,J0m1ff",		MATCH_SFPSWAP,	0xfff000|SUFFIX},
 {"sfpswap",       XTTBH,   "J4L12,J8L,J0m1ff",		MATCH_SFPSWAP,	0xfff000|SUFFIX},
-{"sfpswap",       XTTQSR,  "J4L,J8L,J0m1ff",		MATCH_SFPSWAP,	0xfff000|SUFFIX},
+{"sfpswap",       XTTQSR,  "J4L,J8L,J12m3,J0m1ff",	MATCH_SFPSWAP,	0xff0000|SUFFIX},
 
 {"sfptransp",     XTTWH,   "",				MATCH_SFPTRANSP,	0xffffff|SUFFIX},
 {"sfptransp",     XTTBH,   "",				MATCH_SFPTRANSP,	0xffffff|SUFFIX},
