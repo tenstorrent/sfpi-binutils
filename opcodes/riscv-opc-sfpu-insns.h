@@ -118,7 +118,7 @@
 
 {"sfpsetcc",      XTTWH,   "J8L,J12d12,J0mfffd+2",	MATCH_SFPSETCC,	0xf0|SUFFIX},
 {"sfpsetcc",      XTTBH,   "J8L,J12d12,J0mfffd+2",	MATCH_SFPSETCC,	0xf0|SUFFIX},
-{"sfpsetcc",      XTTQSR,  "J8L,J12d12,J0mfffd+2",	MATCH_SFPSETCC,	0xf0|SUFFIX},
+{"sfpsetcc",      XTTQSR,  "J8L,J12d12,J0mffa8+57",	MATCH_SFPSETCC,	0xf0|SUFFIX},
 {"sfpsetexp",     XTTWH,   "J4L8,J8L,J12d12,J0m5+2",	MATCH_SFPSETEXP,	SUFFIX},
 {"sfpsetexp",     XTTBH,   "J4L8,J8L,J12d12,J0m5+2",	MATCH_SFPSETEXP,	SUFFIX},
 {"sfpsetexp",     XTTQSR,  "J4L8,J8L,J12d12,J0m5+2",	MATCH_SFPSETEXP,	SUFFIX},

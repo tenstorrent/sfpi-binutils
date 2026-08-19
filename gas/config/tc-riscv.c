@@ -3994,7 +3994,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    {
 			      if (tt_imm_val != 0)
 				{
-				  as_bad (_("imm12_math operand `%ld' not 0"), (long)val);
+				  as_bad (_("immediate operand with mod=%ld not 0"), (long)val);
 				  break;
 				}
 			    }
@@ -4004,14 +4004,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			      if (tt_imm_val < (is_signed ? -lim : 0)
 				  || tt_imm_val >= lim)
 				{
-				  as_bad (_("immediate operand `%ld' not in range [%d,%d]"),
+				  as_bad (_("immediate operand with mod=%ld not in range [%d,%d]"),
 					  (long)val, is_signed ? -lim : 0, lim - 1);
 				  break;
 				}
 			    }
 			  else
 			    {
-			      as_bad (_("unsupported value `%ld' for mod operand (permitted mask is %#04x"), (long)val,
+			      as_bad (_("unsupported mod=%ld (permitted mask is %#04x"), (long)val,
 				      mask_zero | mask_range);
 			      break;
 			    }

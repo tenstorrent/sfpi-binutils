@@ -166,6 +166,10 @@
 	sfpsetcc L7,0,0
 	sfpsetcc L0,0,15
 	sfpsetcc L0,4095,1
+	sfpsetcc L0,2048,0
+	sfpsetcc L0,2048,2
+	sfpsetcc L0,2048,4
+	sfpsetcc L0,2048,6
 
 	sfpmov L0,L0,0
 	sfpmov L7,L0,0
