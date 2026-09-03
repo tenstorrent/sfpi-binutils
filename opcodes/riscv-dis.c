@@ -729,6 +729,7 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	      case 'o':
 	      case 's':
 	      case 'u':
+	      case 'v':
 		{
 		  char c = *oparg;
 		  unsigned bits;
@@ -737,6 +738,13 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  if (c == 'l')
 		    /* Deduce width from limit.  */
 		    bits = 8 * sizeof (bits) - __builtin_clz (bits - 1);
+		  if (c == 'v')
+		    {
+		      // reduce width depending on bit 7.  Ugh This is
+		      // ttsetdmareg shenanigans.
+		      if (!EXTRACT_U_IMM (1, 7, l))
+			bits -= 2;
+		    }
 		  val = EXTRACT_U_IMM (bits, pos, l);
 		  if ((c == 's' || c == 'o') && bits == 16)
 		    // Heuristic to preserve wierd behaviour

@@ -255,8 +255,9 @@ Disassembly of section .text:
 [	 ]+[0-9a-f]+:[	 ]+17000001[	 ]+ttsetdmareg[	 ]+3,0,0,0
 [	 ]+[0-9a-f]+:[	 ]+14fffc01[	 ]+ttsetdmareg[	 ]+0,16383,0,0
 [	 ]+[0-9a-f]+:[	 ]+14000201[	 ]+ttsetdmareg[	 ]+0,0,1,0
+[	 ]+[0-9a-f]+:[	 ]+17fffe01[	 ]+ttsetdmareg[	 ]+3,65535,1,0
 [	 ]+[0-9a-f]+:[	 ]+140001fd[	 ]+ttsetdmareg[	 ]+0,0,0,127
-[	 ]+[0-9a-f]+:[	 ]+17fffffd[	 ]+ttsetdmareg[	 ]+3,16383,1,127
+[	 ]+[0-9a-f]+:[	 ]+17fffffd[	 ]+ttsetdmareg[	 ]+3,65535,1,127
 [	 ]+[0-9a-f]+:[	 ]+70000001[	 ]+ttshiftdmareg[	 ]+0,0,0,0,0
 [	 ]+[0-9a-f]+:[	 ]+72000001[	 ]+ttshiftdmareg[	 ]+1,0,0,0,0
 [	 ]+[0-9a-f]+:[	 ]+71f00001[	 ]+ttshiftdmareg[	 ]+0,31,0,0,0

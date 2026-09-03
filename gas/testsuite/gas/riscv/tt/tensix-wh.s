@@ -244,6 +244,7 @@
 	ttsetdmareg 3,0,0,0
 	ttsetdmareg 0,16383,0,0
 	ttsetdmareg 0,0,1,0
+	ttsetdmareg 0,0xffff,1,0
 	ttsetdmareg 0,0,0,127
 	ttsetdmareg 3,16383,1,127
 
@@ -734,7 +735,7 @@
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,0
 	ttunpacr 1,0,0,0,0,0,0,0,0,0,0,0,0
 	ttunpacr 0,255,0,0,0,0,0,0,0,0,0,0,0
-	ttunpacr 0,0,3,0,0,0,0,0,0,0,0,0,0
+	ttunpacr 0,0,1,0,0,0,0,0,0,0,0,0,0
 	ttunpacr 0,0,0,7,0,0,0,0,0,0,0,0,0
 	ttunpacr 0,0,0,0,3,0,0,0,0,0,0,0,0
 	ttunpacr 0,0,0,0,0,1,0,0,0,0,0,0,0
@@ -745,7 +746,7 @@
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,1,0,0
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,1,0
 	ttunpacr 0,0,0,0,0,0,0,0,0,0,0,0,1
- 	ttunpacr 1,255,3,7,3,1,1,1,1,1,1,1,1
+ 	ttunpacr 1,255,1,7,3,1,1,1,1,1,1,1,1
 
 	ttunpacr_nop 0,0
 	ttunpacr_nop 1,0
