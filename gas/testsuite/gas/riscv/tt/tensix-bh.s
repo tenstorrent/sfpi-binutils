@@ -295,6 +295,7 @@
 	ttsetdmareg 3,0,0,0
 	ttsetdmareg 0,16383,0,0
 	ttsetdmareg 0,0,1,0
+	ttsetdmareg 0,0xffff,1,0
 	ttsetdmareg 0,0,0,127
 	ttsetdmareg 3,16383,1,127
 

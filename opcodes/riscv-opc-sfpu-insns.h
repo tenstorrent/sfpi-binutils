@@ -379,8 +379,9 @@
 {"ttsetashrmv",   XTTBH, "J0u24",			MATCH_SFPSETASHRMV,	SUFFIX},
 {"ttsetc16",      XTTWH, "J16u8,J0u16",			MATCH_SFPSETC16,	SUFFIX},
 {"ttsetc16",      XTTBH, "J16u8,J0u16",			MATCH_SFPSETC16,	SUFFIX},
-{"ttsetdmareg",   XTTWH,  "J22u2,J8u14,J7u1,J0u7",	MATCH_SFPSETDMAREG,	SUFFIX},
-{"ttsetdmareg",   XTTBH,  "J22u2,J8u14,J7u1,J0u7",	MATCH_SFPSETDMAREG,	SUFFIX},
+// Operand 2 overlaps operand 1!
+{"ttsetdmareg",   XTTWH,  "J22u2,J8v16,J7u1,J0u7",	MATCH_SFPSETDMAREG,	SUFFIX},
+{"ttsetdmareg",   XTTBH,  "J22u2,J8v16,J7u1,J0u7",	MATCH_SFPSETDMAREG,	SUFFIX},
 {"ttsetdvalid",   XTTWH, "J0u16",			MATCH_SFPSETDVALID,	0xff0000|SUFFIX},
 {"ttsetdvalid",   XTTBH, "J0u16",			MATCH_SFPSETDVALID,	0xff0000|SUFFIX},
 {"ttsetdvalid",   XTTQSR,"J0u5",			MATCH_SFPSETDVALID,	0xffffe0|SUFFIX},
@@ -423,10 +424,8 @@
 {"tttrnspsrcb",   XTTWH, "",				MATCH_SFPTRNSPSRCB,	0xffffff|SUFFIX},
 {"tttrnspsrcb",   XTTBH, "",				MATCH_SFPTRNSPSRCB,	0xffffff|SUFFIX},
 
-{"ttunpacr",      XTTWH, "J23u1,J15u8,J12u2,J10u3,J8u3,J7u1,J6u1,J5u1,J4u1,J3u1,J2u1,J1u1,J0u1",
-    MATCH_SFPUNPACR,	0x4000|SUFFIX},
-{"ttunpacr",      XTTBH, "J23u1,J15u8,J13u2,J10u3,J8u2,J7u1,J6u1,J5u1,J4u1,J3u1,J2u1,J1u1,J0u1",
-    MATCH_SFPUNPACR,	SUFFIX},
+{"ttunpacr",      XTTWH, "J23u1,J15u8,J13u1,J10u3,J8u2,J7u1,J6u1,J5u1,J4u1,J3u1,J2u1,J1u1,J0u1", MATCH_SFPUNPACR,	0x4000|SUFFIX},
+{"ttunpacr",      XTTBH, "J23u1,J15u8,J13u2,J10u3,J8u2,J7u1,J6u1,J5u1,J4u1,J3u1,J2u1,J1u1,J0u1", MATCH_SFPUNPACR,	SUFFIX},
 
 {"ttunpacr_dest_face",      XTTQSR, "J14u2,J12u2,J10u2,J7u3,J2u5,J1u1", MATCH_SFPUNPACR_DEST_FACE, 0xff0001|SUFFIX},
 {"ttunpacr_dest_face_inc",  XTTQSR, "J14u2,J12u2,J10u2,J7u3,J2u5,J1u1", MATCH_SFPUNPACR_DEST_FACE_INC,	0xff0001|SUFFIX},

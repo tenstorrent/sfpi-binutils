@@ -1654,6 +1654,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	      case 'o':
 	      case 's':
 	      case 'u':
+	      case 'v':
 		{
 		  char c = *oparg;
 		  unsigned bits;
@@ -4027,6 +4028,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      case 'o': // Overloaded encoding
 		      case 's': // Signed
 		      case 'u': // Unsigned
+		      case 'v': // Split unsigned, how exciting
 			{
 			  // signed/unsigned immediate
 			  char c = *oparg;
@@ -4063,6 +4065,12 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 				  tt_imm_val = val;
 				  tt_imm_bits = bits;
 				}
+			      if (c == 'v')
+				// Or the top two bits, as they
+				// overlay another field.
+				val |= EXTRACT_BITS (ip->insn_opcode, 0x3,
+						     pos + bits - 2) << (bits - 2);
+
 			      INSERT_IMM (bits, pos, *ip, val);
 			      imm_expr->X_op = O_absent;
 			      asarg = expr_parse_end;
