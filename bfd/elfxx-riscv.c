@@ -1512,6 +1512,7 @@ static struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtttensixbh",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xtttensixqsr",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xtttensixwh",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
+  {"xttzbkb",		ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
@@ -2696,6 +2697,9 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
     case INSN_CLASS_ZBC_OR_ZBKC:
       return (riscv_subset_supports (rps, "zbc")
 	      || riscv_subset_supports (rps, "zbkc"));
+    case INSN_CLASS_ZBKB_OR_XTTZBKB:
+      return (riscv_subset_supports (rps, "zbkb")
+	      || riscv_subset_supports (rps, "xttzbkb"));
     case INSN_CLASS_ZKND:
       return riscv_subset_supports (rps, "zknd");
     case INSN_CLASS_ZKNE:
@@ -3022,6 +3026,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return _("zbb' or `zbkb");
     case INSN_CLASS_ZBC_OR_ZBKC:
       return _("zbc' or `zbkc");
+    case INSN_CLASS_ZBKB_OR_XTTZBKB:
+      return _("zbkb' or `xttzbkb");
     case INSN_CLASS_ZKND:
       return "zknd";
     case INSN_CLASS_ZKNE:
