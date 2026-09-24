@@ -859,9 +859,13 @@ and it provides AMO instructions for the T-Head VECTOR vendor extension.
 
 It is documented in @url{https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.3.0/xthead-2023-11-10-2.3.0.pdf}.
 
-@item XTTwh
-@item XTTbh
-Tenstorrent WormHole and BlackHole extensions respectively.
+@item XTTcache
+@item XTTroccqsr
+@item XTTtensixbh
+@item XTTtensixqsr
+@item XTTtensixwh
+@item XTTxbkb
+Tenstorrent extensions.
 
 @item XVentanaCondOps
 XVentanaCondOps extension provides instructions for branchless
