@@ -5792,6 +5792,14 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
 static void
 s_riscv_tt_insn (int x ATTRIBUTE_UNUSED)
 {
+  static int is_tensix = -1;
+  if (is_tensix < 0)
+    is_tensix = (riscv_subset_supports (&riscv_rps_as, "xtttensixwh")
+		 || riscv_subset_supports (&riscv_rps_as, "xtttensixbh")
+		 || riscv_subset_supports (&riscv_rps_as, "xtttensixqsr"));
+  if (!is_tensix)
+    as_bad (".ttinsn only available on tensix ISAs");
+
   expressionS exp;
 
   expression (&exp);
@@ -5801,7 +5809,10 @@ s_riscv_tt_insn (int x ATTRIBUTE_UNUSED)
       return;
     }
   demand_empty_rest_of_line ();
-  insn_t value = SFPU_OP_SWIZZLE((insn_t)exp.X_add_number);
+  insn_t unswizzled = (insn_t)exp.X_add_number;
+  if (3 == ((unswizzled >> 30) & 3))
+    as_bad ("%#lx is not a tensix encoding", (unsigned long)unswizzled);
+  insn_t value = SFPU_OP_SWIZZLE (unswizzled);
 
   riscv_mapping_state (MAP_INSN, 0, false);
   int bytes = 4;
