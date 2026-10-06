@@ -854,10 +854,10 @@
 	ttpop_tiles 7,1023,31
 
 	ttpush_tiles 0,0,0
-	ttpush_tiles 7,0,0
+	ttpush_tiles 3,0,0
 	ttpush_tiles 0,1023,0
 	ttpush_tiles 0,0,31
-	ttpush_tiles 7,1023,31
+	ttpush_tiles 3,1023,31
 
 	ttrv_pacr x0,x0,x0
 	ttrv_pacr x31,x0,x0
