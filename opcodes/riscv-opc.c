@@ -3473,6 +3473,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vcompress.vm",0, INSN_CLASS_XTHEADVECTOR, "Vd,Vt,Vs", MATCH_VCOMPRESSVM, MASK_VCOMPRESSVM, match_opcode, 0},
 
 /* Vendor-specific (Tenstorrent) ROCC instructions */
+{"tt.rocc.nop",				    0, INSN_CLASS_XTTROCCQSR, "", MATCH_TTROCC_NOP, MASK_TTROCC_NOP, match_opcode, 0},
 {"tt.rocc.dbg_postcode",		    0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_DBG_POSTCODE, MASK_TTROCC_DBG_POSTCODE, match_opcode, 0},
 {"tt.rocc.noc_fence",	                    0, INSN_CLASS_XTTROCCQSR, "", MATCH_TTROCC_NOC_FENCE, MASK_TTROCC_NOC_FENCE, match_opcode, 0},
 {"tt.rocc.llk_intf_write",                  0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_LLK_INTF_WRITE, MASK_TTROCC_LLK_INTF_WRITE, match_opcode, 0},

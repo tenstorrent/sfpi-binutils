@@ -3700,6 +3700,8 @@
 #define MATCH_TH_VFMVSF 0x36005057
 #define MASK_TH_VFMVSF 0xfff0707f
 /* Vendor-specific (Tenstorrent) ROCC instructions */
+#define MATCH_TTROCC_NOP 0x7c00000b
+#define MASK_TTROCC_NOP 0xffffffff
 #define MATCH_TTROCC_DBG_POSTCODE 0x4200205b
 #define MASK_TTROCC_DBG_POSTCODE 0xfff07fff
 #define MATCH_TTROCC_NOC_FENCE 0x4400005b
