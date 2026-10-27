@@ -1,5 +1,5 @@
 /* riscv.h.  RISC-V opcode list for GDB, the GNU debugger.
-   Copyright (C) 2011-2025 Free Software Foundation, Inc.
+   Copyright (C) 2011-2026 Free Software Foundation, Inc.
    Contributed by Andrew Waterman
 
    This file is part of GDB, GAS, and the GNU binutils.
@@ -132,6 +132,18 @@ static inline unsigned int riscv_insn_length (insn_t insn)
   ((RV_X(x, 25, 1)) | (RV_X(x, 20, 5) << 1) | (RV_IMM_SIGN_N(x, 20, 5) << 5))
 #define EXTRACT_CV_SIMD_UIMM6(x) \
   ((RV_X(x, 25, 1)) | (RV_X(x, 20, 5) << 1))
+/* Vendor-specific (MIPS) extract macros.  */
+#define EXTRACT_MIPS_LWP_IMM(x) \
+  (RV_X(x, 22, 5) << 2)
+#define EXTRACT_MIPS_LDP_IMM(x) \
+  (RV_X(x, 23, 4) << 3)
+#define EXTRACT_MIPS_SWP_IMM(x) \
+  ((RV_X(x, 25, 2) << 5) | (RV_X(x, 9, 3) << 2))
+#define EXTRACT_MIPS_SDP_IMM(x) \
+  ((RV_X(x, 25, 2) << 5) | (RV_X(x, 10, 2) << 3))
+/* Vendor-specific (SPACEMIT) encode macros.  */
+#define ENCODE_SPACEMIT_IME_UIMM2_SP(x) \
+  ((RV_X (x, 0, 1) << 7) | (RV_X (x, 1, 1) << 15))
 
 #define ENCODE_ITYPE_IMM(x) \
   (RV_X(x, 0, 12) << 20)
@@ -200,6 +212,15 @@ static inline unsigned int riscv_insn_length (insn_t insn)
   ((RV_X(x, 0, 1) << 25) | (RV_X(x, 1, 5) << 20))
 #define ENCODE_CV_SIMD_UIMM6(x) \
   ((RV_X(x, 0, 1) << 25) | (RV_X(x, 1, 5) << 20))
+/* Vendor-specific (MIPS) encode macros.  */
+#define ENCODE_MIPS_LWP_IMM(x) \
+  (RV_X(x, 2, 5) << 22)
+#define ENCODE_MIPS_LDP_IMM(x) \
+  (RV_X(x, 3, 4) << 23)
+#define ENCODE_MIPS_SWP_IMM(x) \
+  ((RV_X(x, 5, 2) << 25) | (RV_X(x, 2, 3) << 9))
+#define ENCODE_MIPS_SDP_IMM(x) \
+  ((RV_X(x, 5, 2) << 25) | (RV_X(x, 3, 2) << 10))
 
 #define VALID_ITYPE_IMM(x) (EXTRACT_ITYPE_IMM(ENCODE_ITYPE_IMM(x)) == (x))
 #define VALID_STYPE_IMM(x) (EXTRACT_STYPE_IMM(ENCODE_STYPE_IMM(x)) == (x))
@@ -353,6 +374,8 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define OP_SH_VTA		6
 #define OP_MASK_VMA		0x1
 #define OP_SH_VMA		7
+#define OP_MASK_VTYPE_ALTFMT	0x1
+#define OP_SH_VTYPE_ALTFMT	8
 #define OP_MASK_VWD		0x1
 #define OP_SH_VWD		26
 
@@ -383,12 +406,37 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define OP_MASK_XSO1            0x1
 #define OP_SH_XSO1              26
 
-/* Tensix fields/  */
-#define OP_SH_SFPU_OP	24
-#define OP_MASK_SFPU_OP	0xff
+/* MIPS fields.  */
+#define OP_MASK_MIPS_IMM9		0x1ff
+#define OP_SH_MIPS_IMM9		20
+#define OP_MASK_MIPS_HINT		0x1f
+#define OP_SH_MIPS_HINT		7
+#define OP_MASK_MIPS_LWP_OFFSET     0x1f
+#define OP_SH_MIPS_LWP_OFFSET       22
+#define OP_MASK_MIPS_LDP_OFFSET     0xf
+#define OP_SH_MIPS_LDP_OFFSET       23
+#define OP_MASK_MIPS_SWP_OFFSET9    0x7
+#define OP_SH_MIPS_SWP_OFFSET9      9
+#define OP_MASK_MIPS_SWP_OFFSET25   0x3
+#define OP_SH_MIPS_SWP_OFFSET25     25
+#define OP_MASK_MIPS_SDP_OFFSET10   0x3
+#define OP_SH_MIPS_SDP_OFFSET10     10
+#define OP_MASK_MIPS_SDP_OFFSET25   0x3
+#define OP_SH_MIPS_SDP_OFFSET25     25
+
+/* SpacemiT fields.  */
+#define OP_MASK_SPACEMIT_IME_VD		0xf
+#define OP_SH_SPACEMIT_IME_VD		8
+#define OP_MASK_SPACEMIT_IME_VS1	0xf
+#define OP_SH_SPACEMIT_IME_VS1		16
+#define OP_MASK_SPACEMIT_IME_WI		0x3
+#define OP_SH_SPACEMIT_IME_WI		29
+#define OP_MASK_SPACEMIT_IME_VMASK	0x1
+#define OP_SH_SPACEMIT_IME_VMASK	25
 
 /* ABI names for selected x-registers.  */
 
+#define X_ZERO 0
 #define X_RA 1
 #define X_SP 2
 #define X_GP 3
@@ -408,7 +456,6 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 
 #define NGPR 32
 #define NFPR 32
-#define NSFPUR 16
 
 /* These fake label defines are use by both the assembler, and
    libopcodes.  The assembler uses this when it needs to generate a fake
@@ -447,11 +494,6 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define VALIDATE_S_IMM(v, n) \
   (v < (long) (1UL << (n-1)) && v >= -(offsetT) (1UL << (n-1)))
 
-/* Put top 2 bits, which are currently never 'b11 to bottom, indicating to Risc
-   that they are not risc instructions. */
-#define SFPU_OP_SWIZZLE(x)   ( (((x) >> 30) & 0x3) | (((x) & 0x3FFFFFFF) << 2) )
-#define SFPU_OP_UNSWIZZLE(x) ( (((x) & 0x3) << 30) | (((x) & 0xfffffffc) >> 2) )
-
 /* The maximal number of subset can be required.  */
 #define MAX_SUBSET_NUM 4
 
@@ -466,22 +508,23 @@ enum riscv_insn_class
   INSN_CLASS_NONE,
 
   INSN_CLASS_I,
-  INSN_CLASS_C,
+  INSN_CLASS_ZCA,
   INSN_CLASS_M,
   INSN_CLASS_F,
   INSN_CLASS_D,
   INSN_CLASS_Q,
-  INSN_CLASS_F_AND_C,
-  INSN_CLASS_D_AND_C,
+  INSN_CLASS_ZCF,
+  INSN_CLASS_ZCD,
   INSN_CLASS_ZICOND,
   INSN_CLASS_ZICSR,
   INSN_CLASS_ZIFENCEI,
   INSN_CLASS_ZIHINTNTL,
-  INSN_CLASS_ZIHINTNTL_AND_C,
+  INSN_CLASS_ZIHINTNTL_AND_ZCA,
   INSN_CLASS_ZIHINTPAUSE,
   INSN_CLASS_ZIMOP,
   INSN_CLASS_ZMMUL,
   INSN_CLASS_ZAAMO,
+  INSN_CLASS_ZALASR,
   INSN_CLASS_ZALRSC,
   INSN_CLASS_ZAWRS,
   INSN_CLASS_F_INX,
@@ -513,19 +556,30 @@ enum riscv_insn_class
   INSN_CLASS_ZBB_OR_ZBKB,
   INSN_CLASS_ZBC_OR_ZBKC,
   INSN_CLASS_ZKND_OR_ZKNE,
-  INSN_CLASS_ZBKB_OR_XTTZBKB,
   INSN_CLASS_V,
   INSN_CLASS_ZVEF,
   INSN_CLASS_ZVBB,
   INSN_CLASS_ZVBC,
   INSN_CLASS_ZVFBFMIN,
   INSN_CLASS_ZVFBFWMA,
+  INSN_CLASS_ZVFBDOTA32F,
+  INSN_CLASS_ZVFQWBDOTA8F,
+  INSN_CLASS_ZVFQWDOTA8F,
+  INSN_CLASS_ZVFWBDOTA16BF,
+  INSN_CLASS_ZVFWDOTA16BF,
   INSN_CLASS_ZVKB,
   INSN_CLASS_ZVKG,
   INSN_CLASS_ZVKNED,
   INSN_CLASS_ZVKNHA_OR_ZVKNHB,
   INSN_CLASS_ZVKSED,
   INSN_CLASS_ZVKSH,
+  INSN_CLASS_ZVABD,
+  INSN_CLASS_ZVQWBDOTA8I,
+  INSN_CLASS_ZVQWBDOTA16I,
+  INSN_CLASS_ZVQWBDOTA8I_OR_ZVQWBDOTA16I,
+  INSN_CLASS_ZVQWDOTA8I,
+  INSN_CLASS_ZVQWDOTA16I,
+  INSN_CLASS_ZVQWDOTA8I_OR_ZVQWDOTA16I,
   INSN_CLASS_ZICFISS,
   INSN_CLASS_ZICFISS_AND_ZCMOP,
   INSN_CLASS_ZICFILP,
@@ -537,6 +591,9 @@ enum riscv_insn_class
   INSN_CLASS_ZCMP,
   INSN_CLASS_ZCMT,
   INSN_CLASS_SMCTR_OR_SSCTR,
+  INSN_CLASS_ZILSD,
+  INSN_CLASS_ZCLSD,
+  INSN_CLASS_SMRNMI,
   INSN_CLASS_SVINVAL,
   INSN_CLASS_ZICBOM,
   INSN_CLASS_ZICBOP,
@@ -565,18 +622,21 @@ enum riscv_insn_class
   INSN_CLASS_XTHEADMEMPAIR,
   INSN_CLASS_XTHEADSYNC,
   INSN_CLASS_XTHEADVECTOR,
+  INSN_CLASS_XTHEADVDOT,
   INSN_CLASS_XTHEADZVAMO,
-  INSN_CLASS_XTTCACHE,
-  INSN_CLASS_XTTROCCQSR,
-  INSN_CLASS_XTTTENSIXBH,
-  INSN_CLASS_XTTTENSIXQSR,
-  INSN_CLASS_XTTTENSIXWH,
   INSN_CLASS_XVENTANACONDOPS,
   INSN_CLASS_XSFVCP,
   INSN_CLASS_XSFCEASE,
   INSN_CLASS_XSFVQMACCQOQ,
   INSN_CLASS_XSFVQMACCDOD,
   INSN_CLASS_XSFVFNRCLIPXFQF,
+  INSN_CLASS_XMIPSCBOP,
+  INSN_CLASS_XMIPSCMOV,
+  INSN_CLASS_XMIPSEXECTL,
+  INSN_CLASS_XMIPSLSP,
+  INSN_CLASS_XSMTVDOT,
+  INSN_CLASS_XSMTVDOTII,
+  INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII,
 };
 
 /* This structure holds information for a particular instruction.  */
@@ -635,9 +695,6 @@ struct riscv_opcode
 #define INSN_JSR		0x00000006
 /* Instruction is a data reference.  */
 #define INSN_DREF		0x00000008
-
-#define INSN_SFPU		0x0000000a
-
 /* Instruction is allowed when eew >= 64.  */
 #define INSN_V_EEW64		0x10000000
 
@@ -649,7 +706,6 @@ struct riscv_opcode
 #define INSN_4_BYTE		0x00000030
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
-
 
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */
@@ -694,6 +750,7 @@ extern const char * const riscv_pred_succ[16];
 extern const char riscv_vecr_names_numeric[NVECR][NRC];
 extern const char riscv_vecm_names_numeric[NVECM][NRC];
 extern const char * const riscv_vsew[8];
+extern const char * const riscv_vsew_altfmt[2];
 extern const char * const riscv_vlmul[8];
 extern const char * const riscv_vta[2];
 extern const char * const riscv_vma[2];
@@ -701,7 +758,6 @@ extern const char * const riscv_th_vlen[4];
 extern const char * const riscv_th_vediv[4];
 extern const char * const riscv_fli_symval[32];
 extern const float riscv_fli_numval[32];
-extern const char riscv_sfpur_names_numeric[NSFPUR][NRC];
 
 extern const struct riscv_opcode riscv_opcodes[];
 extern const struct riscv_opcode riscv_insn_types[];
