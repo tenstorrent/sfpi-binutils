@@ -1,3 +1,3 @@
 target:
 	.option norvc
-	nop
+	ttnop
