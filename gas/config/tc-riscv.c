@@ -755,12 +755,20 @@ riscv_target_format (void)
     return xlen == 64 ? "elf64-littleriscv" : "elf32-littleriscv";
 }
 
+static inline bool
+is_tensix (enum riscv_insn_class insn_class)
+{
+  return (insn_class == INSN_CLASS_XTTTENSIXWH
+	  || insn_class == INSN_CLASS_XTTTENSIXBH
+	  || insn_class == INSN_CLASS_XTTTENSIXQSR);
+}
 /* Return the length of instruction INSN.  */
 
 static inline unsigned int
 insn_length (const struct riscv_cl_insn *insn)
 {
-  return riscv_insn_length (insn->insn_opcode);
+  return is_tensix (insn->insn_mo->insn_class)
+	  ? 4 : riscv_insn_length (insn->insn_opcode);
 }
 
 /* Initialise INSN from opcode entry MO.  Leave its position unspecified.  */
@@ -774,6 +782,11 @@ create_insn (struct riscv_cl_insn *insn, const struct riscv_opcode *mo)
   insn->frag = NULL;
   insn->where = 0;
   insn->fixp = NULL;
+
+  /*  Zero out the lower most two bits as they were set to indicate the
+      instruction as a 4 byte instruction */
+  if (is_tensix (mo->insn_class))
+    insn->insn_opcode &= 0xfffffffc;
 }
 
 /* Install INSN at the location specified by its "frag" and "where" fields.  */
@@ -972,6 +985,7 @@ enum reg_class
   RCLASS_FPR,
   RCLASS_VECR,
   RCLASS_VECM,
+  RCLASS_SFPUR,
   RCLASS_MAX,
 
   RCLASS_CSR
@@ -1476,7 +1490,29 @@ reglist_lookup (char **s, unsigned *reg_list)
 
 #define USE_BITS(mask,shift) (used_bits |= ((insn_t)(mask) << (shift)))
 #define USE_IMM(n, s) \
-  (used_bits |= ((insn_t)((1ull<<n)-1) << (s)))
+  (used_bits |= ((insn_t)((1ull<<(n))-1) << (s)))
+
+// Someone complained that stroul was inefficiently slow
+static const char *
+strdec (const char *pos, unsigned *val)
+{
+  unsigned v = 0, d;
+  for (; (unsigned)(d = *pos - '0') < 10; pos++)
+    v = v * 10 + d;
+  *val = v;
+  return pos;
+}
+
+static const char *
+strhex (const char *pos, unsigned *val)
+{
+  unsigned v = 0, d;
+  for (; (d = *pos - '0') < 10
+	 || (d -= 'a' - '0' - 10) < 16; pos++)
+    v = v * 16 + d;
+  *val = v;
+  return pos;
+}
 
 /* For consistency checking, verify that all bits are specified either
    by the match/mask part of the instruction definition, or by the
@@ -1492,7 +1528,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
   insn_t required_bits;
 
   if (length == 0)
-    length = riscv_insn_length (opc->match);
+    length = is_tensix (opc->insn_class)
+	      ? 4 : riscv_insn_length (opc->match);
   /* We don't support instructions longer than 64-bits yet.  */
   if (length > 8)
     length = 8;
@@ -1589,6 +1626,71 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	      goto unknown_validate_operand;
 	    }
 	  break; /* end RVV */
+
+	case 'J': // Tenstorrent
+	  {
+	    // J<POS><LETTER><SUFFX>
+	    unsigned pos;
+	    oparg = strdec (oparg + 1, &pos);
+	    switch (*oparg)
+	      {
+	      case 'C':
+		USE_IMM (5, pos);
+		break;
+	      case 'L':
+	      case 'S':
+		{
+		  char c = *oparg;
+		  unsigned lim = 0;
+		  oparg = strdec (oparg + 1, &lim) - 1;
+		  if (lim > 16)
+		    goto unknown_validate_operand;
+		  USE_IMM (c == 'S' ? 2 : 4, pos);
+		  if (c == 'S')
+		    USE_IMM (1, 0);
+		}
+		break;
+
+	      case 'm':
+		{
+		  // mod mask
+		  unsigned mask_zero = 0;
+		  unsigned mask_range = 0;
+		  oparg = strhex (oparg + 1, &mask_zero);
+		  if (*oparg == '+' || *oparg == '-')
+		    oparg = strhex (oparg + 1, &mask_range);
+		  oparg--;
+		  if (!((mask_zero | mask_range) & 0xffff)
+		      || ((mask_zero | mask_range) & ~0xffffUL)
+		      || (mask_zero & mask_range))
+		    goto unknown_validate_operand;
+		  USE_IMM (4, pos);
+		}
+		break;
+
+	      case 'd':
+	      case 'l':
+	      case 'o':
+	      case 's':
+	      case 'u':
+	      case 'v':
+		{
+		  char c = *oparg;
+		  unsigned bits;
+		  oparg = strdec (oparg + 1, &bits) - 1;
+		  if (c == 'l')
+		    /* Deduce the width from the limit.  */
+		    bits = 8 * sizeof (bits) - __builtin_clz (bits - 1);
+		  if (pos + bits > 32)
+		    goto unknown_validate_operand;
+		  USE_IMM (bits, pos);
+		}
+		break;
+
+	      default: goto unknown_validate_operand;
+	      }
+	  }
+	  break;
 	case ',': break;
 	case '(': break;
 	case ')': break;
@@ -1982,6 +2084,7 @@ md_begin (void)
   hash_reg_names (RCLASS_FPR, riscv_fpr_names_abi, NFPR);
   hash_reg_names (RCLASS_VECR, riscv_vecr_names_numeric, NVECR);
   hash_reg_names (RCLASS_VECM, riscv_vecm_names_numeric, NVECM);
+  hash_reg_names (RCLASS_SFPUR, riscv_sfpur_names_numeric, NSFPUR);
   /* Add "fp" as an alias for "s0".  */
   hash_reg_name (RCLASS_GPR, "fp", 8);
 
@@ -2077,6 +2180,9 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	  ip->fixp->tc_fix_data.source_macro = source_macro;
 	}
     }
+
+  if (is_tensix (ip->insn_mo->insn_class))
+    ip->insn_opcode = SFPU_OP_SWIZZLE(ip->insn_opcode);
 
   add_fixed_insn (ip);
 
@@ -2954,6 +3060,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   /* Indicate we are assembling instruction with CSR.  */
   bool insn_with_csr = false;
   bool force_reloc = false;
+  /* To hold the value of imm12_math till the time the last operand has been read */
+  int tt_imm_val = 0;
+  unsigned tt_imm_bits = 0;
 
   /* Parse the name of the instruction.  Terminate the string if whitespace
      is found so that str_hash_find only sees the name part of the string.  */
@@ -3007,6 +3116,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	  opargStart = oparg;
 	  while (is_whitespace (*asarg))
 	    ++asarg;
+	  // ,()[]<>0
+	  // ABCDEF..I.....OPQRSTUV..YZ
+	  // a.cd.....j..m.opqrstu...y.
+	  // J - tenstorrent
 	  switch (*oparg)
 	    {
 	    case '\0': /* End of args.  */
@@ -3016,9 +3129,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      if (insn->pinfo != INSN_MACRO)
 		{
 		  /* For .insn, insn->match and insn->mask are 0.  */
-		  if (riscv_insn_length ((insn->match == 0 && insn->mask == 0)
-					 ? ip->insn_opcode
-					 : insn->match) == 2
+		  if ((insn->pinfo & INSN_TYPE) != INSN_SFPU
+		      && riscv_insn_length ((insn->match == 0 && insn->mask == 0)
+					    ? ip->insn_opcode
+					    : insn->match) == 2
 		      && !riscv_opts.rvc)
 		    break;
 
@@ -3906,6 +4020,174 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      asarg = expr_parse_end;
 	      continue;
 
+	    case 'J':
+	      // Tenstorrent, yeah it'd be nice to use the correct
+	      // encoding namespace.  Maybe one day.
+	      {
+		// J<POS><LETTER><SUFFX>
+		unsigned pos;
+		oparg = strdec (oparg + 1, &pos);
+		if (*oparg >= 'A' && *oparg <= 'Z')
+		  {
+		    if (*oparg == 'C')
+		      {
+			// Core register
+			if (!reg_lookup (&asarg, RCLASS_GPR, &regno))
+			  break;
+			INSERT_IMM (5, pos, *ip, regno);
+			continue;
+		      }
+
+		    if (!reg_lookup (&asarg, RCLASS_SFPUR, &regno)
+			|| regno >= 16)
+		      break;
+		    char c = *oparg;
+		    unsigned lim = 0;
+		    oparg = strdec (oparg + 1, &lim) - 1;
+		    if (!lim)
+		      lim = 16;
+		    if (regno >= lim)
+		      {
+			as_bad (_("only registers L0...L%d permitted"), lim - 1);
+			break;
+		      }
+
+		    switch (c)
+		      {
+		      case 'L':
+			INSERT_IMM (4, pos, *ip, regno);
+			continue;
+
+		      case 'S':
+			// sfploadmacro encodes reg bit2 into bit0 of
+			// the reg addr. That makes it fun to program!
+			INSERT_IMM (1, 0, *ip, regno >> 2);
+			INSERT_IMM (2, pos, *ip, regno);
+			continue;
+		      }
+		    break;
+		  }
+		else if (*oparg >= 'a' && *oparg <= 'z')
+		  {
+		    if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+			|| imm_expr->X_op != O_constant)
+		      {
+			as_bad (_("immediate operand is not constant"));
+			break;
+		      }
+		    offsetT val = imm_expr->X_add_number;
+
+		    switch (*oparg)
+		      {
+		      case 'm':
+			{
+			  // mod mask
+			  unsigned mask_zero = 0;
+			  unsigned mask_range = 0;
+			  oparg = strhex (oparg + 1, &mask_zero);
+			  int is_signed = *oparg == '-';
+			  if (is_signed || *oparg == '+')
+			    oparg = strhex (oparg + 1, &mask_range);
+			  oparg--;
+
+			  if (!(val >= 0 && val <= 15))
+			    {
+			      as_bad (_("mod operand `%ld; not in range [0,15]"), (long)val);
+			      break;
+			    }
+
+			  if ((1u << val) & mask_zero)
+			    {
+			      if (tt_imm_val != 0)
+				{
+				  as_bad (_("immediate operand with mod=%ld not 0"), (long)val);
+				  break;
+				}
+			    }
+			  else if ((1u << val) & mask_range)
+			    {
+			      int lim = 1 << (tt_imm_bits - is_signed);
+			      if (tt_imm_val < (is_signed ? -lim : 0)
+				  || tt_imm_val >= lim)
+				{
+				  as_bad (_("immediate operand with mod=%ld not in range [%d,%d]"),
+					  (long)val, is_signed ? -lim : 0, lim - 1);
+				  break;
+				}
+			    }
+			  else
+			    {
+			      as_bad (_("unsupported mod=%ld (permitted mask is %#04x"), (long)val,
+				      mask_zero | mask_range);
+			      break;
+			    }
+			  INSERT_IMM (4, pos, *ip, val);
+			  imm_expr->X_op = O_absent;
+			  asarg = expr_parse_end;
+			  continue;
+			}
+			break;
+
+		      case 'd': // Deferred checking
+		      case 'l': // Decimal limit, (inferred width)
+		      case 'o': // Overloaded encoding
+		      case 's': // Signed
+		      case 'u': // Unsigned
+		      case 'v': // Split unsigned, how exciting
+			{
+			  // signed/unsigned immediate
+			  char c = *oparg;
+			  unsigned bits;
+			  oparg = strdec (oparg + 1, &bits) - 1;
+			  unsigned lim;
+
+			  if (c == 'l')
+			    {
+			      lim = bits;
+			      /* Deduce width from limit.  */
+			      bits = 8 * sizeof (bits) - __builtin_clz (bits - 1);
+			    }
+			  else
+			    lim = 1u << bits;
+			  if (!bits && val)
+			    as_bad (_("placeholder immediate `%ld' not zero"), (long)val);
+			  else if ((c == 's' || c == 'o')
+				   && (val < -(int)(lim >> 1) || val >= (int)lim))
+			    as_bad (_("immediate operand  `%ld' not in range [%d,%d]"),
+				    (long)val, -(lim >> 1), lim - 1);
+			  else if ((c == 'u' || c == 'l') && (val < 0 || val >= lim))
+			    as_bad (_("immediate operand `%ld' not in range [0,%u]"),
+				    (long)val, lim - 1);
+			  else if (c == 'o'
+				   && (val & 1) != EXTRACT_U_IMM(1, pos, ip->insn_opcode))
+			    // Bit0 doubles as reg bit2, so they need to match
+			    as_bad (_("immediate operand `%ld' does not meet constraint, should be `%ld'"),
+				    (long)val, (long)(val ^ 1));
+			  else
+			    {
+			      if (c == 'd')
+				{
+				  tt_imm_val = val;
+				  tt_imm_bits = bits;
+				}
+			      if (c == 'v')
+				// Or the top two bits, as they
+				// overlay another field.
+				val |= EXTRACT_BITS (ip->insn_opcode, 0x3,
+						     pos + bits - 2) << (bits - 2);
+
+			      INSERT_IMM (bits, pos, *ip, val);
+			      imm_expr->X_op = O_absent;
+			      asarg = expr_parse_end;
+			      continue;
+			    }
+			}
+			break;
+		      }
+		  }
+	      }
+	      break;  // End of Tenstorrent
+
 	    case 'z':
 	      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
 		  || imm_expr->X_op != O_constant
@@ -4579,6 +4861,7 @@ riscv_ip_hardcode (char *str,
   insn = XCNEW (struct riscv_opcode);
   insn->match = values[num - 1];
   create_insn (ip, insn);
+
   unsigned int bytes = riscv_insn_length (insn->match);
 
   if (num == 2 && values[0] != bytes)
@@ -5875,6 +6158,39 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
+/* .insn but using tt's unswizzled number space.  */
+static void
+s_riscv_tt_insn (int x ATTRIBUTE_UNUSED)
+{
+  static int is_tensix = -1;
+  if (is_tensix < 0)
+    is_tensix = (riscv_subset_supports (&riscv_rps_as, "xtttensixwh")
+		 || riscv_subset_supports (&riscv_rps_as, "xtttensixbh")
+		 || riscv_subset_supports (&riscv_rps_as, "xtttensixqsr"));
+  if (!is_tensix)
+    as_bad (".ttinsn only available on tensix ISAs");
+
+  expressionS exp;
+
+  expression (&exp);
+  if (exp.X_op != O_constant)
+    {
+      as_bad ("value must be constant");
+      return;
+    }
+  demand_empty_rest_of_line ();
+  insn_t unswizzled = (insn_t)exp.X_add_number;
+  if (3 == ((unswizzled >> 30) & 3))
+    as_bad ("%#lx is not a tensix encoding", (unsigned long)unswizzled);
+  insn_t value = SFPU_OP_SWIZZLE (unswizzled);
+
+  riscv_mapping_state (MAP_INSN, 0, false);
+  int bytes = 4;
+  frag_grow (bytes);
+  for (char *p = frag_more (bytes); bytes--; value >>= 8)
+    *p++ = value;
+}
+
 /* Update architecture and privileged elf attributes.  If we don't set
    them, then try to output the default ones.  */
 
@@ -6141,6 +6457,7 @@ static const pseudo_typeS riscv_pseudo_table[] =
   {"variant_cc", s_variant_cc, 0},
   {"float16", float_cons, 'h'},
   {"bfloat16", float_cons, 'b'},
+  {"ttinsn", s_riscv_tt_insn, 4},
 
   { NULL, NULL, 0 },
 };

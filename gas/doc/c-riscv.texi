@@ -246,6 +246,14 @@ formats of @samp{.insn}.  Said instruction could also be written as
 @var{insn_length} form is used, the assembler will check if @var{value} is a
 valid @var{insn_length} bytes instruction.
 
+@cindex INSN directives
+@item .ttinsn @var{value}
+A raw unswizzled Tenstorrent SFPU or TT instruction. The value
+provided will be swizzled before storing, and thus disassemble
+correctly. For example @samp{.ttinsn 0x700cc000} will assemble an
+@samp{sfpload} instruction. (No validation on the encoding is
+performed.)
+
 @cindex @code{.attribute} directive, RISC-V
 @item .attribute @var{tag}, @var{value}
 Set the object attribute @var{tag} to @var{value}.
@@ -876,6 +884,14 @@ The XTheadZvamo extension is a subextension of the XTheadVector extension,
 and it provides AMO instructions for the T-Head VECTOR vendor extension.
 
 It is documented in @url{https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.3.0/xthead-2023-11-10-2.3.0.pdf}.
+
+@item XTTcache
+@item XTTroccqsr
+@item XTTtensixbh
+@item XTTtensixqsr
+@item XTTtensixwh
+@item XTTxbkb
+Tenstorrent extensions.
 
 @item XVentanaCondOps
 XVentanaCondOps extension provides instructions for branchless

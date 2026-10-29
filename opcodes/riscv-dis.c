@@ -313,6 +313,17 @@ riscv_zcmp_get_sregno (unsigned sreg_idx)
       sreg_idx + 16 : sreg_idx + 8;
 }
 
+// Someone complained that stroul was inefficiently slow
+static const char *
+strdec (const char *pos, unsigned *val)
+{
+  unsigned v = 0, d;
+  for (; (unsigned)(d = *pos - '0') < 10; pos++)
+    v = v * 10 + d;
+  *val = v;
+  return pos;
+}
+
 /* Print insn arguments for 32/64-bit code.  */
 
 static void
@@ -719,6 +730,85 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	case 'Y':
 	  print (info->stream, dis_style_immediate, "0x%x",
 		 EXTRACT_OPERAND (RNUM, l));
+          break;
+
+	case 'J':
+	  // Tenstorrent, yeah it'd be nice to use the correct
+	  // encoding namespace.  Maybe one day.
+	  {
+	    // J<POS><LETTER><SUFFX>
+	    unsigned pos, val;
+	    oparg = strdec (oparg + 1, &pos);
+	    switch (*oparg)
+	      {
+	      case 'C':
+		val = EXTRACT_U_IMM (5, pos, l);
+		print (info->stream, dis_style_register, "%s", pd->riscv_gpr_names[val]);
+		goto tensix_next;
+	      case 'L':
+		val = EXTRACT_U_IMM (4, pos, l);
+		goto tensix_reg;
+	      case 'S':
+		val = (EXTRACT_U_IMM (1, 0, l) << 2)
+		  | EXTRACT_U_IMM (2, pos, l);
+	      tensix_reg:
+		while (oparg[1] >= '0' && oparg[1] <= '9')
+		  oparg++;
+		print (info->stream, dis_style_register, "%s", riscv_sfpur_names_numeric[val]);
+		goto tensix_next;
+
+	      case 'm':
+		{
+		  while ((oparg[1] >= '0' && oparg[1] <= '9')
+			 || (oparg[1] >= 'a' && oparg[1] <= 'f')
+			 || oparg[1] == '-' || oparg[1] == '+')
+		    oparg++;
+		  val = EXTRACT_U_IMM (4, pos, l);
+		}
+		break;
+
+	      case 'd':
+	      case 'l':
+	      case 'o':
+	      case 's':
+	      case 'u':
+	      case 'v':
+		{
+		  char c = *oparg;
+		  unsigned bits;
+		  oparg = strdec (oparg + 1, &bits) - 1;
+
+		  if (c == 'l')
+		    /* Deduce width from limit.  */
+		    bits = 8 * sizeof (bits) - __builtin_clz (bits - 1);
+		  if (c == 'v')
+		    {
+		      // reduce width depending on bit 7.  Ugh This is
+		      // ttsetdmareg shenanigans.
+		      if (!EXTRACT_U_IMM (1, 7, l))
+			bits -= 2;
+		    }
+		  val = EXTRACT_U_IMM (bits, pos, l);
+		  if ((c == 's' || c == 'o') && bits == 16)
+		    // Heuristic to preserve wierd behaviour
+		    val = (short)val;
+		  if (c == 'd' && bits == 12)
+		    {
+		      // Special case 12-bit deferred immediate
+		      print (info->stream, dis_style_immediate, "0x%03X", val);
+		      goto tensix_next;
+		    }
+		}
+		break;
+		  
+	      default:
+		print (info->stream, dis_style_text, _("# internal error, undefined modifier (l%c)"), *oparg);
+		goto tensix_next;
+	      }
+	    print (info->stream, dis_style_immediate, "%d", val);
+	  tensix_next:
+	    break;
+	  }
 	  break;
 
 	case 'Z':
@@ -1057,23 +1147,49 @@ riscv_disassemble_insn (bfd_vma memaddr,
   const struct riscv_opcode *op;
   static bool init = false;
   static const struct riscv_opcode *riscv_hash[OP_MASK_OP + 1];
+  static const struct riscv_opcode *riscv_hash_tt[OP_MASK_SFPU_OP + 1];
   struct riscv_private_data *pd = info->private_data;
   int insnlen, i;
   bool printed;
 
-#define OP_HASH_IDX(i) ((i) & (riscv_insn_length (i) == 2 ? 0x3 : OP_MASK_OP))
+#define OP_HASH_IDX(i) ((i) & ((tt_class ? 4 : riscv_insn_length (i)) == 2 ? 0x3 : OP_MASK_OP))
+#define SFPU_OP_HASH_IDX(i) (((i) >> OP_SH_SFPU_OP) & OP_MASK_SFPU_OP)
+  static enum riscv_insn_class tt_class = 0;
 
   /* Build a hash table to shorten the search time.  */
   if (! init)
     {
+      if (riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixwh"))
+	tt_class = INSN_CLASS_XTTTENSIXWH;
+      else if  (riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixbh"))
+	tt_class = INSN_CLASS_XTTTENSIXBH;
+      else if  (riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixqsr"))
+	tt_class = INSN_CLASS_XTTTENSIXQSR;
+
       for (op = riscv_opcodes; op->name; op++)
-	if (!riscv_hash[OP_HASH_IDX (op->match)])
-	  riscv_hash[OP_HASH_IDX (op->match)] = op;
+	{
+	  if ((op->pinfo & INSN_TYPE) == INSN_SFPU)
+	    {
+	      if (tt_class == op->insn_class
+		  && !riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)])
+		riscv_hash_tt[SFPU_OP_HASH_IDX (op->match)] = op;
+	      continue;
+	    }
+
+	  if (!riscv_hash[OP_HASH_IDX (op->match)])
+	    riscv_hash[OP_HASH_IDX (op->match)] = op;
+	}
 
       init = true;
     }
 
-  insnlen = riscv_insn_length (word);
+  /* Unswizzle the bottom 2 bits so that we get back the original instruction
+     for SFPU */
+  bool is_sfpu = tt_class && (word & 0x3) != 0x3;
+  if (is_sfpu)
+    word = SFPU_OP_UNSWIZZLE(word);
+
+  insnlen = tt_class ? 4 : riscv_insn_length (word); /// ???
 
   /* RISC-V instructions are always little-endian.  */
   info->endian_code = BFD_ENDIAN_LITTLE;
@@ -1088,8 +1204,9 @@ riscv_disassemble_insn (bfd_vma memaddr,
   info->insn_type = dis_nonbranch;
   info->target = 0;
   info->target2 = 0;
+  op = is_sfpu ? riscv_hash_tt[SFPU_OP_HASH_IDX (word)]
+    : riscv_hash[OP_HASH_IDX (word)];
 
-  op = riscv_hash[OP_HASH_IDX (word)];
   if (op != NULL)
     {
       /* If XLEN is not known, get its value from the ELF class.  */
@@ -1637,6 +1754,7 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
   mstate = riscv_search_mapping_symbol (memaddr, info);
   /* Save the last mapping state.  */
   ((struct riscv_private_data *) info->private_data)->last_map_state = mstate;
+  struct riscv_private_data *pd = info->private_data;
 
   /* Set the size to dump.  */
   if (mstate == MAP_DATA
@@ -1665,7 +1783,12 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
 	  goto print;
        }
       insn = (insn_t) bfd_getl16 (packet);
-      dump_size = riscv_insn_length (insn);
+      static int is_tt = -1;
+      if (is_tt < 0)
+	is_tt = riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixwh")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixbh")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixqsr");
+      dump_size = is_tt ? 4 : riscv_insn_length (insn);
       riscv_disassembler = riscv_disassemble_insn;
     }
 

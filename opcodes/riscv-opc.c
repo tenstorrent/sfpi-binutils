@@ -424,6 +424,12 @@ match_cm_jalt (const struct riscv_opcode *op, insn_t insn)
     && EXTRACT_ZCMT_INDEX (insn) < 256;
 }
 
+const char riscv_sfpur_names_numeric[NSFPUR][NRC] =
+{
+  "L0",   "L1",   "L2",   "L3",   "L4",   "L5",   "L6",   "L7",
+  "L8",   "L9",   "L10",  "L11",  "L12",  "L13",  "L14",  "L15"
+};
+
 /* The order of overloaded instructions matters.  Label arguments and
    register arguments look the same. Instructions that can have either
    for arguments must apear in the correct order in this table for the
@@ -448,6 +454,13 @@ match_rs2_x1x5_opcode (const struct riscv_opcode *op,
 {
   int rs2 = (insn & MASK_RS2) >> OP_SH_RS2;
   return match_opcode (op, insn) && (rs2 == 1 || rs2 == 5);
+}
+
+static int
+sfp_match_opcode (const struct riscv_opcode *op,
+                  insn_t insn)
+{
+  return match_opcode (op, insn);
 }
 
 static int
@@ -1384,11 +1397,11 @@ const struct riscv_opcode riscv_opcodes[] =
 {"clzw",      64, INSN_CLASS_ZBB,  "d,s",   MATCH_CLZW, MASK_CLZW, match_opcode, 0 },
 {"ctzw",      64, INSN_CLASS_ZBB,  "d,s",   MATCH_CTZW, MASK_CTZW, match_opcode, 0 },
 {"cpopw",     64, INSN_CLASS_ZBB,  "d,s",   MATCH_CPOPW, MASK_CPOPW, match_opcode, 0 },
-{"brev8",     32, INSN_CLASS_ZBKB,  "d,s",      MATCH_GREVI | MATCH_SHAMT_BREV8, MASK_GREVI | MASK_SHAMT, match_opcode, 0 },
+{"brev8",     32, INSN_CLASS_ZBKB_OR_XTTZBKB,  "d,s",      MATCH_GREVI | MATCH_SHAMT_BREV8, MASK_GREVI | MASK_SHAMT, match_opcode, 0 },
 {"brev8",     64, INSN_CLASS_ZBKB,  "d,s",      MATCH_GREVI | MATCH_SHAMT_BREV8, MASK_GREVI | MASK_SHAMT, match_opcode, 0 },
 {"zip",       32, INSN_CLASS_ZBKB,  "d,s",      MATCH_SHFLI|MATCH_SHAMT_ZIP_32, MASK_SHFLI|MASK_SHAMT, match_opcode, 0 },
 {"unzip",     32, INSN_CLASS_ZBKB,  "d,s",      MATCH_UNSHFLI|MATCH_SHAMT_ZIP_32, MASK_UNSHFLI|MASK_SHAMT, match_opcode, 0 },
-{"pack",       0, INSN_CLASS_ZBKB,  "d,s,t",    MATCH_PACK, MASK_PACK, match_opcode, 0 },
+{"pack",       0, INSN_CLASS_ZBKB_OR_XTTZBKB,  "d,s,t",    MATCH_PACK, MASK_PACK, match_opcode, 0 },
 {"packh",      0, INSN_CLASS_ZBKB,  "d,s,t",    MATCH_PACKH, MASK_PACKH, match_opcode, 0 },
 {"packw",     64, INSN_CLASS_ZBKB,  "d,s,t",    MATCH_PACKW, MASK_PACKW, match_opcode, 0 },
 {"andn",       0, INSN_CLASS_ZBB_OR_ZBKB,  "d,s,t", MATCH_ANDN, MASK_ANDN, match_opcode, 0 },
@@ -3570,6 +3583,100 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vmaqasu.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQASU_VX, MASK_TH_VMAQASU_VX, match_opcode, 0},
 {"th.vmaqaus.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQAUS_VX, MASK_TH_VMAQAUS_VX, match_opcode, 0},
 
+/* Vendor-specific (Tenstorrent) ROCC instructions */
+{"tt.rocc.nop",				    0, INSN_CLASS_XTTROCCQSR, "", MATCH_TTROCC_NOP, MASK_TTROCC_NOP, match_opcode, 0},
+{"tt.rocc.dbg_postcode",		    0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_DBG_POSTCODE, MASK_TTROCC_DBG_POSTCODE, match_opcode, 0},
+{"tt.rocc.noc_fence",	                    0, INSN_CLASS_XTTROCCQSR, "", MATCH_TTROCC_NOC_FENCE, MASK_TTROCC_NOC_FENCE, match_opcode, 0},
+{"tt.rocc.llk_intf_write",                  0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_LLK_INTF_WRITE, MASK_TTROCC_LLK_INTF_WRITE, match_opcode, 0},
+{"tt.rocc.llk_intf_read",                   0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_LLK_INTF_READ, MASK_TTROCC_LLK_INTF_READ, match_opcode, 0},
+{"tt.rocc.fds_intf_write",                  0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_FDS_INTF_WRITE, MASK_TTROCC_FDS_INTF_WRITE, match_opcode, 0},
+{"tt.rocc.fds_intf_read",                   0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_FDS_INTF_READ, MASK_TTROCC_FDS_INTF_READ, match_opcode, 0},
+{"tt.rocc.cs_alloc",                        0, INSN_CLASS_XTTROCCQSR, "d", MATCH_TTROCC_CS_ALLOC, MASK_TTROCC_CS_ALLOC, match_opcode, 0},
+{"tt.rocc.cs_dealloc",                      0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_CS_DEALLOC, MASK_TTROCC_CS_DEALLOC, match_opcode, 0},
+{"tt.rocc.cs_save",                         0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_CS_SAVE, MASK_TTROCC_CS_SAVE, match_opcode, 0},
+{"tt.rocc.cs_restore",                      0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_CS_RESTORE, MASK_TTROCC_CS_RESTORE, match_opcode, 0},
+{"tt.rocc.wr_tiles_to_process_thres_tr_ack",      0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_WR_TILES_TO_PROCESS_THRES_TR_ACK, MASK_TTROCC_WR_TILES_TO_PROCESS_THRES_TR_ACK, match_opcode, 0},
+{"tt.rocc.wr_tiles_to_process_thres_wr_sent",     0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_WR_TILES_TO_PROCESS_THRES_WR_SENT, MASK_TTROCC_WR_TILES_TO_PROCESS_THRES_WR_SENT, match_opcode, 0},
+{"tt.rocc.wr_tiles_to_process_thres_idma_tr_ack", 0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_WR_TILES_TO_PROCESS_THRES_IDMA_TR_ACK, MASK_TTROCC_WR_TILES_TO_PROCESS_THRES_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.rd_tiles_to_process_thres_tr_ack",      0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_RD_TILES_TO_PROCESS_THRES_TR_ACK, MASK_TTROCC_RD_TILES_TO_PROCESS_THRES_TR_ACK, match_opcode, 0},
+{"tt.rocc.rd_tiles_to_process_thres_wr_sent",     0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_RD_TILES_TO_PROCESS_THRES_WR_SENT, MASK_TTROCC_RD_TILES_TO_PROCESS_THRES_WR_SENT, match_opcode, 0},
+{"tt.rocc.rd_tiles_to_process_thres_idma_tr_ack", 0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_RD_TILES_TO_PROCESS_THRES_IDMA_TR_ACK, MASK_TTROCC_RD_TILES_TO_PROCESS_THRES_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.scmdbuf_get_vc_space",	    0, INSN_CLASS_XTTROCCQSR, "d", MATCH_TTROCC_SCMDBUF_GET_VC_SPACE, MASK_TTROCC_SCMDBUF_GET_VC_SPACE, match_opcode, 0},
+{"tt.rocc.scmdbuf_get_vc_space_vc",	    0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_SCMDBUF_GET_VC_SPACE_VC, MASK_TTROCC_SCMDBUF_GET_VC_SPACE_VC, match_opcode, 0},
+{"tt.rocc.scmdbuf_wr_sent",		    0, INSN_CLASS_XTTROCCQSR, "d", MATCH_TTROCC_SCMDBUF_WR_SENT, MASK_TTROCC_SCMDBUF_WR_SENT, match_opcode, 0},
+{"tt.rocc.scmdbuf_wr_sent_trid",	    0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_SCMDBUF_WR_SENT_TRID, MASK_TTROCC_SCMDBUF_WR_SENT_TRID, match_opcode, 0},
+{"tt.rocc.scmdbuf_tr_ack",		    0, INSN_CLASS_XTTROCCQSR, "d", MATCH_TTROCC_SCMDBUF_TR_ACK, MASK_TTROCC_SCMDBUF_TR_ACK, match_opcode, 0},
+{"tt.rocc.scmdbuf_tr_ack_trid",		    0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_SCMDBUF_TR_ACK_TRID, MASK_TTROCC_SCMDBUF_TR_ACK_TRID, match_opcode, 0},
+{"tt.rocc.scmdbuf_reset",		    0, INSN_CLASS_XTTROCCQSR, "", MATCH_TTROCC_SCMDBUF_RESET, MASK_TTROCC_SCMDBUF_RESET, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_trans",		    0, INSN_CLASS_XTTROCCQSR, "", MATCH_TTROCC_SCMDBUF_ISSUE_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_inline_trans",	    0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_SCMDBUF_ISSUE_INLINE_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_INLINE_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_inline_addr_trans", 0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_SCMDBUF_ISSUE_INLINE_ADDR_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_INLINE_ADDR_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_read1_trans",	    0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_SCMDBUF_ISSUE_READ1_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_READ1_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_read2_trans",	    0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_SCMDBUF_ISSUE_READ2_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_READ2_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_write1_trans",	    0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_SCMDBUF_ISSUE_WRITE1_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_WRITE1_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_issue_write2_trans",	    0, INSN_CLASS_XTTROCCQSR, "s,t", MATCH_TTROCC_SCMDBUF_ISSUE_WRITE2_TRANS, MASK_TTROCC_SCMDBUF_ISSUE_WRITE2_TRANS, match_opcode, 0},
+{"tt.rocc.scmdbuf_read_tiles_to_process_tr_ack",            0, INSN_CLASS_XTTROCCQSR, "d", MATCH_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_TR_ACK, MASK_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_TR_ACK, match_opcode, 0},
+{"tt.rocc.scmdbuf_read_tiles_to_process_tr_ack_tr_id",      0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_TR_ACK_TR_ID, MASK_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_TR_ACK_TR_ID, match_opcode, 0},
+{"tt.rocc.scmdbuf_read_tiles_to_process_wr_sent",           0, INSN_CLASS_XTTROCCQSR, "d", MATCH_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_WR_SENT, MASK_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_WR_SENT, match_opcode, 0},
+{"tt.rocc.scmdbuf_read_tiles_to_process_wr_sent_tr_id",     0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_WR_SENT_TR_ID, MASK_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_WR_SENT_TR_ID, match_opcode, 0},
+{"tt.rocc.scmdbuf_read_tiles_to_process_idma_tr_ack",       0, INSN_CLASS_XTTROCCQSR, "d", MATCH_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK, MASK_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.scmdbuf_read_tiles_to_process_idma_tr_ack_tr_id", 0, INSN_CLASS_XTTROCCQSR, "d,s", MATCH_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK_TR_ID, MASK_TTROCC_SCMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK_TR_ID, match_opcode, 0},
+{"tt.rocc.scmdbuf_clear_tiles_to_process_tr_ack",           0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_TR_ACK, MASK_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_TR_ACK, match_opcode, 0},
+{"tt.rocc.scmdbuf_clear_tiles_to_process_wr_sent",          0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_WR_SENT, MASK_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_WR_SENT, match_opcode, 0},
+{"tt.rocc.scmdbuf_clear_tiles_to_process_idma_tr_ack",      0, INSN_CLASS_XTTROCCQSR, "s", MATCH_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_IDMA_TR_ACK, MASK_TTROCC_SCMDBUF_CLEAR_TILES_TO_PROCESS_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.scmdbuf_wr_reg",		    0, INSN_CLASS_XTTROCCQSR, "d,J25l49,s,t", MATCH_TTROCC_SCMDBUF_WR_REG, MASK_TTROCC_SCMDBUF_WR_REG, match_opcode, 0},
+{"tt.rocc.scmdbuf_rd_reg",		    0, INSN_CLASS_XTTROCCQSR, "d,J25l49,s,t", MATCH_TTROCC_SCMDBUF_RD_REG, MASK_TTROCC_SCMDBUF_RD_REG, match_opcode, 0},
+{"tt.rocc.addrgen_reset",                   0, INSN_CLASS_XTTROCCQSR, "J30u1", MATCH_TTROCC_ADDRGEN_RESET, MASK_TTROCC_ADDRGEN_RESET, match_opcode, 0},
+{"tt.rocc.addrgen_reset_counters",          0, INSN_CLASS_XTTROCCQSR, "J30u1,s", MATCH_TTROCC_ADDRGEN_RESET_COUNTERS, MASK_TTROCC_ADDRGEN_RESET_COUNTERS, match_opcode, 0},
+{"tt.rocc.addrgen_pop_dest",                0, INSN_CLASS_XTTROCCQSR, "d,J30u1", MATCH_TTROCC_ADDRGEN_POP_DEST, MASK_TTROCC_ADDRGEN_POP_DEST, match_opcode, 0},
+{"tt.rocc.addrgen_pop_x_dest",              0, INSN_CLASS_XTTROCCQSR, "d,J30u1,s", MATCH_TTROCC_ADDRGEN_POP_X_DEST, MASK_TTROCC_ADDRGEN_POP_X_DEST, match_opcode, 0},
+{"tt.rocc.addrgen_peek_dest",               0, INSN_CLASS_XTTROCCQSR, "d,J30u1", MATCH_TTROCC_ADDRGEN_PEEK_DEST, MASK_TTROCC_ADDRGEN_PEEK_DEST, match_opcode, 0},
+{"tt.rocc.addrgen_peek_src",                0, INSN_CLASS_XTTROCCQSR, "d,J30u1", MATCH_TTROCC_ADDRGEN_PEEK_SRC, MASK_TTROCC_ADDRGEN_PEEK_SRC, match_opcode, 0},
+{"tt.rocc.addrgen_pop_src",                 0, INSN_CLASS_XTTROCCQSR, "d,J30u1", MATCH_TTROCC_ADDRGEN_POP_SRC, MASK_TTROCC_ADDRGEN_POP_SRC, match_opcode, 0},
+{"tt.rocc.addrgen_pop_x_src",               0, INSN_CLASS_XTTROCCQSR, "d,J30u1,s", MATCH_TTROCC_ADDRGEN_POP_X_SRC, MASK_TTROCC_ADDRGEN_POP_X_SRC, match_opcode, 0},
+{"tt.rocc.addrgen_pop_both",                0, INSN_CLASS_XTTROCCQSR, "d,J30u1,s,t", MATCH_TTROCC_ADDRGEN_POP_BOTH, MASK_TTROCC_ADDRGEN_POP_BOTH, match_opcode, 0},
+{"tt.rocc.addrgen_push_src",                0, INSN_CLASS_XTTROCCQSR, "J30u1", MATCH_TTROCC_ADDRGEN_PUSH_SRC, MASK_TTROCC_ADDRGEN_PUSH_SRC, match_opcode, 0},
+{"tt.rocc.addrgen_push_src_pop_x",          0, INSN_CLASS_XTTROCCQSR, "J30u1,s", MATCH_TTROCC_ADDRGEN_PUSH_SRC_POP_X, MASK_TTROCC_ADDRGEN_PUSH_SRC_POP_X, match_opcode, 0},
+{"tt.rocc.addrgen_push_dest",               0, INSN_CLASS_XTTROCCQSR, "J30u1", MATCH_TTROCC_ADDRGEN_PUSH_DEST, MASK_TTROCC_ADDRGEN_PUSH_DEST, match_opcode, 0},
+{"tt.rocc.addrgen_push_dest_pop_x",         0, INSN_CLASS_XTTROCCQSR, "J30u1,s", MATCH_TTROCC_ADDRGEN_PUSH_DEST_POP_X, MASK_TTROCC_ADDRGEN_PUSH_DEST_POP_X, match_opcode, 0},
+{"tt.rocc.addrgen_push_both",               0, INSN_CLASS_XTTROCCQSR, "J30u1", MATCH_TTROCC_ADDRGEN_PUSH_BOTH, MASK_TTROCC_ADDRGEN_PUSH_BOTH, match_opcode, 0},
+{"tt.rocc.addrgen_push_both_pop_x",         0, INSN_CLASS_XTTROCCQSR, "J30u1,s,t", MATCH_TTROCC_ADDRGEN_PUSH_BOTH_POP_X, MASK_TTROCC_ADDRGEN_PUSH_BOTH_POP_X, match_opcode, 0},
+{"tt.rocc.addrgen_wr_reg",                  0, INSN_CLASS_XTTROCCQSR, "d,J30u1,J25l25,s,t", MATCH_TTROCC_ADDRGEN_WR_REG, MASK_TTROCC_ADDRGEN_WR_REG, match_opcode, 0},
+{"tt.rocc.addrgen_rd_reg",                  0, INSN_CLASS_XTTROCCQSR, "d,J30u1,J25l25,s,t", MATCH_TTROCC_ADDRGEN_RD_REG, MASK_TTROCC_ADDRGEN_RD_REG, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_write2_trans",       0, INSN_CLASS_XTTROCCQSR, "J31u1,s,t", MATCH_TTROCC_CMDBUF_ISSUE_WRITE2_TRANS, MASK_TTROCC_CMDBUF_ISSUE_WRITE2_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_write1_trans",       0, INSN_CLASS_XTTROCCQSR, "J31u1,s", MATCH_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, MASK_TTROCC_CMDBUF_ISSUE_WRITE1_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_read2_trans",        0, INSN_CLASS_XTTROCCQSR, "J31u1,s,t", MATCH_TTROCC_CMDBUF_ISSUE_READ2_TRANS, MASK_TTROCC_CMDBUF_ISSUE_READ2_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_read1_trans",        0, INSN_CLASS_XTTROCCQSR, "J31u1,s", MATCH_TTROCC_CMDBUF_ISSUE_READ1_TRANS, MASK_TTROCC_CMDBUF_ISSUE_READ1_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_inline_addr_trans",  0, INSN_CLASS_XTTROCCQSR, "J31u1,s,t", MATCH_TTROCC_CMDBUF_ISSUE_INLINE_ADDR_TRANS, MASK_TTROCC_CMDBUF_ISSUE_INLINE_ADDR_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_inline_trans",       0, INSN_CLASS_XTTROCCQSR, "J31u1,s", MATCH_TTROCC_CMDBUF_ISSUE_INLINE_TRANS, MASK_TTROCC_CMDBUF_ISSUE_INLINE_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_issue_trans",	            0, INSN_CLASS_XTTROCCQSR, "J31u1", MATCH_TTROCC_CMDBUF_ISSUE_TRANS, MASK_TTROCC_CMDBUF_ISSUE_TRANS, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_tr_ack_trid",         0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_IDMA_TR_ACK_TRID, MASK_TTROCC_CMDBUF_IDMA_TR_ACK_TRID, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_tr_ack",	            0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_IDMA_TR_ACK, MASK_TTROCC_CMDBUF_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_get_vc_space_vc",     0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_IDMA_GET_VC_SPACE_VC, MASK_TTROCC_CMDBUF_IDMA_GET_VC_SPACE_VC, match_opcode, 0},
+{"tt.rocc.cmdbuf_idma_get_vc_space",	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_IDMA_GET_VC_SPACE, MASK_TTROCC_CMDBUF_IDMA_GET_VC_SPACE, match_opcode, 0},
+{"tt.rocc.cmdbuf_reset",		    0, INSN_CLASS_XTTROCCQSR, "J31u1", MATCH_TTROCC_CMDBUF_RESET, MASK_TTROCC_CMDBUF_RESET, match_opcode, 0},
+{"tt.rocc.cmdbuf_tr_ack_trid",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_TR_ACK_TRID, MASK_TTROCC_CMDBUF_TR_ACK_TRID, match_opcode, 0},
+{"tt.rocc.cmdbuf_tr_ack",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_TR_ACK, MASK_TTROCC_CMDBUF_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_wr_sent_trid",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_WR_SENT_TRID, MASK_TTROCC_CMDBUF_WR_SENT_TRID, match_opcode, 0},
+{"tt.rocc.cmdbuf_get_vc_space",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_GET_VC_SPACE, MASK_TTROCC_CMDBUF_GET_VC_SPACE, match_opcode, 0},
+{"tt.rocc.cmdbuf_get_vc_space_vc",     	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_GET_VC_SPACE_VC, MASK_TTROCC_CMDBUF_GET_VC_SPACE_VC, match_opcode, 0},
+{"tt.rocc.cmdbuf_wr_sent",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_WR_SENT, MASK_TTROCC_CMDBUF_WR_SENT, match_opcode, 0},
+{"tt.rocc.cmdbuf_read_tiles_to_process_tr_ack",             0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_TR_ACK, MASK_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_read_tiles_to_process_tr_ack_tr_id",       0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_TR_ACK_TR_ID, MASK_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_TR_ACK_TR_ID, match_opcode, 0},
+{"tt.rocc.cmdbuf_read_tiles_to_process_wr_sent",            0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_WR_SENT, MASK_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_WR_SENT, match_opcode, 0},
+{"tt.rocc.cmdbuf_read_tiles_to_process_wr_sent_tr_id",      0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_WR_SENT_TR_ID, MASK_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_WR_SENT_TR_ID, match_opcode, 0},
+{"tt.rocc.cmdbuf_read_tiles_to_process_idma_tr_ack",        0, INSN_CLASS_XTTROCCQSR, "d,J31u1", MATCH_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK, MASK_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_read_tiles_to_process_idma_tr_ack_tr_id",  0, INSN_CLASS_XTTROCCQSR, "d,J31u1,s", MATCH_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK_TR_ID, MASK_TTROCC_CMDBUF_READ_TILES_TO_PROCESS_IDMA_TR_ACK_TR_ID, match_opcode, 0},
+{"tt.rocc.cmdbuf_clear_tiles_to_process_tr_ack",            0, INSN_CLASS_XTTROCCQSR, "J31u1,s", MATCH_TTROCC_CMDBUF_CLEAR_TILES_TO_PROCESS_TR_ACK, MASK_TTROCC_CMDBUF_CLEAR_TILES_TO_PROCESS_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_clear_tiles_to_process_wr_sent",           0, INSN_CLASS_XTTROCCQSR, "J31u1,s", MATCH_TTROCC_CMDBUF_CLEAR_TILES_TO_PROCESS_WR_SENT, MASK_TTROCC_CMDBUF_CLEAR_TILES_TO_PROCESS_WR_SENT, match_opcode, 0},
+{"tt.rocc.cmdbuf_clear_tiles_to_process_idma_tr_ack",       0, INSN_CLASS_XTTROCCQSR, "J31u1,s", MATCH_TTROCC_CMDBUF_CLEAR_TILES_TO_PROCESS_IDMA_TR_ACK, MASK_TTROCC_CMDBUF_CLEAR_TILES_TO_PROCESS_IDMA_TR_ACK, match_opcode, 0},
+{"tt.rocc.cmdbuf_wr_reg",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1,J25l49,s,t", MATCH_TTROCC_CMDBUF_WR_REG, MASK_TTROCC_CMDBUF_WR_REG, match_opcode, 0},
+{"tt.rocc.cmdbuf_rd_reg",	      	    0, INSN_CLASS_XTTROCCQSR, "d,J31u1,J25l49,s,t", MATCH_TTROCC_CMDBUF_RD_REG, MASK_TTROCC_CMDBUF_RD_REG, match_opcode, 0},
+
+/* Vendor-specific (Tenstorrent) cache instructions */
+{"tt.cache.cflush.d.l1",   0, INSN_CLASS_XTTCACHE, "s", MATCH_TTCACHE_CFLUSH_D_L1,    MASK_TTCACHE_CFLUSH_D_L1,   match_opcode, 0},
+{"tt.cache.cdiscard.d.l1", 0, INSN_CLASS_XTTCACHE, "s", MATCH_TTCACHE_CDISCARD_D_L1,  MASK_TTCACHE_CDISCARD_D_L1, match_opcode, 0},
+
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 {"vt.maskc",   64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKC, MASK_VT_MASKC, match_opcode, 0 },
 {"vt.maskcn",  64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKCN, MASK_VT_MASKCN, match_opcode, 0 },
@@ -3682,6 +3789,8 @@ const struct riscv_opcode riscv_opcodes[] =
 {"smt.vnspack4.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNSPACK4_VV, MASK_SMT_VNSPACK4_VV, match_opcode, 0 },
 {"smt.vpack.vv", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt,Xpu2@12", MATCH_SMT_VPACK_VV, MASK_SMT_VPACK_VV, match_opcode, 0 },
 {"smt.vupack.vv", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt,Xpu2@12", MATCH_SMT_VUPACK_VV, MASK_SMT_VUPACK_VV, match_opcode, 0 },
+
+#include "riscv-opc-sfpu-insns.h"
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}
