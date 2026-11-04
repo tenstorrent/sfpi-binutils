@@ -6,6 +6,7 @@
 *~
 .#*
 *#
+.*.swp
 
 *.flt
 *.gmo
@@ -36,7 +37,6 @@ TAGS.sub
 .local.vimrc
 .lvimrc
 
-.clang-format
 .clang-tidy
 .clangd
 .cache
