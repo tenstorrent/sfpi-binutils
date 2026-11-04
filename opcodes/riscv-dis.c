@@ -1754,7 +1754,6 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
   mstate = riscv_search_mapping_symbol (memaddr, info);
   /* Save the last mapping state.  */
   ((struct riscv_private_data *) info->private_data)->last_map_state = mstate;
-  struct riscv_private_data *pd = info->private_data;
 
   /* Set the size to dump.  */
   if (mstate == MAP_DATA
@@ -1785,9 +1784,9 @@ print_insn_riscv (bfd_vma memaddr, struct disassemble_info *info)
       insn = (insn_t) bfd_getl16 (packet);
       static int is_tt = -1;
       if (is_tt < 0)
-	is_tt = riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixwh")
-	  || riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixbh")
-	  || riscv_subset_supports (&pd->riscv_rps_dis, "xtttensixqsr");
+	is_tt = riscv_subset_supports (&((struct riscv_private_data *) info->private_data)->riscv_rps_dis, "xtttensixwh")
+	  || riscv_subset_supports (&((struct riscv_private_data *) info->private_data)->riscv_rps_dis, "xtttensixbh")
+	  || riscv_subset_supports (&((struct riscv_private_data *) info->private_data)->riscv_rps_dis, "xtttensixqsr");
       dump_size = is_tt ? 4 : riscv_insn_length (insn);
       riscv_disassembler = riscv_disassemble_insn;
     }
